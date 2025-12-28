@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Param, UseGuards, Patch, Body, Post, Req, Delete, Request } from '@nestjs/common';
+﻿import { Controller, Get, Param, UseGuards, Patch, Body, Post, Req, Delete, Request, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -23,8 +23,8 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(@Req() req: any) {
-    return this.usersService.findAll(req.user);
+  findAll(@Req() req: any, @Query('clubId') clubId?: string) {
+    return this.usersService.findAll(req.user, clubId);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -5,6 +5,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { ClubsService } from '../clubs/clubs.service';
+import { firebaseAdmin } from '../firebase-admin';
 
 @Injectable()
 export class UsersService {
@@ -21,7 +22,7 @@ export class UsersService {
   }
 
   // Busca todos os usuários
-  async findAll(currentUser?: any) {
+  async findAll(currentUser?: any, clubId?: string) {
     // 1. Get total requirements count per class
     const requirements = await this.prisma.requirement.findMany({
       where: { dbvClass: { not: null } },
@@ -37,23 +38,21 @@ export class UsersService {
 
     // Build Where Clause
     const where: Prisma.UserWhereInput = {};
-    if (currentUser && currentUser.role === 'COUNSELOR') {
+
+    if (currentUser?.email === 'master@cantinhodbv.com') {
+      // Master can filter by clubId if provided, otherwise see all
+      if (clubId) where.clubId = clubId;
+    } else if (currentUser && currentUser.role === 'COUNSELOR') {
       if (!currentUser.unitId) {
-        // If Counselor has no unit, they see no one (or just themselves?)
-        // Let's assume they see no one to avoid confusion, or handle error.
-        // Returning empty list is safer.
         return [];
       }
       where.unitId = currentUser.unitId;
     } else if (currentUser && currentUser.role === 'INSTRUCTOR') {
-      // Instructor sees only their assigned class (assuming their profile has dbvClass set)
       if (currentUser.dbvClass) {
         where.dbvClass = currentUser.dbvClass;
       }
-      // Also restrict by Club
       if (currentUser.clubId) where.clubId = currentUser.clubId;
-
-    } else if (currentUser?.clubId && currentUser.email !== 'master@cantinhodbv.com') {
+    } else if (currentUser?.clubId) {
       where.clubId = currentUser.clubId;
     }
 
@@ -386,6 +385,24 @@ export class UsersService {
           dataToUpdate.role = 'PATHFINDER';
         }
       }
+
+      // Logic to ensure only ONE OWNER per club
+      if (dataToUpdate.role === 'OWNER') {
+        const userToUpdate = await this.prisma.user.findUnique({ where: { id }, select: { clubId: true } });
+        const targetClubId = dataToUpdate.clubId !== undefined ? dataToUpdate.clubId : userToUpdate?.clubId;
+
+        if (targetClubId) {
+          await this.prisma.user.updateMany({
+            where: {
+              clubId: targetClubId,
+              role: 'OWNER',
+              id: { not: id }
+            },
+            data: { role: 'ADMIN' }
+          });
+          console.log(`[ACL] Other owners for club ${targetClubId} demoted to ADMIN.`);
+        }
+      }
     }
 
     if (password) {
@@ -441,12 +458,43 @@ export class UsersService {
     }
 
     try {
-      const result = await this.prisma.user.update({
+      const updatedUser = await this.prisma.user.update({
         where: { id },
         data: dataToUpdate,
       });
-      console.log('User Updated:', result);
-      return result;
+
+      // Firebase Sync: Support updating password if provided
+      if (password && updatedUser.email) {
+        try {
+          // Assuming firebaseAdmin is imported and initialized
+          const fbUser = await firebaseAdmin.auth().getUserByEmail(updatedUser.email);
+          if (fbUser) {
+            await firebaseAdmin.auth().updateUser(fbUser.uid, {
+              password: password
+            });
+            console.log(`[FirebaseSync] Password updated for ${updatedUser.email}`);
+          }
+        } catch (error: any) {
+          if (error.code === 'auth/user-not-found') {
+            console.warn(`[FirebaseSync] User ${updatedUser.email} not found in Firebase. Creating new Firebase user...`);
+            try {
+              await firebaseAdmin.auth().createUser({
+                email: updatedUser.email,
+                password: password,
+                displayName: updatedUser.name
+              });
+              console.log(`[FirebaseSync] User ${updatedUser.email} CREATED successfully in Firebase.`);
+            } catch (createError) {
+              console.error(`[FirebaseSync] Failed to create user ${updatedUser.email} in Firebase:`, createError);
+            }
+          } else {
+            console.error(`[FirebaseSync] Error syncing password for ${updatedUser.email}:`, error);
+          }
+        }
+      }
+
+      console.log('User Updated:', updatedUser);
+      return updatedUser;
     } catch (error) {
       console.error('Error updating user:', error);
       throw error;

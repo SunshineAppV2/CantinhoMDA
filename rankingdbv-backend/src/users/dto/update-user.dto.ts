@@ -27,6 +27,10 @@ export class UpdateUserDto {
     @IsOptional()
     isActive?: boolean;
 
+    @IsBoolean()
+    @IsOptional()
+    mustChangePassword?: boolean;
+
     @IsString()
     @IsOptional()
     dbvClass?: string;

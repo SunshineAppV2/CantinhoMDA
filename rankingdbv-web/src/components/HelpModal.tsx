@@ -4,8 +4,7 @@ import { api } from '../lib/axios';
 import { useAuth } from '../contexts/AuthContext';
 import {
     ChevronDown, ChevronUp, Eye, EyeOff, Search,
-    ShieldCheck, Users, Trophy, BookOpen,
-    DollarSign, ShoppingBag, Settings, HelpCircle,
+    ShieldCheck, DollarSign, ShoppingBag, Settings, HelpCircle,
     UserCircle, Building2, BarChart
 } from 'lucide-react';
 import { Modal } from './Modal';

@@ -116,7 +116,7 @@ export function MembersTable({ members, units, onInspect, onEdit, onDelete }: Me
                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                     <div className="flex justify-end gap-2">
                                         <button onClick={() => onInspect(member)} className="text-slate-400 hover:text-blue-600" title="Ver Detalhes"><Eye className="w-4 h-4" /></button>
-                                        {['OWNER', 'ADMIN'].includes(user?.role || '') && (
+                                        {(['OWNER', 'ADMIN'].includes(user?.role || '') || user?.email === 'master@cantinhodbv.com') && (
                                             <>
                                                 <button onClick={() => onEdit(member)} className="text-slate-400 hover:text-blue-600" title="Editar"><Edit className="w-4 h-4" /></button>
                                                 <button onClick={() => { if (window.confirm('Tem certeza que deseja excluir este membro?')) onDelete(member.id); }} className="text-slate-400 hover:text-red-600" title="Excluir"><Trash2 className="w-4 h-4" /></button>

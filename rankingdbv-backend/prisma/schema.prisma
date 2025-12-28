@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -8,25 +8,446 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- ENUMS ---
+model Club {
+  id                 String              @id @default(uuid())
+  name               String
+  slug               String?             @unique
+  logoUrl            String?
+  planTier           PlanTier            @default(TRIAL)
+  status             ClubStatus          @default(ACTIVE)
+  subscriptionId     String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  mission            String?
+  union              String?
+  settings           Json?
+  region             String?
+  gracePeriodDays    Int                 @default(5)
+  memberLimit        Int                 @default(30)
+  nextBillingDate    DateTime?
+  subscriptionStatus SubscriptionStatus  @default(TRIAL)
+  activities         Activity[]
+  events             Event[]
+  masterTransactions MasterTransaction[]
+  meetings           Meeting[]
+  minutes            Minute[]
+  products           Product[]
+  requirements       Requirement[]
+  transactions       Transaction[]
+  units              Unit[]
+  users              User[]
+
+  @@map("clubs")
+}
+
+model Minute {
+  id        String           @id @default(uuid())
+  title     String
+  type      String           @default("REGULAR")
+  content   String
+  date      DateTime         @default(now())
+  clubId    String
+  authorId  String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  attendees MinuteAttendee[]
+  author    User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  club      Club             @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@map("minutes")
+}
+
+model MinuteAttendee {
+  id       String    @id @default(uuid())
+  minuteId String
+  userId   String
+  status   String    @default("PENDING")
+  signedAt DateTime?
+  minute   Minute    @relation(fields: [minuteId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([minuteId, userId])
+  @@map("minute_attendees")
+}
+
+model Unit {
+  id      String @id @default(uuid())
+  name    String
+  clubId  String
+  club    Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  members User[]
+
+  @@map("units")
+}
+
+model User {
+  id                     String              @id @default(uuid())
+  email                  String              @unique
+  password               String
+  name                   String
+  photoUrl               String?
+  role                   Role                @default(PATHFINDER)
+  clubId                 String?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  points                 Int                 @default(0)
+  dbvClass               DBVClass?
+  unitId                 String?
+  parentId               String?
+  lastClassMilestone     Int                 @default(0)
+  address                String?
+  addressNumber          String?
+  birthDate              DateTime?
+  bloodType              String?
+  cep                    String?
+  city                   String?
+  complement             String?
+  courseName             String?
+  cpf                    String?
+  disabilities           String[]            @default([])
+  diseasesHistory        String[]            @default([])
+  educationLevel         String?
+  educationStatus        String?
+  emergencyName          String?
+  emergencyPhone         String?
+  emergencyRelation      String?
+  fatherEmail            String?
+  fatherName             String?
+  fatherPhone            String?
+  hasDiabetes            Boolean?            @default(false)
+  hasHeartProblem        Boolean?            @default(false)
+  hasPsychProblem        Boolean?            @default(false)
+  hasRenalProblem        Boolean?            @default(false)
+  healthNotes            String?
+  healthPlan             String?
+  healthProfessionalType String?
+  heartProblemDesc       String?
+  institution            String?
+  isBaptized             Boolean             @default(false)
+  isHealthProfessional   Boolean             @default(false)
+  issuingOrg             String?
+  knowledgeArea          String?
+  maritalStatus          String?
+  mobile                 String?
+  motherEmail            String?
+  motherName             String?
+  motherPhone            String?
+  neighborhood           String?
+  phone                  String?
+  recentFracture         String?
+  recentSurgery          String?
+  recentTrauma           String?
+  regularMedications     String?
+  rg                     String?
+  rhFactor               String?
+  sex                    String?
+  shirtSize              String?
+  specificAllergies      String?
+  state                  String?
+  susNumber              String?
+  isActive               Boolean             @default(true)
+  mustChangePassword     Boolean             @default(false)
+  schoolShift            String?
+  status                 UserStatus          @default(ACTIVE)
+  logs                   ActivityLog[]
+  attendances            Attendance[]
+  registrations          EventRegistration[]
+  minuteAttendance       MinuteAttendee[]
+  authoredMinutes        Minute[]
+  notifications          Notification[]
+  pointsHistory          PointHistory[]
+  purchases              Purchase[]
+  memberTransactions     Transaction[]       @relation("TransactionMember")
+  transactions           Transaction[]
+  requirements           UserRequirement[]
+  specialties            UserSpecialty[]
+  club                   Club?               @relation(fields: [clubId], references: [id])
+  parent                 User?               @relation("ParentChildren", fields: [parentId], references: [id])
+  children               User[]              @relation("ParentChildren")
+  unit                   Unit?               @relation(fields: [unitId], references: [id])
+
+  @@map("users")
+}
+
+model Activity {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  points      Int
+  clubId      String
+  createdAt   DateTime      @default(now())
+  type        String        @default("INDIVIDUAL")
+  club        Club          @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  logs        ActivityLog[]
+  events      Event[]
+  meetings    Meeting[]
+
+  @@map("activities")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  userId     String
+  activityId String
+  awardedAt  DateTime @default(now())
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
+
+model PointHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  amount    Int
+  reason    String
+  source    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("point_history")
+}
+
+model Meeting {
+  id          String       @id @default(uuid())
+  title       String
+  date        DateTime
+  type        String       @default("REGULAR")
+  points      Int          @default(10)
+  clubId      String
+  createdAt   DateTime     @default(now())
+  activityId  String?
+  details     String?
+  attendances Attendance[]
+  activity    Activity?    @relation(fields: [activityId], references: [id])
+  club        Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@map("meetings")
+}
+
+model Attendance {
+  id        String           @id @default(uuid())
+  status    AttendanceStatus @default(PRESENT)
+  userId    String
+  meetingId String
+  createdAt DateTime         @default(now())
+  meeting   Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, meetingId])
+  @@map("attendances")
+}
+
+model Specialty {
+  id           String          @id @default(uuid())
+  name         String
+  area         String
+  imageUrl     String?
+  requirements Requirement[]
+  users        UserSpecialty[]
+
+  @@map("specialties")
+}
+
+model UserSpecialty {
+  id          String              @id @default(uuid())
+  userId      String
+  specialtyId String
+  awardedAt   DateTime            @default(now())
+  status      UserSpecialtyStatus @default(IN_PROGRESS)
+  specialty   Specialty           @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, specialtyId])
+  @@map("user_specialties")
+}
+
+model Requirement {
+  id           String            @id @default(uuid())
+  code         String?
+  description  String
+  dbvClass     DBVClass?
+  specialtyId  String?
+  createdAt    DateTime          @default(now())
+  area         String?
+  type         RequirementType   @default(TEXT)
+  clubId       String?
+  questions    Question[]
+  club         Club?             @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  specialty    Specialty?        @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  userProgress UserRequirement[]
+
+  @@map("requirements")
+}
+
+model Question {
+  id            String      @id @default(uuid())
+  questionText  String
+  options       String[]
+  correctIndex  Int
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+model UserRequirement {
+  id            String            @id @default(uuid())
+  completedAt   DateTime?
+  userId        String
+  requirementId String
+  answerFileUrl String?
+  answerText    String?
+  status        RequirementStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  requirement   Requirement       @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, requirementId])
+  @@map("user_requirements")
+}
+
+model Transaction {
+  id            String            @id @default(uuid())
+  type          TransactionType
+  amount        Float
+  description   String
+  date          DateTime          @default(now())
+  category      String
+  clubId        String
+  payerId       String?
+  createdAt     DateTime          @default(now())
+  dueDate       DateTime?
+  paymentMethod String            @default("DINHEIRO")
+  points        Int               @default(0)
+  proofUrl      String?
+  recurrence    Boolean           @default(false)
+  status        TransactionStatus @default(COMPLETED)
+  memberId      String?
+  club          Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  member        User?             @relation("TransactionMember", fields: [memberId], references: [id])
+  payer         User?             @relation(fields: [payerId], references: [id])
+
+  @@map("transactions")
+}
+
+model Event {
+  id            String              @id @default(uuid())
+  title         String
+  cost          Float               @default(0)
+  description   String?
+  location      String?
+  clubId        String
+  createdAt     DateTime            @default(now())
+  endDate       DateTime
+  startDate     DateTime
+  activityId    String?
+  registrations EventRegistration[]
+  activity      Activity?           @relation(fields: [activityId], references: [id])
+  club          Club                @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@map("events")
+}
+
+model EventRegistration {
+  id           String   @id @default(uuid())
+  status       String   @default("PENDING")
+  userId       String
+  eventId      String
+  registeredAt DateTime @default(now())
+  attended     Boolean  @default(false)
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@map("event_registrations")
+}
+
+model Product {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  price       Int
+  stock       Int        @default(-1)
+  imageUrl    String?
+  category    String     @default("REAL")
+  clubId      String
+  createdAt   DateTime   @default(now())
+  club        Club       @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  purchases   Purchase[]
+
+  @@map("products")
+}
+
+model Purchase {
+  id        String   @id @default(uuid())
+  cost      Int
+  status    String   @default("PENDING")
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("purchases")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  type      String   @default("INFO")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model FAQ {
+  id        String   @id @default(uuid())
+  question  String
+  answer    String
+  category  String   @default("GERAL")
+  isVisible Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("faqs")
+}
+
+model MasterTransaction {
+  id           String          @id @default(uuid())
+  type         TransactionType
+  amount       Float
+  description  String
+  category     String
+  date         DateTime        @default(now())
+  sourceClubId String?
+  createdAt    DateTime        @default(now())
+  sourceClub   Club?           @relation(fields: [sourceClubId], references: [id])
+
+  @@map("master_transactions")
+}
 
 enum Role {
-  MASTER
   OWNER
   ADMIN
   INSTRUCTOR
-  COUNSELOR
   PARENT
   PATHFINDER
+  COUNSELOR
   REGIONAL
+  MASTER
 }
 
 enum PlanTier {
-  FREE      // Versão Gratuita Limitada
-  TRIAL     // Período de Testes
-  PLAN_P    // Pequenos (até 30)
-  PLAN_M    // Médios (até 80)
-  PLAN_G    // Grandes (+80)
+  FREE
+  TRIAL
+  PLAN_P
+  PLAN_M
+  PLAN_G
 }
 
 enum SubscriptionStatus {
@@ -57,309 +478,12 @@ enum UserStatus {
   BLOCKED
 }
 
-// --- MODELS ---
-
-model Club {
-  id             String     @id @default(uuid())
-  name           String
-  slug           String?    @unique
-  logoUrl        String?
-  settings       Json?      // Custom permissions (ACL)
-  
-  // Hierarchy
-  region         String?
-  mission        String?
-  union          String?
-
-  // Subscription & Limits
-  planTier           PlanTier           @default(TRIAL)
-  memberLimit        Int                @default(30)
-  subscriptionStatus SubscriptionStatus @default(TRIAL)
-  nextBillingDate    DateTime?
-  gracePeriodDays    Int                @default(5)
-
-  // Removed duplicate planTier
-  status         ClubStatus @default(ACTIVE)
-  subscriptionId String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  
-  users          User[]
-  activities     Activity[]
-  units          Unit[]
-  meetings       Meeting[]
-  transactions   Transaction[]
-  products       Product[]
-  events         Event[]
-  requirements   Requirement[]
-  minutes        Minute[]
-  masterTransactions MasterTransaction[]
-
-  @@map("clubs")
-}
-
-model Minute {
-  id        String   @id @default(uuid())
-  title     String
-  type      String   @default("REGULAR") // REGULAR, DIRETORIA, COMISSAO
-  content   String   // @db.Text is implicit in string for Prisma unless specified otherwise, but Text is good for content
-  date      DateTime @default(now())
-
-  clubId    String
-  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
-
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
-  attendees MinuteAttendee[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("minutes")
-}
-
-model MinuteAttendee {
-  id        String    @id @default(uuid())
-  
-  minuteId  String
-  minute    Minute    @relation(fields: [minuteId], references: [id], onDelete: Cascade)
-  
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  status    String    @default("PENDING") // PENDING, SIGNED, REJECTED
-  signedAt  DateTime? // Data/Hora da assinatura
-  
-  @@unique([minuteId, userId])
-  @@map("minute_attendees")
-}
-
-model Unit {
-  id        String   @id @default(uuid())
-  name      String
-  
-  clubId    String
-  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  
-  members   User[]
-
-  @@map("units")
-}
-
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  photoUrl  String?
-  role      Role     @default(PATHFINDER)
-  isActive  Boolean  @default(true) // Controls visibility in Ranking
-  status    UserStatus @default(ACTIVE) // Approval Status
-  points    Int      @default(0)
-  lastClassMilestone Int @default(0)
-  
-  dbvClass  DBVClass?
-  
-  clubId    String?
-  club      Club?    @relation(fields: [clubId], references: [id], onDelete: SetNull)
-  
-  unitId    String?
-  unit      Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  
-  logs      ActivityLog[]
-  attendances Attendance[]
-  specialties UserSpecialty[]
-
-  // Parent-Child Relation
-  parentId  String?
-  parent    User?    @relation("ParentChildren", fields: [parentId], references: [id])
-  children  User[]   @relation("ParentChildren")
-
-  transactions Transaction[]
-  memberTransactions Transaction[] @relation("TransactionMember")
-  registrations EventRegistration[]
-  purchases    Purchase[]
-  notifications Notification[]
-  requirements UserRequirement[]
-  pointsHistory PointHistory[]
-  authoredMinutes Minute[]
-  minuteAttendance MinuteAttendee[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Extended Profile Data
-  sex             String?
-  birthDate       DateTime?
-  maritalStatus   String?
-  phone           String?
-  mobile          String?
-  isBaptized      Boolean   @default(false)
-  rg              String?
-  issuingOrg      String?
-  cpf             String?
-  shirtSize       String?
-  
-  // Address
-  address         String?
-  addressNumber   String?
-  neighborhood    String?
-  cep             String?
-  city            String?
-  state           String?
-  complement      String?
-  
-  // Education
-  educationLevel  String?
-  educationStatus String?
-  knowledgeArea   String?
-  courseName      String?
-  institution     String?
-  schoolShift     String?
-
-  // Health Professional Info
-  isHealthProfessional Boolean @default(false)
-  healthProfessionalType String?
-
-  // Family Info
-  fatherName      String?
-  fatherEmail     String?
-  fatherPhone     String?
-  motherName      String?
-  motherEmail     String?
-  motherPhone     String?
-
-  // Emergency Contact
-  emergencyName   String?
-  emergencyPhone  String?
-  emergencyRelation String?
-
-  // --- MEDICAL RECORD (Ficha Médica) ---
-  susNumber            String?
-  healthPlan           String?
-  bloodType            String?
-  rhFactor             String?
-
-  // List of diseases/conditions checked (e.g. "Catapora", "Dengue", "Alergia a medicamento")
-  diseasesHistory      String[] @default([])
-
-  hasHeartProblem      Boolean? @default(false)
-  heartProblemDesc     String?
-  
-  hasDiabetes          Boolean? @default(false)
-  hasRenalProblem      Boolean? @default(false)
-  hasPsychProblem      Boolean? @default(false)
-  
-  regularMedications   String?
-  specificAllergies    String?
-  
-  recentTrauma         String?
-  recentFracture       String?
-  recentSurgery        String?
-  
-  disabilities         String[] @default([])
-  
-  healthNotes          String?
-
-  @@map("users")
-}
-
-model Activity {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  points      Int
-  type        String   @default("INDIVIDUAL") // INDIVIDUAL, UNIT
-  
-  clubId      String
-  club        Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  
-  logs        ActivityLog[]
-  meetings    Meeting[]
-  events      Event[]
-  
-  createdAt   DateTime @default(now())
-
-  @@map("activities")
-}
-
-model ActivityLog {
-  id         String   @id @default(uuid())
-  
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  activityId String
-  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  
-  awardedAt  DateTime @default(now())
-
-  @@map("activity_logs")
-}
-
-model PointHistory {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  amount    Int
-  reason    String
-  source    String   // ACTIVITY, PURCHASE, MANUAL, ATTENDANCE, REQUIREMENT
-  
-  createdAt DateTime @default(now())
-
-  @@map("point_history")
-}
-
-// --- ATTENDANCE ---
-
 enum AttendanceStatus {
   PRESENT
   ABSENT
   LATE
   JUSTIFIED
 }
-
-model Meeting {
-  id        String   @id @default(uuid())
-  title     String
-  date      DateTime
-  type      String   @default("REGULAR")
-  points    Int      @default(10)
-  
-  details   String?  // NEW: Descrição do que ocorreu ou ATA
-
-  clubId    String
-  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
-
-  activityId String?
-  activity   Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
-
-  attendances Attendance[]
-
-  createdAt DateTime @default(now())
-
-  @@map("meetings")
-}
-
-model Attendance {
-  id        String           @id @default(uuid())
-  status    AttendanceStatus @default(PRESENT)
-
-  userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  meetingId String
-  meeting   Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime         @default(now())
-
-  @@unique([userId, meetingId])
-  @@map("attendances")
-}
-
-// --- SPECIALTIES ---
 
 enum RequirementType {
   TEXT
@@ -380,94 +504,6 @@ enum UserSpecialtyStatus {
   COMPLETED
 }
 
-model Specialty {
-  id        String   @id @default(uuid())
-  name      String
-  area      String   // Ex: Natureza, Artes, etc.
-  imageUrl  String?
-
-  users     UserSpecialty[]
-  requirements Requirement[]
-
-  @@map("specialties")
-}
-
-model UserSpecialty {
-  id          String   @id @default(uuid())
-  status      UserSpecialtyStatus @default(IN_PROGRESS)
-  
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  specialtyId String
-  specialty   Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
-
-  awardedAt   DateTime @default(now())
-
-  @@unique([userId, specialtyId])
-  @@map("user_specialties")
-}
-
-// --- REQUIREMENTS ---
-
-model Requirement {
-  id          String   @id @default(uuid())
-  code        String?  // Ex: "I.1", "AM-01"
-  description String
-  area        String?  // Ex: "GERAL", "DESCOBERTA ESPIRITUAL"
-  type        RequirementType @default(TEXT)
-  
-  // Scopes
-  dbvClass    DBVClass?
-  
-  specialtyId String?
-  specialty   Specialty? @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
-
-  clubId      String?
-  club        Club?    @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  
-  userProgress UserRequirement[]
-  questions    Question[]
-
-  createdAt   DateTime @default(now())
-
-  @@map("requirements")
-}
-
-model Question {
-  id            String @id @default(uuid())
-  questionText  String
-  options       String[]
-  correctIndex  Int
-  
-  requirementId String
-  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
-
-  @@map("questions")
-}
-
-model UserRequirement {
-  id            String   @id @default(uuid())
-  status        RequirementStatus @default(PENDING)
-  answerText    String?
-  answerFileUrl String?
-  completedAt   DateTime?
-  
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  requirementId String
-  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@unique([userId, requirementId])
-  @@map("user_requirements")
-}
-
-// --- FINANCIALS ---
-
 enum TransactionType {
   INCOME
   EXPENSE
@@ -478,158 +514,4 @@ enum TransactionStatus {
   WAITING_APPROVAL
   COMPLETED
   CANCELED
-}
-
-model Transaction {
-  id          String   @id @default(uuid())
-  type        TransactionType
-  amount      Float
-  description String
-  date        DateTime @default(now())
-  category    String   // Mensalidade, Seguro, Venda, Material, Lanche
-  
-  status        TransactionStatus @default(COMPLETED)
-  dueDate       DateTime?
-  proofUrl      String?
-  recurrence    Boolean  @default(false) // Indica se é recorrente (ex: mensalidade)
-  points        Int      @default(0)     // Pontos ganhos ao quitar
-  paymentMethod String   @default("DINHEIRO")
-
-  clubId      String
-  club        Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
-
-  // Opcional: Relacionar com quem pagou (se for membro)
-  payerId     String?
-  payer       User?    @relation(fields: [payerId], references: [id], onDelete: SetNull)
-
-  // Quem recebe o benefício (pontos)
-  memberId    String?
-  member      User?    @relation("TransactionMember", fields: [memberId], references: [id], onDelete: SetNull)
-
-  createdAt   DateTime @default(now())
-
-  @@map("transactions")
-}
-
-// --- EVENTS ---
-
-model Event {
-  id          String   @id @default(uuid())
-  title       String
-  startDate   DateTime
-  endDate     DateTime
-  cost        Float    @default(0)
-  description String?
-  location    String?
-  
-  activityId  String?
-  activity    Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
-
-  clubId      String
-  club        Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
-
-  registrations EventRegistration[]
-
-  createdAt   DateTime @default(now())
-
-  @@map("events")
-}
-
-model EventRegistration {
-  id        String   @id @default(uuid())
-  status    String   @default("PENDING") // PENDING, PAID, CANCELED
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
-  attended  Boolean  @default(false)
-  registeredAt DateTime @default(now())
-
-  @@unique([userId, eventId])
-  @@map("event_registrations")
-}
-
-
-// --- STORE (GAMIFICATION) ---
-
-model Product {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  price       Int      // Price in Points
-  stock       Int      @default(-1) // -1 = Infinite
-  imageUrl    String?
-  category    String   @default("REAL") // REAL, VIRTUAL
-  
-  clubId      String
-  club        Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  
-  purchases   Purchase[]
-
-  createdAt   DateTime @default(now())
-
-  @@map("products")
-}
-
-model Purchase {
-  id        String   @id @default(uuid())
-  cost      Int      // Cost at time of purchase
-  status    String   @default("PENDING") // PENDING, DELIVERED, APPLIED
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  
-  createdAt DateTime @default(now())
-
-  @@map("purchases")
-}
-
-// --- NOTIFICATIONS ---
-
-model Notification {
-  id        String   @id @default(uuid())
-  title     String
-  message   String
-  type      String   @default("INFO") // INFO, SUCCESS, WARNING, ERROR
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notifications")
-}
-
-model FAQ {
-  id        String   @id @default(uuid())
-  question  String
-  answer    String
-  category  String   @default("GERAL") // FINANCEIRO, EVENTOS, RANKING, GERAL
-  isVisible Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  @@map("faqs")
-}
-
-model MasterTransaction {
-  id           String          @id @default(uuid())
-  type         TransactionType // INCOME or EXPENSE
-  amount       Float
-  description  String
-  category     String
-  date         DateTime        @default(now())
-  
-  // Source Identification
-  sourceClubId String?
-  sourceClub   Club?           @relation(fields: [sourceClubId], references: [id], onDelete: SetNull)
-
-  createdAt    DateTime        @default(now())
-
-  @@map("master_transactions")
 }

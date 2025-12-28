@@ -1,10 +1,12 @@
-﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+﻿
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthLayout } from './layouts/AuthLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { ChangePassword } from './pages/ChangePassword';
 import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/members';
 import { Ranking } from './pages/Ranking';
@@ -51,6 +53,7 @@ function App() {
             </Route>
 
             <Route element={<ProtectedRoute />}>
+              <Route path="/change-password" element={<ChangePassword />} />
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="members" element={<Members />} />

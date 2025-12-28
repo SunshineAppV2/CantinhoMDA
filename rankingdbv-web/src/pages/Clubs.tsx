@@ -113,12 +113,12 @@ export function Clubs() {
         }
     };
 
-    if (isLoading) return <div className="p-10 text-center">Carregando Clubes...</div>;
+    if (isLoading) return <div className="p-10 text-center"><span>Carregando Clubes...</span></div>;
 
     const isSaving = createClubMutation.isPending || updateClubMutation.isPending;
 
     return (
-        <div>
+        <div translate="no">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-slate-800">Clubes Parceiros</h1>
                 <button

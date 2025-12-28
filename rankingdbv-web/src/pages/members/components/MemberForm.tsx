@@ -96,6 +96,18 @@ export function MemberForm({ isOpen, onClose, onSubmit, initialData, units, club
                                     required
                                     minLength={6}
                                 />
+                                <div className="mt-2 flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="mustChangeInit"
+                                        checked={formData.mustChangePassword}
+                                        onChange={e => setFormData({ ...formData, mustChangePassword: e.target.checked })}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="mustChangeInit" className="text-xs text-slate-600 font-medium cursor-pointer">
+                                        Obrigar troca de senha no próximo login
+                                    </label>
+                                </div>
                             </div>
                         )}
                         {initialData && (
@@ -109,6 +121,18 @@ export function MemberForm({ isOpen, onClose, onSubmit, initialData, units, club
                                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
                                     minLength={6}
                                 />
+                                <div className="mt-2 flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="mustChangeNew"
+                                        checked={formData.mustChangePassword}
+                                        onChange={e => setFormData({ ...formData, mustChangePassword: e.target.checked })}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="mustChangeNew" className="text-xs text-slate-600 font-medium cursor-pointer">
+                                        Obrigar troca de senha no próximo login
+                                    </label>
+                                </div>
                             </div>
                         )}
                         <div>
@@ -125,9 +149,18 @@ export function MemberForm({ isOpen, onClose, onSubmit, initialData, units, club
                                 }}
                                 className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                             >
-                                {Object.entries(ROLE_TRANSLATIONS).map(([key, label]) => (
-                                    <option key={key} value={key}>{label}</option>
-                                ))}
+                                {Object.entries(ROLE_TRANSLATIONS).map(([key, label]) => {
+                                    // Special label for Master users to distinguish roles
+                                    let displayLabel = label;
+                                    if (user?.email === 'master@cantinhodbv.com') {
+                                        if (key === 'OWNER') displayLabel = 'DIRETOR (Acesso Master ao Clube)';
+                                        if (key === 'DIRECTOR') displayLabel = 'DIRETOR (Cargo Administrativo)';
+                                    } else {
+                                        // Hide industrial roles for non-master if needed, but for now just show
+                                        if (key === 'DIRECTOR' && formData.role !== 'DIRECTOR') return null; // Deduplicate
+                                    }
+                                    return <option key={key} value={key}>{displayLabel}</option>;
+                                })}
                             </select>
                         </div>
 

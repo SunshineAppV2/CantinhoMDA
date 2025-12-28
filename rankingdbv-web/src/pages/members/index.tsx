@@ -2,9 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-// import { api } from '../../lib/axios'; // Api no longer used for members main operations
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { api } from '../../lib/axios';
 import { Share2, Plus, ListChecks, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
@@ -67,23 +65,21 @@ function MembersContent() {
 
     // Queries
     const { data: members = [], isLoading, error } = useQuery<Member[]>({
-        queryKey: ['members', user?.clubId],
+        queryKey: ['members', user?.clubId, user?.email],
         queryFn: async () => {
-            if (!user?.clubId) return [];
-            const q = query(collection(db, 'users'), where('clubId', '==', user.clubId));
-            const snapshot = await getDocs(q);
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Member));
+            const url = user?.email === 'master@cantinhodbv.com' ? '/users' : `/users?clubId=${user?.clubId}`;
+            const res = await api.get(url);
+            return res.data;
         },
-        enabled: !!user?.clubId
+        enabled: !!user?.id
     });
 
     const { data: units = [] } = useQuery<Unit[]>({
         queryKey: ['units', user?.clubId],
         queryFn: async () => {
             if (!user?.clubId) return [];
-            const q = query(collection(db, 'units'), where('clubId', '==', user.clubId));
-            const snapshot = await getDocs(q);
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Unit));
+            const res = await api.get(`/units?clubId=${user?.clubId}`);
+            return res.data;
         },
         enabled: !!user?.clubId
     });
@@ -91,8 +87,8 @@ function MembersContent() {
     const { data: clubs = [] } = useQuery({
         queryKey: ['clubs-list'],
         queryFn: async () => {
-            const snapshot = await getDocs(collection(db, 'clubs'));
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const res = await api.get('/clubs');
+            return res.data;
         },
         enabled: user?.email === 'master@cantinhodbv.com',
         staleTime: 1000 * 60 * 5 // 5 minutes
@@ -101,12 +97,10 @@ function MembersContent() {
     const { data: requirements = [] } = useQuery<any[]>({
         queryKey: ['requirements', classFilter],
         queryFn: async () => {
-            // Note: Complex filtering might need composite indexes or client-side filtering
-            // For now fetching all requirements (optimize later)
-            const snapshot = await getDocs(collection(db, 'requirements'));
-            let reqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const res = await api.get('/requirements');
+            let reqs = res.data;
             if (classFilter) {
-                reqs = reqs.filter((r: any) => r.class === classFilter);
+                reqs = reqs.filter((r: any) => r.dbvClass === classFilter);
             }
             return reqs;
         },
@@ -117,11 +111,8 @@ function MembersContent() {
         queryKey: ['club-status', user?.clubId],
         queryFn: async () => {
             if (!user?.clubId) return null;
-            // Mocking status query for now or fetch from club doc
-            // const clubDoc = await getDoc(doc(db, 'clubs', user.clubId));
-            // return clubDoc.data();
-            // Keeping it simple since we don't have detailed subscription logic in Firestore yet
-            return { activeMembers: members.length, memberLimit: 100 };
+            const res = await api.get('/clubs/status'); // Using the correct endpoint
+            return res.data;
         },
         enabled: !!user?.clubId
     });
@@ -129,12 +120,9 @@ function MembersContent() {
     // Mutations
     const createMutation = useMutation({
         mutationFn: async (data: any) => {
-            // Create member in Firestore directly (No Auth User created yet)
-            return await addDoc(collection(db, 'users'), {
+            return await api.post('/users', {
                 ...data,
-                clubId: user?.clubId,
-                createdAt: new Date().toISOString(),
-                role: data.role || 'PATHFINDER'
+                clubId: data.clubId || user?.clubId
             });
         },
         onSuccess: () => {
@@ -143,13 +131,12 @@ function MembersContent() {
             closeModal();
             toast.success('Membro adicionado com sucesso!');
         },
-        onError: (e: any) => toast.error('Erro ao criar membro: ' + e.message)
+        onError: (e: any) => toast.error('Erro ao criar membro: ' + (e.response?.data?.message || e.message))
     });
 
     const updateMutation = useMutation({
         mutationFn: async ({ id, updates }: any) => {
-            const docRef = doc(db, 'users', id);
-            await updateDoc(docRef, updates);
+            await api.patch(`/users/${id}`, updates);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['members'] });
@@ -158,37 +145,34 @@ function MembersContent() {
             closeModal();
             toast.success('Membro atualizado com sucesso');
         },
-        onError: (e: any) => toast.error('Erro ao atualizar membro: ' + e.message)
+        onError: (e: any) => toast.error('Erro ao atualizar membro: ' + (e.response?.data?.message || e.message))
     });
 
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => {
-            await deleteDoc(doc(db, 'users', id));
+            await api.delete(`/users/${id}`);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['members'] });
             queryClient.invalidateQueries({ queryKey: ['ranking'] });
             toast.success('Membro excluído com sucesso');
         },
-        onError: (e: any) => toast.error('Erro ao excluir membro: ' + e.message)
+        onError: (e: any) => toast.error('Erro ao excluir membro: ' + (e.response?.data?.message || e.message))
     });
 
     const assignMutation = useMutation({
         mutationFn: async ({ rid, uids }: any) => {
-            // Bulk create submissions/requirements for users
             const promises = uids.map((uid: string) => {
-                return addDoc(collection(db, 'submissions'), {
+                return api.post('/activities/award/direct', {
                     requirementId: rid,
                     userId: uid,
-                    status: 'PENDING',
-                    assignedAt: new Date().toISOString(),
-                    clubId: user?.clubId
+                    status: 'APPROVED'
                 });
             });
             await Promise.all(promises);
         },
-        onSuccess: () => { alert('Atribuído!'); setIsAssignModalOpen(false); setSelectedMemberIds([]); setSelectedRequirementId(''); },
-        onError: (e: any) => alert('Erro ao atribuir: ' + e.message)
+        onSuccess: () => { toast.success('Atribuído com sucesso!'); setIsAssignModalOpen(false); setSelectedMemberIds([]); setSelectedRequirementId(''); },
+        onError: (e: any) => toast.error('Erro ao atribuir: ' + (e.response?.data?.message || e.message))
     });
 
     // Handlers
@@ -256,27 +240,27 @@ function MembersContent() {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-slate-800">{user?.role === 'COUNSELOR' ? 'Minha Unidade' : 'Membros'}</h1>
                 <div className="flex gap-2">
-                    {['COUNSELOR', 'OWNER', 'ADMIN', 'INSTRUCTOR'].includes(user?.role || '') && (
+                    {(['COUNSELOR', 'OWNER', 'ADMIN', 'INSTRUCTOR'].includes(user?.role || '') || user?.email === 'master@cantinhodbv.com') && (
                         <button onClick={() => { setIsAssignModalOpen(true); setSelectedMemberIds(members.map(m => m.id)); }} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
                             <ListChecks className="w-5 h-5" /> Enviar Requisito
                         </button>
                     )}
-                    {['OWNER', 'ADMIN'].includes(user?.role || '') && (
+                    {(['OWNER', 'ADMIN'].includes(user?.role || '') || user?.email === 'master@cantinhodbv.com') && (
                         <>
                             <button onClick={handleCopyInvite} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
                                 <Share2 className="w-5 h-5" /> Convite
                             </button>
                             <button
                                 onClick={() => {
-                                    if (isLimitReached) {
+                                    if (isLimitReached && user?.email !== 'master@cantinhodbv.com') {
                                         toast.error('Limite de usuários atingido. Faça upgrade do plano.');
                                         return;
                                     }
                                     setEditingMember(null);
                                     setIsModalOpen(true);
                                 }}
-                                disabled={!!isLimitReached}
-                                className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 text-white ${isLimitReached ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                disabled={!!isLimitReached && user?.email !== 'master@cantinhodbv.com'}
+                                className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 text-white ${(isLimitReached && user?.email !== 'master@cantinhodbv.com') ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                             >
                                 <Plus className="w-5 h-5" /> Adicionar Membro
                             </button>

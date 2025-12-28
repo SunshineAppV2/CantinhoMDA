@@ -6,6 +6,7 @@ export interface Member {
     password?: string;
     role: string;
     isActive: boolean;
+    mustChangePassword?: boolean;
     clubId: string | null;
     unitId?: string | null;
     club?: { name: string };
@@ -87,6 +88,7 @@ export const INITIAL_FORM_DATA = {
     password: '',
     role: 'PATHFINDER',
     isActive: true,
+    mustChangePassword: false,
     clubId: '',
     unitId: '',
     dbvClass: '',

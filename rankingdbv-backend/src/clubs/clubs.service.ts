@@ -186,13 +186,16 @@ export class ClubsService {
         });
     }
 
-    async update(id: string, data: { name?: string; logoUrl?: string; settings?: any }) {
+    async update(id: string, data: { name?: string; logoUrl?: string; settings?: any; union?: string; mission?: string; region?: string }) {
         return this.prisma.club.update({
             where: { id },
             data: {
                 ...(data.name && { name: data.name }),
                 ...(data.logoUrl && { logoUrl: data.logoUrl }),
                 ...(data.settings && { settings: data.settings }),
+                ...(data.union && { union: data.union }),
+                ...(data.mission && { mission: data.mission }),
+                ...(data.region && { region: data.region }),
             }
         });
     }

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { api } from '../lib/axios';
 import { useAuth } from '../contexts/AuthContext';
-import { ChevronRight, ChevronDown, Building2, MapPin, Globe, Pencil, Trash2, Plus, Settings, AlertTriangle, Search, LayoutGrid, List, DollarSign, Send } from 'lucide-react';
+import { ChevronRight, ChevronDown, Building2, MapPin, Globe, Pencil, Trash2, Plus, Settings, AlertTriangle, Search, LayoutGrid, List, DollarSign, Send, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 import { ClubSubscriptionModal } from '../components/ClubSubscriptionModal';
+import { EditClubModal } from '../components/EditClubModal';
 import { useQuery } from '@tanstack/react-query';
 import { differenceInDays, format } from 'date-fns';
 
@@ -39,6 +40,7 @@ export function Hierarchy() {
 
     // State for Modals
     const [editingSubscription, setEditingSubscription] = useState<any | null>(null);
+    const [editingClubData, setEditingClubData] = useState<any | null>(null);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [newClub, setNewClub] = useState({ name: '', union: '', mission: '', region: '' });
     const [createLoading, setCreateLoading] = useState(false);
@@ -126,12 +128,24 @@ export function Hierarchy() {
     };
 
     const handleDeleteNode = async (level: string, name: string) => {
-        if (!confirm('Tem certeza?')) return;
+        if (!confirm('Tem certeza? Isso oculpará os clubes deste nível no filtro de árvore, mas não deletará os clubes.')) return;
         try {
             await api.delete('/clubs/hierarchy', { params: { level, name } });
             toast.success('Removido!');
             refetchTree();
         } catch (e) { toast.error('Erro ao remover.'); }
+    };
+
+    const handleDeleteClub = async (id: string, name: string) => {
+        if (!confirm(`TEM CERTEZA? Isso deletará PERMANENTEMENTE o clube "${name}" e TODOS os seus membros, atividades e dados financeira. Esta ação não pode ser desfeita.`)) return;
+        try {
+            await api.delete(`/clubs/${id}`);
+            toast.success('Clube removido definitivamente!');
+            refetchTree();
+            refetchClubs();
+        } catch (e: any) {
+            toast.error('Erro ao remover clube. Verifique se existem membros vinculados que impedem a exclusão.');
+        }
     };
 
 
@@ -304,7 +318,28 @@ export function Hierarchy() {
                                                             onClick={() => setEditingSubscription(club)}
                                                             className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 hover:border-blue-400 bg-blue-50 px-3 py-1.5 rounded transition-all"
                                                         >
-                                                            Gerenciar
+                                                            Assinatura
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setEditingClubData(club)}
+                                                            className="p-1.5 text-slate-400 hover:text-amber-600 border border-transparent hover:border-amber-100 rounded"
+                                                            title="Trocar Diretor"
+                                                        >
+                                                            <UserCog className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setEditingClubData(club)}
+                                                            className="p-1.5 text-slate-400 hover:text-blue-600 border border-transparent hover:border-blue-100 rounded"
+                                                            title="Editar Clube"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteClub(club.id, club.name)}
+                                                            className="p-1.5 text-slate-400 hover:text-red-600 border border-transparent hover:border-red-100 rounded"
+                                                            title="Excluir Clube"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -374,7 +409,12 @@ export function Hierarchy() {
                                                                                 <Building2 className="w-4 h-4 text-slate-400" />
                                                                                 <span className="text-sm text-slate-700">{club.name}</span>
                                                                             </div>
-                                                                            <button onClick={() => setEditingSubscription(club as any)} className="p-1 text-slate-400 hover:text-blue-600 transition-colors" title="Gerenciar Assinatura"><Settings className="w-4 h-4" /></button>
+                                                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                <button onClick={() => setEditingSubscription(club as any)} className="p-1 text-slate-400 hover:text-blue-600 transition-colors" title="Assinatura"><Settings className="w-4 h-4" /></button>
+                                                                                <button onClick={() => setEditingClubData(club as any)} className="p-1 text-slate-400 hover:text-amber-600 transition-colors" title="Trocar Diretor"><UserCog className="w-4 h-4" /></button>
+                                                                                <button onClick={() => setEditingClubData(club as any)} className="p-1 text-slate-400 hover:text-blue-600 transition-colors" title="Editar Clube"><Pencil className="w-4 h-4" /></button>
+                                                                                <button onClick={() => handleDeleteClub(club.id, club.name)} className="p-1 text-slate-400 hover:text-red-600 transition-colors" title="Excluir Clube"><Trash2 className="w-4 h-4" /></button>
+                                                                            </div>
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -433,6 +473,18 @@ export function Hierarchy() {
                         setEditingSubscription(null);
                         refetchClubs();
                         toast.success('Assinatura atualizada.');
+                    }}
+                />
+            )}
+
+            {editingClubData && (
+                <EditClubModal
+                    club={editingClubData}
+                    onClose={() => setEditingClubData(null)}
+                    onSave={() => {
+                        setEditingClubData(null);
+                        refetchClubs();
+                        refetchTree();
                     }}
                 />
             )}

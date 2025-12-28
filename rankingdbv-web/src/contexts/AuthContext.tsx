@@ -22,6 +22,7 @@ interface User {
     unitId?: string;
     specialties?: any[];
     points?: number;
+    mustChangePassword?: boolean;
 }
 
 interface AuthContextType {
@@ -30,6 +31,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     isAuthenticated: boolean;
+    setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,7 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     name: firebaseUser.displayName || 'Usuário', // Or fetch from /users/me
                     role: decoded.role,
                     clubId: decoded.clubId,
-                    unitId: decoded.unitId
+                    unitId: decoded.unitId,
+                    mustChangePassword: decoded.mustChangePassword
                 });
             } catch (e) {
                 console.error("Invalid token:", e);
@@ -153,8 +156,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     .then(() => console.log('[Login] 4. Firestore Sync Success (Background)'))
                     .catch(e => console.warn('[Login] 4. Firestore Sync Failed (Non-critical):', e));
 
-
-
                 console.log('[Login] 5. Setting User State...');
                 setUser({
                     id: backendUser.id,
@@ -164,13 +165,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     role: backendUser.role,
                     clubId: backendUser.clubId,
                     unitId: backendUser.unitId,
+                    mustChangePassword: backendUser.mustChangePassword
                 });
                 console.log('[Login] 6. Login Complete');
             }
-        } catch (error) {
-            console.error("Backend login failed. Proceeding with limited access/fallback?", error);
+        } catch (error: any) {
+            console.error("Backend login failed.", error);
+
+            // Check if user exists in Firebase but NOT in Backend (Limbo state)
+            const isUserNotFound = error.response?.status === 401 || error.response?.status === 404;
+
+            if (isUserNotFound && auth.currentUser) {
+                // User is in Firebase but not PostgreSQL
+                // We DON'T sign out yet, we give them a chance to "Complete" registration
+                throw new Error('CONTA_INCOMPLETA');
+            }
+
             await signOut(auth);
-            throw new Error('Falha na autenticação com o servidor. Verifique se o usuário existe no sistema.');
+            throw new Error(error.response?.data?.message || 'Falha na autenticação com o servidor. Verifique seu login.');
         }
     };
 
@@ -186,7 +198,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             loading,
             login,
             logout,
-            isAuthenticated: !!user
+            isAuthenticated: !!user,
+            setUser
         }}>
             {children}
         </AuthContext.Provider>

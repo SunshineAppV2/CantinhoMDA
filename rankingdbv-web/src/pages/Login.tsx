@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, Settings, Server } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
+import { auth } from '../lib/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { toast } from 'sonner';
 
 export function Login() {
@@ -14,6 +16,11 @@ export function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
+
+  // Forgot Password State
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   // Server Config State
   const [showSettings, setShowSettings] = useState(false);
@@ -29,6 +36,27 @@ export function Login() {
     document.body.style.overflow = 'unset';
   }, []);
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) return toast.error('Digite seu email.');
+
+    setForgotLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, forgotEmail);
+      toast.success('Email de recuperação enviado!', {
+        description: 'Verifique sua caixa de entrada (e o spam).'
+      });
+      setShowForgotModal(false);
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao enviar email.', {
+        description: err.message
+      });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -41,6 +69,20 @@ export function Login() {
 
     } catch (err: any) {
       console.error(err);
+
+      if (err.message === 'CONTA_INCOMPLETA') {
+        const msg = 'Sua conta existe no Google, mas o cadastro do Clube não foi concluído.';
+        setError(msg);
+        toast.error(msg, {
+          description: 'Redirecionando para completar seu cadastro...',
+          duration: 5000
+        });
+        setTimeout(() => {
+          navigate(`/register?email=${encodeURIComponent(email)}&resume=true`);
+        }, 2000);
+        return;
+      }
+
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         toast.error('Email ou senha incorretos.');
         setError('Email ou senha incorretos.');
@@ -48,8 +90,8 @@ export function Login() {
         toast.error('Muitas tentativas falhas. Tente novamente mais tarde.');
         setError('Muitas tentativas. Aguarde.');
       } else {
-        toast.error('Erro ao realizar login.');
-        setError(`Erro: ${err.message}`);
+        toast.error(err.message || 'Erro ao realizar login.');
+        setError(`${err.message}`);
       }
     } finally {
       setLoading(false);
@@ -58,7 +100,7 @@ export function Login() {
 
   return (
     <>
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden relative z-[100]">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden relative z-[100]" translate="no">
         <div className="bg-blue-600 p-8 text-center relative">
           <div className="mx-auto bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
             <Lock className="text-white w-8 h-8" />
@@ -107,9 +149,18 @@ export function Login() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                  placeholder="••••••••"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotEmail(email); // Pre-fill with current email if any
+                  setShowForgotModal(true);
+                }}
+                className="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline mt-2 block ml-auto"
+              >
+                Esqueci minha senha
+              </button>
             </div>
 
             <button
@@ -117,13 +168,13 @@ export function Login() {
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {loading ? 'Entrando...' : (<>Entrar no Sistema <ArrowRight className="w-5 h-5" /></>)}
+              {loading ? <span>Entrando...</span> : (<><span>Entrar no Sistema</span> <ArrowRight className="w-5 h-5" /></>)}
             </button>
           </form>
 
           {/* New Register Link */}
           <div className="mt-6 text-center text-sm text-slate-600">
-            Ainda não tem conta?{' '}
+            <span>Ainda não tem conta?</span>{' '}
             <a href="/register" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
               Criar conta
             </a>
@@ -202,6 +253,36 @@ export function Login() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Forgot Password Modal */}
+      <Modal isOpen={showForgotModal} onClose={() => setShowForgotModal(false)} title="Recuperar Senha">
+        <form onSubmit={handleForgotPassword} className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Digite seu email abaixo. Enviaremos um link para você redefinir sua senha com segurança.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Seu Email</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                type="email"
+                required
+                value={forgotEmail}
+                onChange={e => setForgotEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="seu@email.com"
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={forgotLoading}
+            className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {forgotLoading ? 'Enviando...' : 'Enviar Link de Recuperação'}
+          </button>
+        </form>
       </Modal>
     </>
   );

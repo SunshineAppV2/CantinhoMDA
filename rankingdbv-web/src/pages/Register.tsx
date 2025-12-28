@@ -17,11 +17,23 @@ interface Unit {
     name: string;
 }
 
-// Static options to replace API call
-const HIERARCHY_OPTIONS = {
-    unions: ['União Central Brasileira', 'União Sul Brasileira', 'União Nordeste', 'Outra'],
-    missions: ['Associação Paulistana', 'Associação Paulista Sul', 'Associação Paulista Leste', 'Outra'],
-    regions: ['Região 1', 'Região 2', 'Região 3', 'Região 4', 'Outra']
+// Comprehensive DSA Hierarchy Data
+const HIERARCHY_DATA: Record<string, string[]> = {
+    'União Central Brasileira (UCB)': ['Paulista Central', 'Paulista Do Vale', 'Paulista Leste', 'Paulista Oeste', 'Paulista Sudeste', 'Paulista Sudoeste', 'Paulista Sul', 'Paulistana'],
+    'União Centro Oeste Brasileira (UCOB)': ['Brasil Central', 'Leste Mato-Grossense', 'Oeste Mato-Grossense', 'Planalto Central', 'Sul Mato-Grossense', 'Tocantins'],
+    'União Leste Brasileira (ULB)': ['Bahia', 'Bahia Central', 'Bahia Norte', 'Bahia Sul', 'Bahia Extremo Sul', 'Bahia Sudoeste', 'Sergipe'],
+    'União Nordeste Brasileira (UNEB)': ['Cearense', 'Pernambucana', 'Pernambucana Central', 'Alagoas', 'Piauiense', 'Rio Grande do Norte-Paraíba'],
+    'União Noroeste Brasileira (UNOB)': ['Amazonas Roraima', 'Central Amazonas', 'Norte de Rondônia e Acre', 'Sul de Rondônia', 'Leste Amazonas'],
+    'União Norte Brasileira (UNB)': ['Maranhense', 'Norte Do Pará', 'Sul Do Pará', 'Sul Maranhense', 'Nordeste Maranhense', 'Oeste Do Pará', 'Pará Amapá'],
+    'União Sudeste Brasileira (USEB)': ['Espírito Santense', 'Mineira Central', 'Mineira Leste', 'Mineira Sul', 'Rio de Janeiro', 'Rio Fluminense', 'Rio Sul', 'Sul Espírito Santense', 'Mineira Norte', 'Mineira Oeste'],
+    'União Sul Brasileira (USB)': ['Central do Rio Grande do Sul', 'Central Paranaense', 'Norte Catarinense', 'Norte do Rio Grande do Sul', 'Norte Paranaense', 'Oeste Paranaense', 'Sul Catarinense', 'Sul do Rio Grande do Sul', 'Sul Paranaense'],
+    'União Argentina (UA)': ['Argentina Central', 'Argentina del Norte', 'Argentina del Sur', 'Bonaerense', 'Argentina del Centro Oeste', 'Argentina del Noroeste', 'Bonaerense del Norte'],
+    'União Boliviana (UB)': ['Boliviana Central', 'Boliviana Occidental Norte', 'Boliviana Occidental Sur', 'Oriente Boliviano'],
+    'União Chilena (UCH)': ['Centro Sur de Chile', 'Metropolitana de Chile', 'Norte de Chile', 'Sur Austral de Chile', 'Central de Chile', 'Chilena del Pacífico', 'Sur Metropolitana de Chile'],
+    'União Ecuatoriana (UE)': ['Ecuatoriana del Norte', 'Ecuatoriana del Sur'],
+    'União Paraguaya (UP)': ['Paraguaya'],
+    'União Peruana del Norte (UPN)': ['Nor Pacífico del Perú', 'Peruana Central Este', 'Centro-Oeste del Perú', 'Nor Oriental', 'Peruana del Norte'],
+    'União Peruana del Sur (UPS)': ['Peruana Central', 'Peruana del Sur', 'Central del Perú', 'Oriente Peruano', 'Peruana Central Sur', 'Lago Titicaca', 'Sur Oriental del Perú']
 };
 
 type RegistrationMode = 'JOIN' | 'CREATE';
@@ -52,8 +64,9 @@ export function Register() {
     const [mission, setMission] = useState('');
     const [union, setUnion] = useState('');
 
-    // Using static options
-    const hierarchyOptions = HIERARCHY_OPTIONS;
+    // Dynamic Options based on selected union
+    const availableUnions = Object.keys(HIERARCHY_DATA);
+    const availableMissions = HIERARCHY_DATA[union] || [];
 
     const [searchParams] = useSearchParams();
 
@@ -68,7 +81,18 @@ export function Register() {
                 });
                 setClubs(clubsList);
 
-                // Handle Invite Link
+                // Handle Redirect/Resume
+                const urlEmail = searchParams.get('email');
+                if (urlEmail) {
+                    setEmail(urlEmail);
+                }
+
+                const isResume = searchParams.get('resume');
+                if (isResume) {
+                    toast.info('Complete o nome do seu Clube para ativar sua conta.');
+                    setMode('CREATE');
+                }
+
                 const inviteClubId = searchParams.get('clubId');
                 if (inviteClubId) {
                     setMode('JOIN');
@@ -122,32 +146,64 @@ export function Register() {
                 if (!region || !mission || !union) throw new Error('Preencha os dados hierárquicos.');
             }
 
-            // 1. Create Authentication User
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
+            let user;
+            try {
+                // 1. Attempt to Create Authentication User
+                console.log('[Register] Step 1: Creating Firebase User...');
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                user = userCredential.user;
+                console.log('[Register] Step 1 Success: Firebase User Created');
+            } catch (authErr: any) {
+                // If user already exists, try to sign in to resume flow
+                if (authErr.code === 'auth/email-already-in-use') {
+                    console.log('[Register] Step 1 Note: Email exists, attempting sign-in as fallback...');
+                    try {
+                        const { signInWithEmailAndPassword } = await import('firebase/auth');
+                        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                        user = userCredential.user;
+                        console.log('[Register] Step 1 Success: Signed in existing user');
+                    } catch (signInErr) {
+                        console.error('[Register] Step 1 Error: Sign-in failed', signInErr);
+                        throw new Error('Este email já está cadastrado com outra senha. Tente fazer login ou use outro email.');
+                    }
+                } else {
+                    console.error('[Register] Step 1 Error: Create user failed', authErr);
+                    throw authErr;
+                }
+            }
+
+            if (!user) throw new Error('Falha na autenticação.');
 
             // Update Display Name
+            console.log('[Register] Step 2: Updating user profile name...');
             await updateProfile(user, { displayName: name });
 
             let finalClubId = clubId;
             let finalRole = role;
 
-            // 2. If Creating Club, create it in Firestore first
+            // 2. If Creating Club, create it in Firestore first (Legacy)
             if (mode === 'CREATE') {
-                const clubRef = await addDoc(collection(db, 'clubs'), {
+                console.log('[Register] Step 3: (Background) Creating Club in Firestore...');
+                addDoc(collection(db, 'clubs'), {
                     name: clubName,
                     region,
                     mission,
                     union,
                     ownerId: user.uid,
                     createdAt: new Date().toISOString()
+                }).then(clubRef => {
+                    console.log('[Register] Step 3 Success (BG): Club created in Firestore:', clubRef.id);
+                }).catch(fsErr => {
+                    console.warn('[Register] Step 3 Warning (BG): Failed to create legacy club record.', fsErr);
                 });
-                finalClubId = clubRef.id;
+
                 finalRole = 'OWNER';
+                // finalClubId will be empty here, but backend handles creation in step 5
             }
 
             // 3. Create User Profile in Firestore (Legacy/Stats)
-            await setDoc(doc(db, 'users', user.uid), {
+            console.log('[Register] Step 4: (Background) Syncing User Profile to Firestore...');
+            setDoc(doc(db, 'users', user.uid), {
                 uid: user.uid,
                 name,
                 email,
@@ -155,57 +211,60 @@ export function Register() {
                 clubId: finalClubId,
                 unitId: (mode === 'JOIN' && unitId) ? unitId : null,
                 createdAt: new Date().toISOString()
+            }, { merge: true }).then(() => {
+                console.log('[Register] Step 4 Success (BG): User sync complete');
+            }).catch(fsUserErr => {
+                console.warn('[Register] Step 4 Warning (BG): Failed to sync legacy user record.', fsUserErr);
             });
 
             // 4. Register in Backend (PostgreSQL) - CRITICAL FOR LOGIN
             try {
-                // Prepare DTO
+                console.log('[Register] Step 5: Registering in Backend (Postgres)...');
                 const registerPayload = {
                     email,
-                    password, // Backend needs password to create its own hash/user
+                    password,
                     name,
                     role: finalRole,
-                    clubId: (mode === 'JOIN') ? clubId : undefined, // If CREATE, backend creates club inside register
+                    clubId: (mode === 'JOIN') ? clubId : undefined,
                     unitId: (mode === 'JOIN' && unitId) ? unitId : undefined,
-
-                    // Fields for New Club (if CREATE)
                     clubName: (mode === 'CREATE') ? clubName : undefined,
                     region: (mode === 'CREATE') ? region : undefined,
                     mission: (mode === 'CREATE') ? mission : undefined,
                     union: (mode === 'CREATE') ? union : undefined,
                 };
 
-                const res = await import('../lib/axios').then(m => m.api.post('/auth/register', registerPayload));
+                const { api } = await import('../lib/axios');
+                const res = await api.post('/auth/register', registerPayload);
 
                 if (res.data && res.data.access_token) {
+                    console.log('[Register] Step 5 Success: Backend token received');
                     localStorage.setItem('token', res.data.access_token);
                 }
 
-                if (mode === 'CREATE') {
-                    toast.success(`Clube "${clubName}" criado com sucesso!`);
-                } else {
-                    toast.success('Cadastro realizado!');
-                }
-
+                toast.success(mode === 'CREATE' ? `Clube "${clubName}" criado!` : 'Cadastro realizado!');
+                console.log('[Register] Registration Fully Complete!');
                 navigate('/dashboard');
 
-            } catch (backendErr) {
-                console.error("Backend registration failed:", backendErr);
-                toast.error("Erro ao sincronizar com o servidor. Contate o suporte.");
-                // Optional: Delete firebase user to roll back? 
-                // For now, let's just warn.
+            } catch (backendErr: any) {
+                console.error("[Register] Step 5 Error: Backend registration failed:", backendErr);
+                // If it's a conflict in backend too, it might mean user is fully registered
+                if (backendErr.response?.status === 409 || backendErr.response?.data?.message?.includes('already exists')) {
+                    console.log('[Register] Step 5 Note: Backend record already exists, redirecting to dashboard...');
+                    toast.success('Sua conta já estava ativa!');
+                    navigate('/dashboard');
+                } else {
+                    toast.error("Erro ao sincronizar com o servidor.");
+                    throw backendErr;
+                }
             }
 
         } catch (err: any) {
             console.error(err);
-            if (err.code === 'auth/email-already-in-use') {
-                setError('Email já cadastrado.');
-                toast.error('Email já cadastrado.');
-            } else if (err.code === 'auth/weak-password') {
+            if (err.code === 'auth/weak-password') {
                 setError('A senha deve ter pelo menos 6 caracteres.');
             } else {
-                setError(`Erro: ${err.message} `);
-                toast.error('Erro ao criar conta.');
+                setError(err.message || 'Erro ao criar conta.');
+                toast.error(err.message || 'Erro ao criar conta.');
             }
         } finally {
             setLoading(false);
@@ -213,7 +272,7 @@ export function Register() {
     };
 
     return (
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden my-8">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden my-8" translate="no">
             <div className="bg-green-600 p-8 text-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="relative z-10">
@@ -369,12 +428,15 @@ export function Register() {
                                             required
                                             list="unions-list"
                                             value={union}
-                                            onChange={e => setUnion(e.target.value)}
+                                            onChange={e => {
+                                                setUnion(e.target.value);
+                                                setMission(''); // Reset mission when union changes
+                                            }}
                                             className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                                            placeholder="Ex: União Central Brasileira"
+                                            placeholder="Ex: União Central Brasileira (UCB)"
                                         />
                                         <datalist id="unions-list">
-                                            {hierarchyOptions.unions.map((opt, i) => <option key={i} value={opt} />)}
+                                            {availableUnions.map((opt, i) => <option key={i} value={opt} />)}
                                         </datalist>
                                     </div>
                                 </div>
@@ -390,10 +452,10 @@ export function Register() {
                                             value={mission}
                                             onChange={e => setMission(e.target.value)}
                                             className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                                            placeholder="Ex: Associação Paulistana"
+                                            placeholder="Ex: Paulistana"
                                         />
                                         <datalist id="missions-list">
-                                            {hierarchyOptions.missions.map((opt, i) => <option key={i} value={opt} />)}
+                                            {availableMissions.map((opt, i) => <option key={i} value={opt} />)}
                                         </datalist>
                                     </div>
                                 </div>
@@ -409,10 +471,10 @@ export function Register() {
                                             value={region}
                                             onChange={e => setRegion(e.target.value)}
                                             className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                                            placeholder="Ex: Região 1"
+                                            placeholder="Ex: R1 ou 1ª Região"
                                         />
                                         <datalist id="regions-list">
-                                            {hierarchyOptions.regions.map((opt, i) => <option key={i} value={opt} />)}
+                                            {['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10'].map((opt, i) => <option key={i} value={opt} />)}
                                         </datalist>
                                     </div>
                                 </div>
@@ -440,9 +502,11 @@ export function Register() {
                         disabled={loading}
                         className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-6"
                     >
-                        {loading ? 'Processando...' : (
+                        {loading ? (
+                            <span>Processando...</span>
+                        ) : (
                             <>
-                                {mode === 'CREATE' ? 'Criar Clube e Conta' : 'Solicitar Entrada'}
+                                <span>{mode === 'CREATE' ? 'Criar Clube e Conta' : 'Solicitar Entrada'}</span>
                                 <ArrowRight className="w-5 h-5" />
                             </>
                         )}
