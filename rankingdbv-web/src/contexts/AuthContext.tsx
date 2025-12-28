@@ -142,23 +142,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 localStorage.setItem('token', access_token);
                 console.log('[Login] 3. Token stored');
 
-                // SYNC FIRESTORE: Ensure Firebase User matches Backend Permissions (Fixes Race Condition)
-                try {
-                    console.log('[Login] 4. Syncing Firestore Role...');
-                    const userRef = doc(db, 'users', auth.currentUser?.uid || backendUser.id);
-                    // Use static setDoc instead of dynamic import
-                    await setDoc(userRef, {
-                        role: backendUser.role,
-                        clubId: backendUser.clubId || null,
-                        unitId: backendUser.unitId || null,
-                        email: backendUser.email
-                    }, { merge: true });
-                    console.log('[Login] 4. Firestore Sync Success');
-                } catch (syncErr) {
-                    // AdBlockers often block Firestore. Log but allow proceeding.
-                    console.error("[Login] 4. Firestore Sync Error (Probable AdBlock/Extension):", syncErr);
-                    // Non-blocking
-                }
+                // SYNC FIRESTORE: Background task, non-blocking
+                const userRef = doc(db, 'users', auth.currentUser?.uid || backendUser.id);
+                setDoc(userRef, {
+                    role: backendUser.role,
+                    clubId: backendUser.clubId || null,
+                    unitId: backendUser.unitId || null,
+                    email: backendUser.email
+                }, { merge: true })
+                    .then(() => console.log('[Login] 4. Firestore Sync Success (Background)'))
+                    .catch(e => console.warn('[Login] 4. Firestore Sync Failed (Non-critical):', e));
+
+
 
                 console.log('[Login] 5. Setting User State...');
                 setUser({
