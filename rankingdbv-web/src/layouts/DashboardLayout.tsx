@@ -224,6 +224,20 @@ export function DashboardLayout() {
                                             <AlertTriangle className="w-4 h-4" />
                                             <span>Mensagens Sistema</span>
                                         </Link>
+                                        <Link
+                                            to="/dashboard/master-requirements"
+                                            className="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all text-sm"
+                                        >
+                                            <ListChecks className="w-4 h-4" />
+                                            <span>Gerenciar Requisitos</span>
+                                        </Link>
+                                        <Link
+                                            to="/dashboard/master-specialties"
+                                            className="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-all text-sm"
+                                        >
+                                            <Award className="w-4 h-4" />
+                                            <span>Gerenciar Especialidades</span>
+                                        </Link>
                                     </div>
                                 </div>
                             )}

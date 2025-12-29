@@ -74,7 +74,7 @@ export interface Unit {
 export const ROLE_TRANSLATIONS: Record<string, string> = {
     OWNER: 'DIRETOR(A) DO CLUBE',
     ADMIN: 'ADMINISTRADOR',
-    DIRECTOR: 'DIRETOR(A) DO CLUBE',
+    DIRECTOR: 'DIRETOR(A) ASSOCIADO(A)',
     SECRETARY: 'SECRETÁRIO(A)',
     COUNSELOR: 'CONSELHEIRO(A)',
     INSTRUCTOR: 'INSTRUTOR',

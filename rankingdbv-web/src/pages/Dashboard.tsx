@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Users, Trophy, Calendar, DollarSign } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { SimpleBarChart } from '../components/Charts';
 import { Skeleton } from '../components/Skeleton';
 import { Modal } from '../components/Modal';
 
@@ -51,16 +50,17 @@ function DirectorDashboard() {
     const navigate = useNavigate();
     const [showBirthdaysModal, setShowBirthdaysModal] = useState(false);
 
-    // 1. Stats Query from Firestore
+    // 1. Stats Query from Firestore (Optimized)
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ['dashboard-stats', user?.clubId],
         queryFn: async () => {
             if (!user?.clubId) return null;
             const clubId = user.clubId;
-            console.log('[Dashboard] Fetching stats for club:', clubId);
+            // console.log('[Dashboard] Fetching stats for club:', clubId); // Reduced logging
 
             try {
                 // 1. Members and Birthdays
+                // Still fetching all users for accurate counts/birthdays, but query is relatively light for <100 docs
                 const usersQ = query(collection(db, 'users'), where('clubId', '==', clubId));
                 const usersSnap = await getDocs(usersQ);
                 const activeMembers = usersSnap.size;
@@ -81,7 +81,7 @@ function DirectorDashboard() {
                     }))
                     .sort((a, b) => a.day - b.day);
 
-                // 2. Next Event (Wrapped in inner try-catch for Index Safety)
+                // 2. Next Event (Light Query: limit 1)
                 let nextEvent: any = null;
                 try {
                     const today = new Date().toISOString();
@@ -102,26 +102,9 @@ function DirectorDashboard() {
                     console.warn('[Dashboard] Next Event Query Failed (Likely Missing Index):', idxErr);
                 }
 
-                // 3. Attendance Stats
-                let attendanceStats: any[] = [];
-                try {
-                    const allMeetingsQ = query(collection(db, 'meetings'), where('clubId', '==', clubId));
-                    const allMeetingsSnap = await getDocs(allMeetingsQ);
+                // Removed: Attendance Stats (Heavy Query) - Optimization
 
-                    attendanceStats = allMeetingsSnap.docs
-                        .map(d => d.data())
-                        .filter(m => new Date(m.date) < new Date())
-                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                        .slice(-5)
-                        .map((m: any) => ({
-                            date: new Date(m.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-                            count: m._count?.attendances || 0
-                        }));
-                } catch (attErr) {
-                    console.warn('[Dashboard] Attendance Stats Failed:', attErr);
-                }
-
-                // 4. Financial
+                // 3. Financial
                 let financial = { balance: 0 };
                 try {
                     const clubSnap = await getDoc(doc(db, 'clubs', clubId));
@@ -134,7 +117,6 @@ function DirectorDashboard() {
                     activeMembers,
                     birthdays,
                     nextEvent,
-                    attendanceStats,
                     financial
                 };
             } catch (error) {
@@ -144,16 +126,16 @@ function DirectorDashboard() {
                     activeMembers: 0,
                     birthdays: [],
                     nextEvent: null,
-                    attendanceStats: [],
                     financial: { balance: 0 }
                 };
             }
         },
-        enabled: !!user?.clubId
+        enabled: !!user?.clubId,
+        staleTime: 1000 * 60 * 5, // Cache for 5 mins to prevent aggressive refetching
+        refetchOnWindowFocus: false // Further Reduce Load
     });
 
     // 2. Fetch API Club Status for Referral Code
-    // MOVED UP: Executing this hook unconditionally before any early returns
     const { data: clubStatus } = useQuery({
         queryKey: ['club-status-api'],
         queryFn: async () => {
@@ -161,11 +143,11 @@ function DirectorDashboard() {
             const res = await api.get('/clubs/status');
             return res.data;
         },
-        enabled: ['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '')
+        enabled: ['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || ''),
+        staleTime: 1000 * 60 * 30 // Cache for 30 mins
     });
 
     // 3. Early Loading Return
-    // If no clubId (e.g. Master), we shouldn't show loading skeletons forever
     if (statsLoading && user?.clubId) {
         return (
             <div className="space-y-6">
@@ -181,30 +163,9 @@ function DirectorDashboard() {
                         </div>
                     ))}
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 bg-white h-80 rounded-xl border border-slate-200 p-6">
-                        <div className="space-y-4">
-                            <Skeleton className="h-6 w-48" />
-                            <Skeleton className="h-full w-full" />
-                        </div>
-                    </div>
-                    <div className="bg-white h-80 rounded-xl border border-slate-200 p-6 space-y-4">
-                        <Skeleton className="h-6 w-32" />
-                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
-                    </div>
-                </div>
             </div>
         );
     }
-
-    // Formatting Data for Charts
-    const attendanceData = stats?.attendanceStats?.map((d: any) => ({
-        date: new Date(d.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-        count: d.count
-    })) || [];
-
-    // Safety check: ensure we have an array for the chart
-    const safeAttendanceData = Array.isArray(attendanceData) ? attendanceData : [];
 
     // Copy Link Handler
     const handleCopyReferral = () => {
@@ -335,41 +296,8 @@ function DirectorDashboard() {
                 </div>
             </div>
 
-            {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Chart: Attendance */}
-                <div className="lg:col-span-2">
-                    <SimpleBarChart
-                        title="Frequência nas Reuniões"
-                        data={safeAttendanceData}
-                        dataKeyName="date"
-                        dataKeyValue="count"
-                        color="#3b82f6"
-                    />
-                </div>
+            {/* REMOVED: Charts and Side List for Performance Simplification */}
 
-                {/* Side Panel: Birthdays List */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 className="text-lg font-bold text-slate-800 mb-4">🎈 Aniversariantes</h3>
-                    {stats?.birthdays?.length === 0 ? (
-                        <p className="text-slate-500 text-center py-4">Ninguém faz ano este mês.</p>
-                    ) : (
-                        <ul className="space-y-3">
-                            {stats?.birthdays?.map((b: any) => (
-                                <li key={b.id} className="flex items-center gap-3 pb-3 border-b border-slate-50 last:border-0 last:pb-0">
-                                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-600">
-                                        {b.day}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="font-medium text-slate-800 text-sm">{b.name}</p>
-                                        <p className="text-xs text-slate-400 capitalize">{ROLE_TRANSLATIONS[b.role] || b.role}</p>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-            </div>
             {/* Birthdays Modal */}
             <Modal
                 isOpen={showBirthdaysModal}

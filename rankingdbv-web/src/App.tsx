@@ -35,6 +35,9 @@ import { Reports } from './pages/Reports';
 import { MinuteDetails } from './pages/MinuteDetails';
 import { SystemMessages } from './pages/SystemMessages';
 import { MasterTreasury } from './pages/MasterTreasury';
+import { ClubAssignment } from './pages/admin/ClubAssignment';
+import { MasterRequirements } from './pages/admin/MasterRequirements';
+import { MasterSpecialties } from './pages/admin/MasterSpecialties';
 
 import { SocketProvider } from './contexts/SocketContext';
 
@@ -77,6 +80,11 @@ function App() {
                 </Route>
                 <Route element={<ProtectedRoute allowedRoles={['MASTER', 'OWNER']} />}>
                   <Route path="master-treasury" element={<MasterTreasury />} />
+                  <Route path="club-assignment" element={<ClubAssignment />} />
+                </Route>
+                <Route element={<ProtectedRoute allowedRoles={['MASTER']} />}>
+                  <Route path="master-requirements" element={<MasterRequirements />} />
+                  <Route path="master-specialties" element={<MasterSpecialties />} />
                 </Route>
                 <Route path="events" element={<Events />} />
                 <Route path="requirements" element={<Requirements />} />

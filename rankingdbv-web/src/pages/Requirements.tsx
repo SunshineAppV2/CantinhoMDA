@@ -268,12 +268,25 @@ export function Requirements() {
             questions: reqType === 'QUESTIONNAIRE' ? questions : undefined
         };
 
-        if (editingReqId) {
+        const existingReq = requirements.find(r => r.id === editingReqId);
+        const isUniversal = existingReq && !existingReq.clubId;
+
+        if (editingReqId && !isUniversal) {
+            // Normal Edit (Club Requirement)
             updateMutation.mutate({ id: editingReqId, payload });
         } else {
-            if (activeTab === 'CLASSES') payload.dbvClass = selectedClass;
-            else if (activeTab === 'SPECIALTIES') payload.specialtyId = selectedSpecialtyId;
-            // MY_CLUB: No class/specialty attached, backend uses user.clubId
+            // New Requirement OR Forking Universal
+            if (activeTab === 'CLASSES') {
+                payload.dbvClass = selectedClass;
+                // If forking, ensure we keep the class matching the current view (or the original)
+                if (isUniversal) payload.dbvClass = existingReq.dbvClass || selectedClass;
+            }
+            else if (activeTab === 'SPECIALTIES') {
+                payload.specialtyId = selectedSpecialtyId;
+                if (isUniversal) payload.specialtyId = existingReq.specialtyId || selectedSpecialtyId;
+            }
+
+            // Backend will assign clubId from User Token
             createMutation.mutate(payload);
         }
     };

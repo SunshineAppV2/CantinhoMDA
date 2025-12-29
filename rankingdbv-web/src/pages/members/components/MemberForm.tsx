@@ -154,7 +154,7 @@ export function MemberForm({ isOpen, onClose, onSubmit, initialData, units, club
                                     let displayLabel = label;
                                     if (user?.email === 'master@cantinhodbv.com') {
                                         if (key === 'OWNER') displayLabel = 'DIRETOR (Acesso Master ao Clube)';
-                                        if (key === 'DIRECTOR') displayLabel = 'DIRETOR (Cargo Administrativo)';
+                                        if (key === 'DIRECTOR') displayLabel = 'DIRETOR(A) ASSOCIADO(A)';
                                     } else {
                                         // Hide industrial roles for non-master if needed, but for now just show
                                         if (key === 'DIRECTOR' && formData.role !== 'DIRECTOR') return null; // Deduplicate
