@@ -1,6 +1,6 @@
 
 import { useState, useMemo } from 'react';
-import { User, Mail, Eye, Edit, Trash2 } from 'lucide-react';
+import { User, Mail, Eye, Edit, Trash2, Ban, Unlock } from 'lucide-react';
 import { ROLE_TRANSLATIONS } from '../types';
 import type { Member, Unit } from '../types';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -11,9 +11,10 @@ interface MembersTableProps {
     onInspect: (member: Member) => void;
     onEdit: (member: Member) => void;
     onDelete: (id: string) => void;
+    onToggleStatus: (member: Member) => void;
 }
 
-export function MembersTable({ members, units, onInspect, onEdit, onDelete }: MembersTableProps) {
+export function MembersTable({ members, units, onInspect, onEdit, onDelete, onToggleStatus }: MembersTableProps) {
     const { user } = useAuth();
     const [sortConfig, setSortConfig] = useState<{ key: keyof Member | 'age' | 'unitName' | 'clubName'; direction: 'asc' | 'desc' } | null>(null);
 
@@ -104,7 +105,10 @@ export function MembersTable({ members, units, onInspect, onEdit, onDelete }: Me
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><User className="w-4 h-4" /></div>
-                                        <span className="font-medium text-slate-900">{member.name}</span>
+                                        <div>
+                                            <span className="font-medium text-slate-900 block">{member.name}</span>
+                                            {!member.isActive && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">BLOQUEADO</span>}
+                                        </div>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{getAge(member.birthDate)}</td>
@@ -119,6 +123,13 @@ export function MembersTable({ members, units, onInspect, onEdit, onDelete }: Me
                                         {(['OWNER', 'ADMIN'].includes(user?.role || '') || user?.email === 'master@cantinhodbv.com') && (
                                             <>
                                                 <button onClick={() => onEdit(member)} className="text-slate-400 hover:text-blue-600" title="Editar"><Edit className="w-4 h-4" /></button>
+                                                <button
+                                                    onClick={() => onToggleStatus(member)}
+                                                    className={`${member.isActive ? 'text-slate-400 hover:text-orange-600' : 'text-green-500 hover:text-green-700'}`}
+                                                    title={member.isActive ? "Bloquear Usuário" : "Desbloquear Usuário"}
+                                                >
+                                                    {member.isActive ? <Ban className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                                                </button>
                                                 <button onClick={() => { if (window.confirm('Tem certeza que deseja excluir este membro?')) onDelete(member.id); }} className="text-slate-400 hover:text-red-600" title="Excluir"><Trash2 className="w-4 h-4" /></button>
                                             </>
                                         )}

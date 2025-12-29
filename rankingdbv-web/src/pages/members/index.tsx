@@ -160,6 +160,26 @@ function MembersContent() {
         onError: (e: any) => toast.error('Erro ao excluir membro: ' + (e.response?.data?.message || e.message))
     });
 
+    const toggleStatusMutation = useMutation({
+        mutationFn: async (member: Member) => {
+            const newStatus = member.isActive ? 'BLOCKED' : 'ACTIVE';
+            const newIsActive = !member.isActive;
+            await api.patch(`/users/${member.id}`, { status: newStatus, isActive: newIsActive });
+        },
+        onSuccess: () => {
+            toast.success('Status do usuário atualizado!');
+            queryClient.invalidateQueries({ queryKey: ['members'] });
+        },
+        onError: () => toast.error('Erro ao atualizar status.')
+    });
+
+    const handleToggleStatus = (member: Member) => {
+        const action = member.isActive ? 'bloquear' : 'desbloquear';
+        if (window.confirm(`Tem certeza que deseja ${action} o usuário ${member.name}?`)) {
+            toggleStatusMutation.mutate(member);
+        }
+    };
+
     const assignMutation = useMutation({
         mutationFn: async ({ rid, uids }: any) => {
             const promises = uids.map((uid: string) => {
@@ -296,6 +316,7 @@ function MembersContent() {
                 onInspect={(m) => { setInspectingMember(m); setIsDetailsOpen(true); }}
                 onEdit={(m) => { setEditingMember(m); setIsModalOpen(true); }}
                 onDelete={(id) => deleteMutation.mutate(id)}
+                onToggleStatus={handleToggleStatus}
             />
 
             {/* Modals */}

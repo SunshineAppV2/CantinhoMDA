@@ -6,6 +6,7 @@ export interface Member {
     password?: string;
     role: string;
     isActive: boolean;
+    status: 'ACTIVE' | 'BLOCKED' | 'PENDING';
     mustChangePassword?: boolean;
     clubId: string | null;
     unitId?: string | null;
