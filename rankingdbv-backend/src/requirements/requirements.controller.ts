@@ -24,9 +24,12 @@ export class RequirementsController {
         console.log('[RequirementsController] User:', req.user.email, req.user.role);
         // ... (existing logic)
         const userClubId = req.user.clubId;
-        if (userClubId) {
+        const isMaster = req.user.email === 'master@cantinhodbv.com' || req.user.role === 'MASTER';
+
+        if (userClubId && !isMaster) {
             createDto.clubId = userClubId;
         }
+        // If Master, we respect the createDto.clubId (which can be null for Universal)
 
         return this.requirementsService.create(createDto);
     }
