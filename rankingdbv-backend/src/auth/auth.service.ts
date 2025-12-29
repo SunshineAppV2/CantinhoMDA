@@ -92,13 +92,20 @@ export class AuthService {
     };
   }
 
-  async register(createUserDto: CreateUserDto) {
+  async register(createUserDto: CreateUserDto & { referralCode?: string }) {
     // 1. Hash Password
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
     let clubId = createUserDto.clubId;
     let role = createUserDto.role || 'PATHFINDER';
     let status = 'PENDING'; // Default status for joiners
+
+    // REFERRAL CHECK (DELAYED REWARD)
+    let referrerClubId: string | undefined = undefined;
+    if (createUserDto.referralCode && createUserDto.clubName) { // Only for new clubs
+      const resolved = await this.clubsService.resolveReferralCode(createUserDto.referralCode);
+      referrerClubId = resolved || undefined;
+    }
 
     // 2. Logic: Create New Club OR Join Existing
     if (!clubId && createUserDto.clubName) {
@@ -107,7 +114,8 @@ export class AuthService {
         name: createUserDto.clubName,
         region: createUserDto.region,
         mission: createUserDto.mission,
-        union: createUserDto.union
+        union: createUserDto.union,
+        referrerClubId: referrerClubId
       });
 
       clubId = newClub.id;

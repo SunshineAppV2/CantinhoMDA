@@ -36,8 +36,27 @@ model Club {
   transactions       Transaction[]
   units              Unit[]
   users              User[]
+  referralCode          String?             @unique
+  referralCredits       ReferralCredit[]
+
+  // Delayed Reward Logic
+  referrerClubId        String?
+  referrerClub          Club?               @relation("ClubReferrals", fields: [referrerClubId], references: [id])
+  referrals             Club[]              @relation("ClubReferrals")
+  referralRewardClaimed Boolean             @default(false)
 
   @@map("clubs")
+}
+
+model ReferralCredit {
+  id        String   @id @default(uuid())
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id])
+  status    String   @default("AVAILABLE") // AVAILABLE, USED, EXPIRED
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("referral_credits")
 }
 
 model Minute {

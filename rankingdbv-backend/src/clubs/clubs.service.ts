@@ -1,26 +1,99 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClubDto } from './dto/create-club.dto';
 import { HIERARCHY_DATA, UNIONS_LIST } from './data/hierarchy.data';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
-export class ClubsService {
+export class ClubsService implements OnModuleInit {
     constructor(
         private prisma: PrismaService,
         private notificationsService: NotificationsService
     ) { }
 
-    async create(createClubDto: CreateClubDto) {
+    async onModuleInit() {
+        // Backfill Referral Codes for existing clubs
+        const clubsWithoutCode = await this.prisma.club.findMany({
+            where: { referralCode: null }
+        });
+
+        if (clubsWithoutCode.length > 0) {
+            console.log(`[Referral] Backfilling codes for ${clubsWithoutCode.length} clubs...`);
+            for (const club of clubsWithoutCode) {
+                await this.prisma.club.update({
+                    where: { id: club.id },
+                    data: { referralCode: this.generateReferralCode() }
+                });
+            }
+            console.log('[Referral] Backfill complete.');
+        }
+    }
+
+    private generateReferralCode(): string {
+        return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    async resolveReferralCode(code: string): Promise<string | null> {
+        const club = await this.prisma.club.findUnique({
+            where: { referralCode: code },
+            select: { id: true }
+        });
+        return club ? club.id : null;
+    }
+
+    async create(createClubDto: CreateClubDto & { referrerClubId?: string }) {
         return this.prisma.club.create({
             data: {
                 name: createClubDto.name,
                 region: createClubDto.region,
                 mission: createClubDto.mission,
                 union: createClubDto.union,
-                // slug could be generated here
+                referralCode: this.generateReferralCode(),
+                referrerClubId: createClubDto.referrerClubId
             },
         });
+    }
+
+    async awardReferralCredit(referrerClubId: string) {
+        const referrerClub = await this.prisma.club.findUnique({
+            where: { id: referrerClubId },
+            include: { referralCredits: { where: { status: 'AVAILABLE' } } }
+        });
+
+        if (!referrerClub) return;
+
+        const activeCredits = referrerClub.referralCredits.length;
+
+        if (activeCredits >= 3) {
+            console.log(`[Referral] Club ${referrerClub.name} reached max credits (3). No new credit awarded.`);
+            return;
+        }
+
+        // Logic: 1st = 30d, 2nd = 60d, 3rd = 90d from NOW.
+        const days = (activeCredits + 1) * 30;
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + days);
+
+        await this.prisma.referralCredit.create({
+            data: {
+                clubId: referrerClub.id,
+                expiresAt: expiresAt,
+                status: 'AVAILABLE'
+            }
+        });
+
+        console.log(`[Referral] Awarded credit to ${referrerClub.name}. Expires in ${days} days.`);
+
+        // Notify Owner
+        const owner = await this.prisma.user.findFirst({ where: { clubId: referrerClub.id, role: 'OWNER' } });
+        if (owner) {
+            await this.notificationsService.send(
+                owner.id,
+                'Nova Indicação Confirmada!',
+                `Sua indicação realizou o primeiro pagamento e você ganhou um desconto de 20%! (Válido por ${days} dias)`,
+                'SUCCESS'
+            );
+        }
     }
 
     async getExportData(clubId: string) {
@@ -251,6 +324,10 @@ export class ClubsService {
                 subscriptionStatus: true,
                 nextBillingDate: true,
                 gracePeriodDays: true,
+                referralCode: true,
+                referralCredits: {
+                    where: { status: 'AVAILABLE' }
+                }
             }
         });
 
@@ -306,6 +383,28 @@ export class ClubsService {
                     date: new Date()
                 }
             });
+        }
+
+        // 2. CHECK REFERRAL REWARD
+        // If status became ACTIVE (meaning they paid) AND they have a referrer AND reward not claimed
+        if (data.subscriptionStatus === 'ACTIVE') {
+            const club = await this.prisma.club.findUnique({
+                where: { id: clubId },
+                select: { referrerClubId: true, referralRewardClaimed: true }
+            });
+
+            if (club && club.referrerClubId && !club.referralRewardClaimed) {
+                console.log(`[Referral] Triggering reward for referrer ${club.referrerClubId} from club ${clubId}`);
+
+                // Award Credit
+                await this.awardReferralCredit(club.referrerClubId);
+
+                // Mark as Claimed
+                await this.prisma.club.update({
+                    where: { id: clubId },
+                    data: { referralRewardClaimed: true }
+                });
+            }
         }
 
         return result;

@@ -139,12 +139,68 @@ export function Dashboard() {
         count: d.count
     })) || [];
 
+    // Fetch API Club Status for Referral Code
+    const { data: clubStatus } = useQuery({
+        queryKey: ['club-status-api'],
+        queryFn: async () => {
+            const { api } = await import('../lib/axios');
+            const res = await api.get('/clubs/status');
+            return res.data;
+        },
+        enabled: ['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '')
+    });
+
+    // Copy Link Handler
+    const handleCopyReferral = () => {
+        if (clubStatus?.referralCode) {
+            const link = `${window.location.origin}/register?ref=${clubStatus.referralCode}`;
+            navigator.clipboard.writeText(link);
+            import('sonner').then(({ toast }) => toast.success('Link de indicação copiado!'));
+        }
+    };
+
     return (
         <PullToRefreshWrapper>
             <div className="space-y-6">
 
                 {/* Subscription Status for Admins */}
                 {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && <SubscriptionWidget />}
+
+                {/* Referral Widget */}
+                {clubStatus?.referralCode && (
+                    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <Users className="w-32 h-32" />
+                        </div>
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="text-xl font-bold mb-1">Indique e Ganhe 20% OFF</h3>
+                                    <p className="text-indigo-100 text-sm max-w-md">
+                                        Indique um diretor de outro clube e ganhe 20% de desconto na sua mensalidade!
+                                        (Acumule até 3 descontos).
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="block text-2xl font-bold">{clubStatus.referralCredits?.length || 0}/3</span>
+                                    <span className="text-xs text-indigo-200">Descontos Acumulados</span>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 max-w-lg mt-4">
+                                <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-sm font-mono flex-1 truncate border border-white/10">
+                                    {`${window.location.origin}/register?ref=${clubStatus.referralCode}`}
+                                </div>
+                                <button
+                                    onClick={handleCopyReferral}
+                                    className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-50 transition-colors"
+                                >
+                                    Copiar Link
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Pending Signatures Widget */}
                 <SignaturesWidget />
