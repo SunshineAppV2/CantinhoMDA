@@ -28,6 +28,12 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('available-directors')
+  findAvailableDirectors() {
+    return this.usersService.findAvailableDirectors();
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get()
   findAll(@Req() req: any, @Query('clubId') clubId?: string) {
     return this.usersService.findAll(req.user, clubId);

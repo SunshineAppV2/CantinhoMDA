@@ -66,6 +66,22 @@ export class ClubsService implements OnModuleInit {
         });
     }
 
+    async createAndAssignOwner(createClubDto: CreateClubDto, ownerId: string) {
+        const club = await this.create(createClubDto);
+
+        // Update the owner user to be OWNER and link to this club
+        await this.prisma.user.update({
+            where: { id: ownerId },
+            data: {
+                clubId: club.id,
+                role: 'OWNER',
+                isActive: true // Ensure they are active
+            }
+        });
+
+        return club;
+    }
+
     async awardReferralCredit(referrerClubId: string) {
         const referrerClub = await this.prisma.club.findUnique({
             where: { id: referrerClubId },

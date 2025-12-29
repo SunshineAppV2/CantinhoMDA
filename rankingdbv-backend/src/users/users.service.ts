@@ -21,6 +21,22 @@ export class UsersService {
     });
   }
 
+  // Busca usuários elegíveis para serem donos de clube (sem clube atribuído)
+  async findAvailableDirectors() {
+    return this.prisma.user.findMany({
+      where: {
+        clubId: null,
+        role: { in: ['OWNER', 'ADMIN', 'REGIONAL', 'MASTER'] } // Removed DIRECTOR as it's not in Prisma Enum
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true
+      }
+    });
+  }
+
   // Busca todos os usuários
   async findAll(currentUser?: any, clubId?: string) {
     // 1. Get total requirements count per class

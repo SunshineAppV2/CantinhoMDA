@@ -13,6 +13,15 @@ export class ClubsController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Post('assign-owner')
+    createAndAssignOwner(@Body() body: { createClubDto: CreateClubDto, ownerId: string }, @Request() req) {
+        if (req.user.role !== 'MASTER' && req.user.email !== 'master@cantinhodbv.com') {
+            throw new Error('Acesso negado');
+        }
+        return this.clubsService.createAndAssignOwner(body.createClubDto, body.ownerId);
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Get('export/all')
     exportData(@Req() req) {
         // Only allow if user is OWNER or specific role if needed.
