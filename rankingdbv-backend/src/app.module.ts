@@ -21,6 +21,7 @@ import { ReportsModule } from './reports/reports.module';
 import { SecretaryModule } from './secretary/secretary.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { MasterTreasuryModule } from './master-treasury/master-treasury.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -43,7 +44,9 @@ import { MasterTreasuryModule } from './master-treasury/master-treasury.module';
     ReportsModule,
     SecretaryModule,
     UploadsModule,
+    UploadsModule,
     MasterTreasuryModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/axios';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, TrendingUp, TrendingDown, DollarSign, Printer, Check, X, FileText, Pencil, Trash2, CheckCircle, Eye } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, Printer, Check, X, FileText, Pencil, Trash2, CheckCircle, Eye, QrCode } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { generateFinancialReport } from '../lib/pdf-generator';
 import { collection, query, where, getDocs, updateDoc, doc, runTransaction, getDoc, Transaction as FSTransaction } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toast } from 'sonner';
+import { PaymentModal } from '../components/PaymentModal';
 
 interface Transaction {
     id: string;
@@ -41,6 +42,7 @@ export function Treasury() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isPixModalOpen, setIsPixModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'HISTORY' | 'VALIDATION'>('HISTORY');
 
     // Form State
@@ -420,8 +422,21 @@ export function Treasury() {
                         <Plus className="w-5 h-5" />
                         Nova Transação
                     </button>
+                    <button
+                        onClick={() => setIsPixModalOpen(true)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                        <QrCode className="w-5 h-5" />
+                        Cobrar Pix
+                    </button>
                 </div>
             </div>
+
+            <PaymentModal
+                isOpen={isPixModalOpen}
+                onClose={() => setIsPixModalOpen(false)}
+                member={undefined} // Or selected member if we implement that context
+            />
 
             {/* Navigation Tabs */}
             <div className="flex gap-4 border-b border-slate-200">
