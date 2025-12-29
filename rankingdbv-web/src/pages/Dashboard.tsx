@@ -31,103 +31,102 @@ export function Dashboard() {
     const { data: stats, isLoading } = useQuery({
         queryKey: ['dashboard-stats', user?.clubId],
         queryFn: async () => {
-            queryFn: async () => {
-                if (!user?.clubId) return null;
-                const clubId = user.clubId;
-                console.log('[Dashboard] Fetching stats for club:', clubId);
+            if (!user?.clubId) return null;
+            const clubId = user.clubId;
+            console.log('[Dashboard] Fetching stats for club:', clubId);
 
+            try {
+                // 1. Members and Birthdays
+                const usersQ = query(collection(db, 'users'), where('clubId', '==', clubId));
+                const usersSnap = await getDocs(usersQ);
+                const activeMembers = usersSnap.size;
+
+                const currentMonth = new Date().getMonth();
+                const birthdays = usersSnap.docs
+                    .map(d => ({ id: d.id, ...d.data() } as any))
+                    .filter(u => {
+                        if (!u.birthDate) return false;
+                        const bd = new Date(u.birthDate);
+                        return bd.getMonth() === currentMonth;
+                    })
+                    .map(u => ({
+                        id: u.id,
+                        name: u.name,
+                        role: u.role,
+                        day: new Date(u.birthDate).getDate()
+                    }))
+                    .sort((a, b) => a.day - b.day);
+
+                // 2. Next Event (Wrapped in inner try-catch for Index Safety)
+                let nextEvent = null;
                 try {
-                    // 1. Members and Birthdays
-                    const usersQ = query(collection(db, 'users'), where('clubId', '==', clubId));
-                    const usersSnap = await getDocs(usersQ);
-                    const activeMembers = usersSnap.size;
-
-                    const currentMonth = new Date().getMonth();
-                    const birthdays = usersSnap.docs
-                        .map(d => ({ id: d.id, ...d.data() } as any))
-                        .filter(u => {
-                            if (!u.birthDate) return false;
-                            const bd = new Date(u.birthDate);
-                            return bd.getMonth() === currentMonth;
-                        })
-                        .map(u => ({
-                            id: u.id,
-                            name: u.name,
-                            role: u.role,
-                            day: new Date(u.birthDate).getDate()
-                        }))
-                        .sort((a, b) => a.day - b.day);
-
-                    // 2. Next Event (Wrapped in inner try-catch for Index Safety)
-                    let nextEvent = null;
-                    try {
-                        const today = new Date().toISOString();
-                        const eventsQ = query(
-                            collection(db, 'meetings'),
-                            where('clubId', '==', clubId),
-                            where('date', '>=', today),
-                            orderBy('date', 'asc'),
-                            limit(1)
-                        );
-                        const eventsSnap = await getDocs(eventsQ);
-                        nextEvent = eventsSnap.empty ? null : {
-                            id: eventsSnap.docs[0].id,
-                            ...eventsSnap.docs[0].data(),
-                            startDate: eventsSnap.docs[0].data().date
-                        };
-                    } catch (idxErr) {
-                        console.warn('[Dashboard] Next Event Query Failed (Likely Missing Index):', idxErr);
-                    }
-
-                    // 3. Attendance Stats
-                    let attendanceStats = [];
-                    try {
-                        const allMeetingsQ = query(collection(db, 'meetings'), where('clubId', '==', clubId));
-                        const allMeetingsSnap = await getDocs(allMeetingsQ);
-
-                        attendanceStats = allMeetingsSnap.docs
-                            .map(d => d.data())
-                            .filter(m => new Date(m.date) < new Date())
-                            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                            .slice(-5)
-                            .map((m: any) => ({
-                                date: new Date(m.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-                                count: m._count?.attendances || 0
-                            }));
-                    } catch (attErr) {
-                        console.warn('[Dashboard] Attendance Stats Failed:', attErr);
-                    }
-
-                    // 4. Financial
-                    let financial = { balance: 0 };
-                    try {
-                        const clubSnap = await getDoc(doc(db, 'clubs', clubId));
-                        financial = { balance: clubSnap.exists() ? ((clubSnap.data() as any).balance || 0) : 0 };
-                    } catch (finErr) {
-                        console.warn('[Dashboard] Financial Stats Failed:', finErr);
-                    }
-
-                    return {
-                        activeMembers,
-                        birthdays,
-                        nextEvent,
-                        attendanceStats,
-                        financial
+                    const today = new Date().toISOString();
+                    const eventsQ = query(
+                        collection(db, 'meetings'),
+                        where('clubId', '==', clubId),
+                        where('date', '>=', today),
+                        orderBy('date', 'asc'),
+                        limit(1)
+                    );
+                    const eventsSnap = await getDocs(eventsQ);
+                    nextEvent = eventsSnap.empty ? null : {
+                        id: eventsSnap.docs[0].id,
+                        ...eventsSnap.docs[0].data(),
+                        startDate: eventsSnap.docs[0].data().date
                     };
-                } catch (error) {
-                    console.error('[Dashboard] CRITICAL ERROR loading stats:', error);
-                    // Return safe defaults to UNBLOCK UI
-                    return {
-                        activeMembers: 0,
-                        birthdays: [],
-                        nextEvent: null,
-                        attendanceStats: [],
-                        financial: { balance: 0 }
-                    };
+                } catch (idxErr) {
+                    console.warn('[Dashboard] Next Event Query Failed (Likely Missing Index):', idxErr);
                 }
-            },
-                enabled: !!user?.clubId
-        });
+
+                // 3. Attendance Stats
+                let attendanceStats: any[] = [];
+                try {
+                    const allMeetingsQ = query(collection(db, 'meetings'), where('clubId', '==', clubId));
+                    const allMeetingsSnap = await getDocs(allMeetingsQ);
+
+                    attendanceStats = allMeetingsSnap.docs
+                        .map(d => d.data())
+                        .filter(m => new Date(m.date) < new Date())
+                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                        .slice(-5)
+                        .map((m: any) => ({
+                            date: new Date(m.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                            count: m._count?.attendances || 0
+                        }));
+                } catch (attErr) {
+                    console.warn('[Dashboard] Attendance Stats Failed:', attErr);
+                }
+
+                // 4. Financial
+                let financial = { balance: 0 };
+                try {
+                    const clubSnap = await getDoc(doc(db, 'clubs', clubId));
+                    financial = { balance: clubSnap.exists() ? ((clubSnap.data() as any).balance || 0) : 0 };
+                } catch (finErr) {
+                    console.warn('[Dashboard] Financial Stats Failed:', finErr);
+                }
+
+                return {
+                    activeMembers,
+                    birthdays,
+                    nextEvent,
+                    attendanceStats,
+                    financial
+                };
+            } catch (error) {
+                console.error('[Dashboard] CRITICAL ERROR loading stats:', error);
+                // Return safe defaults to UNBLOCK UI
+                return {
+                    activeMembers: 0,
+                    birthdays: [],
+                    nextEvent: null,
+                    attendanceStats: [],
+                    financial: { balance: 0 }
+                };
+            }
+        },
+        enabled: !!user?.clubId
+    });
 
     // If no clubId (e.g. Master), we shouldn't show loading skeletons forever
     if (isLoading && user?.clubId) {
