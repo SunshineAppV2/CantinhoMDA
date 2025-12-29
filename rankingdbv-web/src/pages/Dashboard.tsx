@@ -102,7 +102,8 @@ export function Dashboard() {
         enabled: !!user?.clubId
     });
 
-    if (isLoading) {
+    // If no clubId (e.g. Master), we shouldn't show loading skeletons forever
+    if (isLoading && user?.clubId) {
         return (
             <div className="space-y-6">
                 <Skeleton className="h-8 w-48" />
