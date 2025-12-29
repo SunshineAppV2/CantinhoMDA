@@ -36,6 +36,7 @@ import { MinuteDetails } from './pages/MinuteDetails';
 import { SystemMessages } from './pages/SystemMessages';
 import { MasterTreasury } from './pages/MasterTreasury';
 import { ClubAssignment } from './pages/admin/ClubAssignment';
+import { AdminAchievements } from './pages/admin/Achievements';
 import { MasterRequirements } from './pages/admin/MasterRequirements';
 import { MasterSpecialties } from './pages/admin/MasterSpecialties';
 
@@ -81,6 +82,7 @@ function App() {
                 <Route element={<ProtectedRoute allowedRoles={['MASTER', 'OWNER']} />}>
                   <Route path="master-treasury" element={<MasterTreasury />} />
                   <Route path="club-assignment" element={<ClubAssignment />} />
+                  <Route path="achievements" element={<AdminAchievements />} />
                 </Route>
                 <Route element={<ProtectedRoute allowedRoles={['MASTER']} />}>
                   <Route path="master-requirements" element={<MasterRequirements />} />

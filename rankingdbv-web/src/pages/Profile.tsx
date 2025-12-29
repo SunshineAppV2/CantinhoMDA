@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Printer, Home, Users, RefreshCw, Plus } from 'lucide-react';
+import { Printer, Home, Users, RefreshCw, Plus, Trophy } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { generatePathfinderCard } from '../lib/pdf-generator';
 import { Modal } from '../components/Modal';
 
@@ -325,6 +326,9 @@ export function Profile() {
                     </form>
                 </div>
 
+                {/* My Achievements Section */}
+                <MyAchievementsList />
+
                 {/* My Specialties Section */}
                 <MySpecialtiesList />
             </div>
@@ -468,6 +472,74 @@ function MySpecialtiesList() {
                                         'Em Andamento'}
                             </span>
                         </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function MyAchievementsList() {
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
+    const { data: myAchievements = [] } = useQuery<any[]>({
+        queryKey: ['my-achievements-profile', user?.id],
+        queryFn: async () => {
+            if (!user?.id) return [];
+
+            // 1. Fetch User Achievements
+            const q = query(collection(db, 'user_achievements'), where('userId', '==', user.id));
+            const snapshot = await getDocs(q);
+            const userAchievements = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+
+            if (userAchievements.length === 0) return [];
+
+            // 2. Fetch All Achievements to map details
+            const achSnaps = await getDocs(collection(db, 'achievements'));
+            const achievementsMap = new Map();
+            achSnaps.docs.forEach(d => achievementsMap.set(d.id, d.data()));
+
+            // 3. Map
+            return userAchievements.map(ua => ({
+                ...ua,
+                details: achievementsMap.get(ua.achievementId) || { name: 'Desconhecido', icon: 'Trophy', description: '?', points: 0 }
+            }));
+        },
+        enabled: !!user?.id
+    });
+
+    const DynamicIcon = ({ name, className }: { name: string, className?: string }) => {
+        const Icon = (LucideIcons as any)[name] || Trophy; // Use LucideIcons namespace
+        return <Icon className={className} />;
+    };
+
+    if (myAchievements.length === 0) return null;
+
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-6">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+                <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-yellow-500" />
+                    <h3 className="text-lg font-bold text-slate-800">Minhas Conquistas</h3>
+                </div>
+                <button
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['my-achievements-profile'] })}
+                    className="p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-blue-500 transition-colors"
+                    title="Atualizar Lista"
+                >
+                    <RefreshCw className="w-4 h-4" />
+                </button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {myAchievements.map((ua: any) => (
+                    <div key={ua.id} className="flex flex-col items-center text-center p-4 rounded-lg border border-slate-100 bg-slate-50 hover:shadow-sm transition-shadow">
+                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-blue-600 mb-2 shadow-sm">
+                            <DynamicIcon name={ua.details.icon} className="w-6 h-6" />
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-sm leading-tight">{ua.details.name}</h4>
+                        <span className="text-[10px] uppercase font-bold text-blue-500 mt-1">{ua.details.category}</span>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2" title={ua.details.description}>{ua.details.description}</p>
+                        <span className="mt-2 text-xs font-medium text-yellow-600">+{ua.details.points} pts</span>
                     </div>
                 ))}
             </div>

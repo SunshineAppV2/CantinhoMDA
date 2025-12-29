@@ -19,7 +19,9 @@ import { ClassesModule } from './classes/classes.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
 import { SecretaryModule } from './secretary/secretary.module';
+
 import { UploadsModule } from './uploads/uploads.module';
+import { AchievementsModule } from './achievements/achievements.module';
 import { MasterTreasuryModule } from './master-treasury/master-treasury.module';
 import { PaymentsModule } from './payments/payments.module';
 
@@ -47,6 +49,7 @@ import { PaymentsModule } from './payments/payments.module';
     UploadsModule,
     MasterTreasuryModule,
     PaymentsModule,
+    AchievementsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

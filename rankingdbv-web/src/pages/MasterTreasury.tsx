@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, TrendingUp, TrendingDown, DollarSign, Building2, Globe, MapPin, Trash2 } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import { SimpleLineChart, CashFlowChart } from '../components/Charts';
 
 // Firestore Imports
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, getDoc } from 'firebase/firestore';
@@ -109,14 +110,68 @@ export function MasterTreasury() {
     const summary = useMemo(() => {
         let income = 0;
         let expense = 0;
-        transactions.forEach(t => {
+
+        // Prepare Monthly Data map
+        const monthlyMap = new Map<string, { name: string, income: number, expense: number }>();
+        // Local map for aggregation
+
+        // Sort asc for evolution
+        const sorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        let runningBalance = 0;
+
+        sorted.forEach(t => {
+            // Overall Summary
             if (t.type === 'INCOME') income += t.amount;
             else expense += t.amount;
+
+            // Monthly Data
+            const date = new Date(t.date);
+            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const monthName = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+
+            if (!monthlyMap.has(key)) {
+                monthlyMap.set(key, { name: monthName, income: 0, expense: 0 });
+            }
+            const monthData = monthlyMap.get(key)!;
+
+            if (t.type === 'INCOME') {
+                monthData.income += t.amount;
+                runningBalance += t.amount;
+            } else {
+                monthData.expense += t.amount;
+                runningBalance -= t.amount;
+            }
+
+            // Capture balance at this transaction date (simplified: daily/transactional)
+            // For line chart, we might want daily or monthly points. Let's do monthly end state or just all points?
+            // All points might be too noisy. Let's do Monthly End Balance properly.
+            // Or simpler: Cumulative Balance line for each transaction?
+            // "Balance Evolution" usually implies time series.
+            // Let's stick to Monthly Balance for consistency with the bar chart?
+            // Or "Cash on Hand" curve.
+            // Let's just push every transaction point for detailed view? No, too heavy.
+            // Monthly Aggregation is cleaner.
         });
+
+        const monthlyData = Array.from(monthlyMap.values());
+
+        // Calculate cumulative balance for each month to chart "Evolution"
+        let cumulative = 0;
+        const evolutionData = monthlyData.map(m => {
+            cumulative += (m.income - m.expense);
+            return {
+                name: m.name,
+                balance: cumulative
+            };
+        });
+
         return {
             income,
             expense,
-            balance: income - expense
+            balance: income - expense,
+            monthlyData,
+            evolutionData
         };
     }, [transactions]);
 
@@ -212,6 +267,40 @@ export function MasterTreasury() {
                         <div className="p-2 bg-red-50 rounded-lg text-red-600"><TrendingDown className="w-6 h-6" /></div>
                     </div>
                 </div>
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <CashFlowChart
+                    title="Fluxo de Caixa Mensal"
+                    data={summary.monthlyData}
+                    dataKeyName="name"
+                    dataKeyIncome="income"
+                    dataKeyExpense="expense"
+                />
+                <SimpleLineChart
+                    title="Evolução do Saldo"
+                    data={summary.evolutionData}
+                    dataKeyName="name"
+                    dataKeyValue="balance"
+                />
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl">
+                <CashFlowChart
+                    title="Fluxo de Caixa Mensal"
+                    data={summary.monthlyData}
+                    dataKeyName="name"
+                    dataKeyIncome="income"
+                    dataKeyExpense="expense"
+                />
+                <SimpleLineChart
+                    title="Evolução do Saldo"
+                    data={summary.evolutionData}
+                    dataKeyName="name"
+                    dataKeyValue="balance"
+                />
             </div>
 
             {/* Filters */}

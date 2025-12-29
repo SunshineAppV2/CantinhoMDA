@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,7 @@ import { collection, query, where, getDocs, updateDoc, doc, runTransaction, getD
 import { db } from '../lib/firebase';
 import { toast } from 'sonner';
 import { PaymentModal } from '../components/PaymentModal';
+import { SimplePieChart, CashFlowChart } from '../components/Charts';
 
 interface Transaction {
     id: string;
@@ -98,6 +99,40 @@ export function Treasury() {
         },
         enabled: !!user?.clubId
     });
+
+    const summary = useMemo(() => { // Assuming we lift the query execution or access data directly
+        // We use 'transactions' from useQuery
+        const monthlyMap = new Map<string, { name: string, income: number, expense: number }>();
+        const categoryMap = new Map<string, number>();
+
+        transactions.forEach(t => {
+            // Monthly
+            const date = new Date(t.date);
+            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const monthName = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+
+            if (!monthlyMap.has(key)) {
+                monthlyMap.set(key, { name: monthName, income: 0, expense: 0 });
+            }
+            const m = monthlyMap.get(key)!;
+            if (t.type === 'INCOME') m.income += t.amount;
+            else m.expense += t.amount;
+
+            // Category (Expenses only usually? Or both? Let's chart Expense Distribution)
+            if (t.type === 'EXPENSE') {
+                const cat = t.category || 'Outros';
+                categoryMap.set(cat, (categoryMap.get(cat) || 0) + t.amount);
+            }
+        });
+
+        // Convert Maps to Arrays
+        // Sort months
+        const monthlyData = Array.from(monthlyMap.values()).reverse(); // Ascending time order
+
+        const categoryData = Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value }));
+
+        return { monthlyData, categoryData };
+    }, [transactions]);
 
     const { data: members = [] } = useQuery({
         queryKey: ['members', user?.clubId],
@@ -501,169 +536,190 @@ export function Treasury() {
                 </div>
             </div>
 
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <CashFlowChart
+                    title="Fluxo de Caixa"
+                    data={summary.monthlyData}
+                    dataKeyName="name"
+                    dataKeyIncome="income"
+                    dataKeyExpense="expense"
+                />
+                <SimplePieChart
+                    title="Despesas por Categoria"
+                    data={summary.categoryData}
+                    dataKeyName="name"
+                    dataKeyValue="value"
+                />
+            </div>
+
             {/* VALIDATION View */}
-            {activeTab === 'VALIDATION' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="p-4 border-b border-slate-200 font-bold text-slate-700 bg-orange-50">
-                        Pagamentos Aguardando Aprovação
-                    </div>
-                    {pendingValidations.length === 0 ? (
-                        <div className="p-8 text-center text-slate-500">Nenhuma validação pendente.</div>
-                    ) : (
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-slate-500 uppercase">
-                                <tr>
-                                    <th className="px-6 py-3">Data</th>
-                                    <th className="px-6 py-3">Membro</th>
-                                    <th className="px-6 py-3">Descrição (Categoria)</th>
-                                    <th className="px-6 py-3 text-right">Valor</th>
-                                    <th className="px-6 py-3 text-center">Comprovante</th>
-                                    <th className="px-6 py-3 text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-200">
-                                {pendingValidations.map(t => (
-                                    <tr key={t.id} className="hover:bg-slate-50">
-                                        <td className="px-6 py-3">{new Date(t.date).toLocaleDateString()}</td>
-                                        <td className="px-6 py-3 font-semibold">{t.payer?.name || '-'}</td>
-                                        <td className="px-6 py-3">{t.description} <span className="text-xs text-slate-400">({t.category})</span></td>
-                                        <td className="px-6 py-3 text-right font-bold text-green-600">R$ {t.amount.toFixed(2)}</td>
-                                        <td className="px-6 py-3 text-center">
-                                            {t.proofUrl ? (
-                                                <a href={t.proofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center justify-center gap-1">
-                                                    <FileText className="w-4 h-4" /> Ver
-                                                </a>
-                                            ) : <span className="text-slate-400">-</span>}
-                                        </td>
-                                        <td className="px-6 py-3 text-right flex justify-end gap-2">
-                                            <button
-                                                onClick={() => approveMutation.mutate(t.id)}
-                                                className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200" title="Aprovar">
-                                                <Check className="w-5 h-5" />
-                                            </button>
-                                            <button
-                                                onClick={() => rejectMutation.mutate(t.id)}
-                                                className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200" title="Rejeitar">
-                                                <X className="w-5 h-5" />
-                                            </button>
-                                        </td>
+            {
+                activeTab === 'VALIDATION' && (
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-4 border-b border-slate-200 font-bold text-slate-700 bg-orange-50">
+                            Pagamentos Aguardando Aprovação
+                        </div>
+                        {pendingValidations.length === 0 ? (
+                            <div className="p-8 text-center text-slate-500">Nenhuma validação pendente.</div>
+                        ) : (
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 text-slate-500 uppercase">
+                                    <tr>
+                                        <th className="px-6 py-3">Data</th>
+                                        <th className="px-6 py-3">Membro</th>
+                                        <th className="px-6 py-3">Descrição (Categoria)</th>
+                                        <th className="px-6 py-3 text-right">Valor</th>
+                                        <th className="px-6 py-3 text-center">Comprovante</th>
+                                        <th className="px-6 py-3 text-right">Ações</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
-            )}
-
-            {/* HISTORY View */}
-            {activeTab === 'HISTORY' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="p-4 border-b border-slate-200 font-bold text-slate-700">
-                        Histórico de Transações
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-slate-500 uppercase">
-                                <tr>
-                                    <th className="px-6 py-3">Vencimento</th>
-                                    <th className="px-6 py-3">Descrição</th>
-                                    <th className="px-6 py-3">Categoria</th>
-                                    <th className="px-6 py-3">Membro</th>
-                                    <th className="px-6 py-3">Status</th>
-                                    <th className="px-6 py-3 text-right">Valor</th>
-                                    <th className="px-6 py-3 text-center">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-200">
-                                {transactions.map(t => {
-                                    const isOverdue = t.status === 'PENDING' && t.dueDate && new Date() > new Date(t.dueDate);
-                                    let rowClass = 'hover:bg-slate-50'; // Default
-                                    if (t.status === 'COMPLETED') rowClass = 'bg-green-50 hover:bg-green-100';
-                                    else if (isOverdue) rowClass = 'bg-red-50 hover:bg-red-100';
-                                    else if (t.status === 'PENDING') rowClass = 'bg-orange-50 hover:bg-orange-100';
-
-                                    return (
-                                        <tr key={t.id} className={`transition-colors border-b border-slate-200 ${rowClass}`}>
-                                            <td className="px-6 py-3 text-slate-600">
-                                                {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : new Date(t.date).toLocaleDateString()}
-                                                {t.status === 'PENDING' && getDaysLabel(t.dueDate)}
-                                            </td>
-                                            <td className="px-6 py-3 font-medium text-slate-800">
-                                                {t.description}
-                                            </td>
-                                            <td className="px-6 py-3">
-                                                <span className={`px-2 py-1 rounded text-xs font-medium border ${t.type === 'INCOME'
-                                                    ? 'bg-green-50 text-green-700 border-green-100'
-                                                    : 'bg-red-50 text-red-700 border-red-100'
-                                                    }`}>
-                                                    {t.category}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-3 text-slate-600">
-                                                {t.payer?.name || '-'}
-                                            </td>
-                                            <td className="px-6 py-3">
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${t.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                                                    t.status === 'WAITING_APPROVAL' ? 'bg-yellow-100 text-yellow-700' :
-                                                        t.status === 'PENDING' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
-                                                    }`}>
-                                                    {t.status === 'COMPLETED' ? 'Concluído' :
-                                                        t.status === 'WAITING_APPROVAL' ? 'Aguardando' :
-                                                            t.status === 'PENDING' ? 'Pendente' : 'Cancelado'}
-                                                </span>
-                                            </td>
-                                            <td className={`px-6 py-3 text-right font-bold ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>
-                                                {t.type === 'INCOME' ? '+' : '-'} R$ {t.amount.toFixed(2)}
-                                            </td>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200">
+                                    {pendingValidations.map(t => (
+                                        <tr key={t.id} className="hover:bg-slate-50">
+                                            <td className="px-6 py-3">{new Date(t.date).toLocaleDateString()}</td>
+                                            <td className="px-6 py-3 font-semibold">{t.payer?.name || '-'}</td>
+                                            <td className="px-6 py-3">{t.description} <span className="text-xs text-slate-400">({t.category})</span></td>
+                                            <td className="px-6 py-3 text-right font-bold text-green-600">R$ {t.amount.toFixed(2)}</td>
                                             <td className="px-6 py-3 text-center">
+                                                {t.proofUrl ? (
+                                                    <a href={t.proofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center justify-center gap-1">
+                                                        <FileText className="w-4 h-4" /> Ver
+                                                    </a>
+                                                ) : <span className="text-slate-400">-</span>}
+                                            </td>
+                                            <td className="px-6 py-3 text-right flex justify-end gap-2">
                                                 <button
-                                                    onClick={() => handleEdit(t)}
-                                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors"
-                                                    title="Editar"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
+                                                    onClick={() => approveMutation.mutate(t.id)}
+                                                    className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200" title="Aprovar">
+                                                    <Check className="w-5 h-5" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(t.id)} // Assuming handleDelete is defined
-                                                    className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded transition-colors"
-                                                    title="Excluir"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
+                                                    onClick={() => rejectMutation.mutate(t.id)}
+                                                    className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200" title="Rejeitar">
+                                                    <X className="w-5 h-5" />
                                                 </button>
-                                                {(t.status === 'WAITING_APPROVAL' || t.status === 'PENDING') && (
-                                                    <button
-                                                        onClick={() => setValidatingTx(t)}
-                                                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors"
-                                                        title="Validar / Ver Detalhes"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                                {t.status === 'PENDING' && (
-                                                    <button
-                                                        onClick={() => handleSettle(t)}
-                                                        className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded transition-colors"
-                                                        title="Baixar (Quitar)"
-                                                    >
-                                                        <CheckCircle className="w-4 h-4" />
-                                                    </button>
-                                                )}
                                             </td>
                                         </tr>
-                                    );
-                                })}
-                                {transactions.length === 0 && (
-                                    <tr>
-                                        <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
-                                            Nenhuma transação encontrada.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
-                </div>
-            )}
+                )
+            }
+
+            {/* HISTORY View */}
+            {
+                activeTab === 'HISTORY' && (
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-4 border-b border-slate-200 font-bold text-slate-700">
+                            Histórico de Transações
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 text-slate-500 uppercase">
+                                    <tr>
+                                        <th className="px-6 py-3">Vencimento</th>
+                                        <th className="px-6 py-3">Descrição</th>
+                                        <th className="px-6 py-3">Categoria</th>
+                                        <th className="px-6 py-3">Membro</th>
+                                        <th className="px-6 py-3">Status</th>
+                                        <th className="px-6 py-3 text-right">Valor</th>
+                                        <th className="px-6 py-3 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200">
+                                    {transactions.map(t => {
+                                        const isOverdue = t.status === 'PENDING' && t.dueDate && new Date() > new Date(t.dueDate);
+                                        let rowClass = 'hover:bg-slate-50'; // Default
+                                        if (t.status === 'COMPLETED') rowClass = 'bg-green-50 hover:bg-green-100';
+                                        else if (isOverdue) rowClass = 'bg-red-50 hover:bg-red-100';
+                                        else if (t.status === 'PENDING') rowClass = 'bg-orange-50 hover:bg-orange-100';
+
+                                        return (
+                                            <tr key={t.id} className={`transition-colors border-b border-slate-200 ${rowClass}`}>
+                                                <td className="px-6 py-3 text-slate-600">
+                                                    {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : new Date(t.date).toLocaleDateString()}
+                                                    {t.status === 'PENDING' && getDaysLabel(t.dueDate)}
+                                                </td>
+                                                <td className="px-6 py-3 font-medium text-slate-800">
+                                                    {t.description}
+                                                </td>
+                                                <td className="px-6 py-3">
+                                                    <span className={`px-2 py-1 rounded text-xs font-medium border ${t.type === 'INCOME'
+                                                        ? 'bg-green-50 text-green-700 border-green-100'
+                                                        : 'bg-red-50 text-red-700 border-red-100'
+                                                        }`}>
+                                                        {t.category}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3 text-slate-600">
+                                                    {t.payer?.name || '-'}
+                                                </td>
+                                                <td className="px-6 py-3">
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${t.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                                                        t.status === 'WAITING_APPROVAL' ? 'bg-yellow-100 text-yellow-700' :
+                                                            t.status === 'PENDING' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                                                        }`}>
+                                                        {t.status === 'COMPLETED' ? 'Concluído' :
+                                                            t.status === 'WAITING_APPROVAL' ? 'Aguardando' :
+                                                                t.status === 'PENDING' ? 'Pendente' : 'Cancelado'}
+                                                    </span>
+                                                </td>
+                                                <td className={`px-6 py-3 text-right font-bold ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {t.type === 'INCOME' ? '+' : '-'} R$ {t.amount.toFixed(2)}
+                                                </td>
+                                                <td className="px-6 py-3 text-center">
+                                                    <button
+                                                        onClick={() => handleEdit(t)}
+                                                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors"
+                                                        title="Editar"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(t.id)} // Assuming handleDelete is defined
+                                                        className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded transition-colors"
+                                                        title="Excluir"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                    {(t.status === 'WAITING_APPROVAL' || t.status === 'PENDING') && (
+                                                        <button
+                                                            onClick={() => setValidatingTx(t)}
+                                                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors"
+                                                            title="Validar / Ver Detalhes"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    {t.status === 'PENDING' && (
+                                                        <button
+                                                            onClick={() => handleSettle(t)}
+                                                            className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded transition-colors"
+                                                            title="Baixar (Quitar)"
+                                                        >
+                                                            <CheckCircle className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {transactions.length === 0 && (
+                                        <tr>
+                                            <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
+                                                Nenhuma transação encontrada.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )
+            }
 
             {/* Create/Edit Modal */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingTransaction ? "Editar Transação" : "Nova Transação"}>
@@ -1002,6 +1058,6 @@ export function Treasury() {
                     </div>
                 )}
             </Modal>
-        </div>
+        </div >
     );
 }
