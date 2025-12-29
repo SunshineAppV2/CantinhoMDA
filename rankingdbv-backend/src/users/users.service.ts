@@ -466,29 +466,59 @@ export class UsersService {
       // Firebase Sync: Support updating password if provided
       if (password && updatedUser.email) {
         try {
-          // Assuming firebaseAdmin is imported and initialized
+          console.log(`[FirebaseSync] Attempting to sync password for ${updatedUser.email}...`);
+          // 1. Try to find user by email
           const fbUser = await firebaseAdmin.auth().getUserByEmail(updatedUser.email);
           if (fbUser) {
             await firebaseAdmin.auth().updateUser(fbUser.uid, {
-              password: password
+              password: password,
+              emailVerified: true // Ensure it's verified
             });
-            console.log(`[FirebaseSync] Password updated for ${updatedUser.email}`);
+            console.log(`[FirebaseSync] Password updated successfully for existing user ${updatedUser.email} (UID: ${fbUser.uid})`);
           }
         } catch (error: any) {
           if (error.code === 'auth/user-not-found') {
             console.warn(`[FirebaseSync] User ${updatedUser.email} not found in Firebase. Creating new Firebase user...`);
             try {
-              await firebaseAdmin.auth().createUser({
+              const newUser = await firebaseAdmin.auth().createUser({
+                uid: updatedUser.id, // Try to enforce same ID if possible, but might fail if format differs
                 email: updatedUser.email,
                 password: password,
-                displayName: updatedUser.name
+                displayName: updatedUser.name,
+                emailVerified: true
               });
-              console.log(`[FirebaseSync] User ${updatedUser.email} CREATED successfully in Firebase.`);
-            } catch (createError) {
-              console.error(`[FirebaseSync] Failed to create user ${updatedUser.email} in Firebase:`, createError);
+              console.log(`[FirebaseSync] User ${updatedUser.email} CREATED successfully in Firebase (UID: ${newUser.uid}).`);
+            } catch (createError: any) {
+              // Edge Case: Email exists but GetByEmail failed? Or Race condition?
+              if (createError.code === 'auth/email-already-exists') {
+                console.warn(`[FirebaseSync] Creation failed because email already exists. Retrying update...`);
+                try {
+                  const existingUser = await firebaseAdmin.auth().getUserByEmail(updatedUser.email);
+                  await firebaseAdmin.auth().updateUser(existingUser.uid, { password: password });
+                  console.log(`[FirebaseSync] Recovered: Password updated for ${updatedUser.email} after creation conflict.`);
+                } catch (retryError) {
+                  console.error(`[FirebaseSync] CRITICAL: Failed to recover password update for ${updatedUser.email}:`, retryError);
+                }
+              } else if (createError.code === 'auth/uid-already-exists') {
+                // Try creating without enforcing UID
+                console.warn(`[FirebaseSync] UID collision. Creating with auto-generated UID...`);
+                try {
+                  await firebaseAdmin.auth().createUser({
+                    email: updatedUser.email,
+                    password: password,
+                    displayName: updatedUser.name,
+                    emailVerified: true
+                  });
+                  console.log(`[FirebaseSync] User ${updatedUser.email} created with auto-UID.`);
+                } catch (finalError) {
+                  console.error(`[FirebaseSync] Failed auto-UID creation for ${updatedUser.email}:`, finalError);
+                }
+              } else {
+                console.error(`[FirebaseSync] Failed to create user ${updatedUser.email}:`, createError);
+              }
             }
           } else {
-            console.error(`[FirebaseSync] Error syncing password for ${updatedUser.email}:`, error);
+            console.error(`[FirebaseSync] Unexpected error looking up ${updatedUser.email}:`, error);
           }
         }
       }
