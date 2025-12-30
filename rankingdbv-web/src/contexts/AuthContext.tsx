@@ -46,15 +46,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
                 // Decode token to get basic info
                 const decoded: any = jwtDecode(token);
-                // decoded = { sub: userId, email, role, clubId, unitId, exp, iat }
 
-                // Optional: We could verify if token is expired here
+                // Fetch full data from backend to get the real Name (source of truth)
+                let backendName = firebaseUser.displayName || 'Usuário';
+                try {
+                    const res = await api.get(`/users/${decoded.userId || decoded.sub}`);
+                    if (res.data && res.data.name) {
+                        backendName = res.data.name;
+                    }
+                } catch (apiErr) {
+                    console.warn("Could not fetch user profile from API, using fallback name:", apiErr);
+                }
 
                 setUser({
-                    id: decoded.userId || decoded.sub, // Mapping backend ID
+                    id: decoded.userId || decoded.sub,
                     uid: firebaseUser.uid,
                     email: firebaseUser.email || decoded.email,
-                    name: firebaseUser.displayName || 'Usuário', // Or fetch from /users/me
+                    name: backendName,
                     role: decoded.role,
                     clubId: decoded.clubId,
                     unitId: decoded.unitId,

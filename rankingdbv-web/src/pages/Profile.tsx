@@ -11,6 +11,7 @@ import { collection, query, where, getDocs, addDoc, updateDoc, doc, getDoc } fro
 import { updatePassword } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
 import { toast } from 'sonner';
+import { api } from '../lib/axios';
 
 interface Club {
     id: string;
@@ -21,6 +22,11 @@ interface Unit {
     id: string;
     name: string;
 }
+
+const SEX_OPTIONS = [
+    { value: 'MASCULINO', label: 'Masculino' },
+    { value: 'FEMININO', label: 'Feminino' }
+];
 
 export function Profile() {
     const { user } = useAuth(); // Assuming login or updateUser updates context
@@ -33,7 +39,43 @@ export function Profile() {
     const [clubId, setClubId] = useState('');
     const [unitId, setUnitId] = useState('');
 
+    // Additional Profile Fields
+    const [birthDate, setBirthDate] = useState('');
+    const [sex, setSex] = useState('');
+    const [cpf, setCpf] = useState('');
+    const [mobile, setMobile] = useState('');
+    const [role, setRole] = useState('');
+
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    // Fetch Full User Data from Backend
+    const { data: fullUser, isLoading: isLoadingProfile, refetch: refetchProfile } = useQuery({
+        queryKey: ['user-profile', user?.id],
+        queryFn: async () => {
+            if (!user?.id) return null;
+            const res = await api.get(`/users/${user.id}`);
+            return res.data;
+        },
+        enabled: !!user?.id
+    });
+
+    // Populate state when data arrives
+    useEffect(() => {
+        if (fullUser) {
+            setName(fullUser.name || '');
+            setEmail(fullUser.email || '');
+            setClubId(fullUser.clubId || '');
+            setUnitId(fullUser.unitId || '');
+            setRole(fullUser.role || '');
+            setSex(fullUser.sex || '');
+            setCpf(fullUser.cpf || '');
+            setMobile(fullUser.mobile || '');
+            if (fullUser.birthDate) {
+                const date = new Date(fullUser.birthDate);
+                setBirthDate(date.toISOString().split('T')[0]);
+            }
+        }
+    }, [fullUser]);
 
     // Creation Modal States
     const [isClubModalOpen, setIsClubModalOpen] = useState(false);
@@ -48,14 +90,7 @@ export function Profile() {
     const [clubs, setClubs] = useState<Club[]>([]);
     const [units, setUnits] = useState<Unit[]>([]);
 
-    useEffect(() => {
-        if (user) {
-            setName(user.name);
-            setEmail(user.email);
-            setClubId(user.clubId || '');
-            setUnitId(user.unitId || '');
-        }
-    }, [user]);
+
 
     // Initial Load: Clubs
     useEffect(() => {
@@ -84,14 +119,20 @@ export function Profile() {
 
     const updateProfileMutation = useMutation({
         mutationFn: async (data: any) => {
+            // Update via BACKEND API (PostgreSQL)
+            await api.patch(`/users/${user!.id}`, data);
+
+            // Also Sync FIRESTORE for legacy/social components
             const userRef = doc(db, 'users', user!.id);
             const updates: any = {
                 name: data.name,
                 clubId: data.clubId,
-                unitId: data.unitId
+                unitId: data.unitId,
+                sex: data.sex,
+                mobile: data.mobile,
+                birthDate: data.birthDate
             };
-
-            await updateDoc(userRef, updates);
+            await updateDoc(userRef, updates).catch(e => console.warn('Firestore sync failed:', e));
 
             if (data.password && auth.currentUser) {
                 await updatePassword(auth.currentUser, data.password);
@@ -102,16 +143,13 @@ export function Profile() {
             setPassword('');
             setConfirmPassword('');
             toast.success('Perfil atualizado!');
-            // updateEmail is tricky without re-auth, we skip it for now or assume email is read-only in UI
+            refetchProfile();
         },
         onError: (err: any) => {
             console.error(err);
-            if (err.code === 'auth/requires-recent-login') {
-                setMessage({ type: 'error', text: 'Para alterar a senha, faça login novamente.' });
-                toast.error('Requer login recente.');
-            } else {
-                setMessage({ type: 'error', text: 'Erro ao atualizar perfil.' });
-            }
+            const errMsg = err.response?.data?.message || err.message;
+            setMessage({ type: 'error', text: `Erro: ${errMsg}` });
+            toast.error('Erro ao atualizar perfil.');
         }
     });
 
@@ -168,7 +206,15 @@ export function Profile() {
             return;
         }
 
-        const payload: any = { name, clubId, unitId };
+        const payload: any = {
+            name,
+            clubId,
+            unitId,
+            sex,
+            mobile,
+            cpf,
+            birthDate
+        };
         if (password) payload.password = password;
 
         updateProfileMutation.mutate(payload);
@@ -212,8 +258,55 @@ export function Profile() {
                                     type="text"
                                     value={name}
                                     onChange={e => setName(e.target.value)}
+                                    placeholder={isLoadingProfile ? 'Carregando...' : ''}
                                     className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
                                 />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Sexo</label>
+                                    <select
+                                        value={sex}
+                                        onChange={e => setSex(e.target.value)}
+                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                                    >
+                                        <option value="">Selecione...</option>
+                                        {SEX_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Data de Nascimento</label>
+                                    <input
+                                        type="date"
+                                        value={birthDate}
+                                        onChange={e => setBirthDate(e.target.value)}
+                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">CPF</label>
+                                    <input
+                                        type="text"
+                                        value={cpf}
+                                        onChange={e => setCpf(e.target.value)}
+                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Celular</label>
+                                    <input
+                                        type="text"
+                                        value={mobile}
+                                        onChange={e => setMobile(e.target.value)}
+                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
