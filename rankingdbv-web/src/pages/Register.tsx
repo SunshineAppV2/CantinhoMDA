@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { UserPlus, Mail, Lock, User, ArrowRight, Home, Users, MapPin, Globe, Award, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 interface Club {
@@ -94,24 +94,42 @@ export function Register() {
 
     // Handle Invite Link & URL Params
     useEffect(() => {
-        // Check for Invite Link (handle both case variations)
-        const inviteClubId = searchParams.get('clubId') || searchParams.get('clubid') || searchParams.get('clubID');
+        const checkInvite = async () => {
+            const inviteClubId = searchParams.get('clubId') || searchParams.get('clubid') || searchParams.get('clubID');
 
-        if (inviteClubId) {
-            setMode('JOIN');
-            // Important: Set the clubId state immediately so it matches the option value
-            setClubId(inviteClubId);
+            if (inviteClubId) {
+                setMode('JOIN');
+                setClubId(inviteClubId);
 
-            if (clubs.length > 0) {
-                // Try to find the club name in the loaded list
-                const foundClub = clubs.find(c => String(c.id) === String(inviteClubId));
-                if (foundClub) {
-                    setInviteClubName(foundClub.name);
+                // 1. Try to find in the already loaded list
+                if (clubs.length > 0) {
+                    const foundClub = clubs.find(c => String(c.id) === String(inviteClubId));
+                    if (foundClub) {
+                        setInviteClubName(foundClub.name);
+                        console.log('Invite club found in loaded list:', foundClub.name);
+                        return;
+                    }
+                }
+
+                // 2. Fallback: Fetch directly from Firestore if not in the list (or list still loading)
+                try {
+                    const clubDoc = await getDoc(doc(db, 'clubs', inviteClubId));
+                    if (clubDoc.exists()) {
+                        const data = clubDoc.data();
+                        setInviteClubName(data.name);
+                        console.log('Invite club fetched from Firestore:', data.name);
+                    } else {
+                        console.warn('Invite club not found in Firestore:', inviteClubId);
+                    }
+                } catch (err) {
+                    console.error('Error fetching invite club details:', err);
                 }
             }
-        }
+        };
 
-        // Other Params
+        checkInvite();
+
+        // Other Params (moved outside async to be immediate)
         const urlEmail = searchParams.get('email');
         if (urlEmail) {
             setEmail(urlEmail);
