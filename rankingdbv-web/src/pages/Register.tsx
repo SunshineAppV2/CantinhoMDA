@@ -70,6 +70,7 @@ export function Register() {
     // Dynamic Options based on selected union
     const availableUnions = Object.keys(HIERARCHY_DATA);
     const availableMissions = HIERARCHY_DATA[union] || [];
+    const [inviteClubName, setInviteClubName] = useState('');
 
     const [searchParams] = useSearchParams();
 
@@ -83,15 +84,27 @@ export function Register() {
                     clubsList.push({ id: doc.id, ...doc.data() } as Club);
                 });
                 setClubs(clubsList);
+
+                // Check invite parameter AFTER clubs are loaded to match name
+                const inviteClubId = searchParams.get('clubId');
+                if (inviteClubId) {
+                    const foundClub = clubsList.find(c => c.id === inviteClubId);
+                    if (foundClub) {
+                        setInviteClubName(foundClub.name);
+                        setClubId(inviteClubId);
+                        setMode('JOIN');
+                        // toast.success(`Bem-vindo ao ${foundClub.name}! Complete seu cadastro.`);
+                    }
+                }
             } catch (err) {
                 console.error('Error fetching clubs from Firestore:', err);
             }
         };
 
         fetchClubs();
-    }, []);
+    }, []); // Only on mount. If params change later, we might miss it? Usually acceptable for landing.
 
-    // Handle URL Params - Runs when params change
+    // Handle URL Params - Runs when params change (for other params)
     useEffect(() => {
         const urlEmail = searchParams.get('email');
         if (urlEmail) {
@@ -102,18 +115,6 @@ export function Register() {
         if (isResume) {
             toast.info('Complete o nome do seu Clube para ativar sua conta.');
             setMode('CREATE');
-        }
-
-        const inviteClubId = searchParams.get('clubId');
-        if (inviteClubId) {
-            setMode('JOIN');
-            setClubId(inviteClubId);
-            // toast.success('Convite aplicado! Complete seu cadastro.'); // Remove or keep? Keep, but maybe verify if not already set?
-            // Better to avoid duplicate toasts if re-renders happen. 
-            // Simple check:
-            if (inviteClubId !== clubId) {
-                toast.success('Convite aplicado! Complete seu cadastro.');
-            }
         }
 
         const refCode = searchParams.get('ref');
@@ -384,9 +385,25 @@ export function Register() {
 
                     {mode === 'JOIN' ? (
                         <>
-                            <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 mb-2">
-                                <p>Selecione o clube que você participa.</p>
-                            </div>
+                            {inviteClubName ? (
+                                <div className="bg-green-50 border border-green-200 p-4 rounded-lg mb-4 flex items-start gap-3">
+                                    <div className="bg-green-100 p-2 rounded-full">
+                                        <Award className="w-6 h-6 text-green-700" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-green-800 font-bold">Convite Especial</p>
+                                        <p className="text-sm text-green-700">
+                                            Você está se cadastrando no clube <span className="font-bold underline">{inviteClubName}</span>.
+                                        </p>
+                                        <p className="text-xs text-green-600 mt-1">Seu cadastro passará por aprovação da diretoria.</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 mb-2">
+                                    <p>Selecione o clube que você participa.</p>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Clube</label>
                                 <div className="relative">
@@ -395,7 +412,8 @@ export function Register() {
                                         required
                                         value={clubId}
                                         onChange={e => setClubId(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white"
+                                        disabled={!!inviteClubName} // Lock if invite
+                                        className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white disabled:bg-slate-100 disabled:text-slate-500"
                                     >
                                         <option value="">Selecione seu Clube</option>
                                         {clubs.map(club => (

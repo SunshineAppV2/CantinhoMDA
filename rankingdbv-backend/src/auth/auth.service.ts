@@ -19,9 +19,19 @@ export class AuthService {
 
     // Compara a senha digitada com o hash do banco
     if (user && (await bcrypt.compare(pass, user.password))) {
-      if (user.isActive === false || user.status === 'BLOCKED') {
-        throw new UnauthorizedException('Sua conta está bloqueada ou inativa.');
+      if (user.status === 'BLOCKED') {
+        throw new UnauthorizedException('Sua conta foi bloqueada. Entre em contato com a diretoria.');
       }
+      if (user.status === 'PENDING' && user.role !== 'OWNER') { // Owners are auto-approved usually if creators, but joined owners might wait? Assuming joined owners wait too? 
+        // Logic: If joined an existing club, wait approval. If created club, ACTIVE.
+        // Register service sets status.
+        throw new UnauthorizedException('Seu cadastro aguarda aprovação da diretoria.');
+      }
+      // Legacy isActive check just in case
+      if (user.isActive === false) {
+        throw new UnauthorizedException('Sua conta está inativa.');
+      }
+
       const { password, ...result } = user;
       return result;
     }
