@@ -147,6 +147,16 @@ function DirectorDashboard() {
         staleTime: 1000 * 60 * 30 // Cache for 30 mins
     });
 
+    // 2b. Check Global System Config (Referral Toggle)
+    const { data: systemConfig } = useQuery({
+        queryKey: ['system-config'],
+        queryFn: async () => {
+            const snap = await getDoc(doc(db, 'system', 'config'));
+            return snap.exists() ? snap.data() : { referralEnabled: false }; // Default false as per request
+        },
+        staleTime: 1000 * 60 * 5
+    });
+
     // 3. Early Loading Return
     if (statsLoading && user?.clubId) {
         return (
@@ -183,8 +193,8 @@ function DirectorDashboard() {
             {/* Subscription Status for Admins */}
             {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && <SubscriptionWidget />}
 
-            {/* Referral Widget */}
-            {clubStatus?.referralCode && (
+            {/* Referral Widget (Conditionally Rendered) */}
+            {systemConfig?.referralEnabled && clubStatus?.referralCode && (
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                         <Users className="w-32 h-32" />

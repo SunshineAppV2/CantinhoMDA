@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/axios';
 import { toast } from 'sonner';
-import { Send, AlertTriangle, CheckCircle, Info, XCircle } from 'lucide-react';
+import { Send, AlertTriangle, CheckCircle, Info, XCircle, Settings } from 'lucide-react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export function SystemMessages() {
     const [title, setTitle] = useState('');
@@ -116,6 +118,72 @@ export function SystemMessages() {
                 <p>
                     <strong>Atenção:</strong> Esta ação enviará uma notificação instantânea para TODOS os usuários ativos do sistema. Use com cautela.
                 </p>
+            </div>
+
+            <SystemConfigSection />
+        </div>
+    );
+}
+
+function SystemConfigSection() {
+    const { data: config, isLoading } = useQuery({
+        queryKey: ['system-config-editor'],
+        queryFn: async () => {
+            const snap = await getDoc(doc(db, 'system', 'config'));
+            return snap.exists() ? snap.data() : { referralEnabled: false };
+        }
+    });
+
+    const queryClient = useQueryClient();
+
+    const toggleMutation = useMutation({
+        mutationFn: async (newState: boolean) => {
+            await setDoc(doc(db, 'system', 'config'), { referralEnabled: newState }, { merge: true });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['system-config-editor'] });
+            toast.success('Configuração atualizada com sucesso!');
+        },
+        onError: () => toast.error('Erro ao atualizar configuração.')
+    });
+
+    if (isLoading) return <div className="mt-8 p-6 text-center text-slate-500">Carregando configurações...</div>;
+
+    const isEnabled = config?.referralEnabled || false;
+
+    return (
+        <div className="mt-12 border-t pt-8">
+            <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Settings className="w-6 h-6 text-slate-600" />
+                Configurações Globais
+            </h2>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold text-slate-800">Sistema de Indicação</h3>
+                    <p className="text-sm text-slate-500">
+                        Ativar ou desativar o banner e link de indicação para todos os clubes.
+                    </p>
+                </div>
+
+                <button
+                    onClick={() => toggleMutation.mutate(!isEnabled)}
+                    disabled={toggleMutation.isPending}
+                    className={`
+                        relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2
+                        ${isEnabled ? 'bg-green-500' : 'bg-slate-200'}
+                    `}
+                >
+                    <span
+                        className={`
+                            inline-block h-6 w-6 transform rounded-full bg-white transition-transform
+                            ${isEnabled ? 'translate-x-7' : 'translate-x-1'}
+                        `}
+                    />
+                </button>
+            </div>
+            <div className="mt-2 text-right text-xs text-slate-400">
+                Estado atual: <span className={isEnabled ? 'text-green-600 font-bold' : 'text-slate-500 font-bold'}>{isEnabled ? 'ATIVADO' : 'DESATIVADO'}</span>
             </div>
         </div>
     );
