@@ -33,13 +33,7 @@ type MenuItem = {
     badge?: number; // For alerts/counts
 };
 
-// --- Styles ---
-const COLORS = {
-    primary: '#7CB342', // Main Green
-    primaryDark: '#558B2F', // Darker Green (Hover/Active)
-    text: '#FFFFFF',
-    textMuted: 'rgba(255, 255, 255, 0.7)',
-};
+
 
 export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, setMobileOpen: (o: boolean) => void }) {
     const { user, logout } = useAuth();
@@ -49,16 +43,21 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
     // Close secondary menu when clicking outside (handled by layout overlay usually, but simple state here)
     // Auto-select menu based on current path
     useEffect(() => {
-        // Simple heuristic to highlight the correct top-level item
+        // Simple heuristic to highlight the correct top-level item on mount/nav
         const path = location.pathname;
-        if (path === '/dashboard') setActiveMenu('dashboard');
-        else if (path.includes('/profile') || path.includes('/family') || path.includes('/requirements') || path.includes('/activities')) setActiveMenu('access');
-        else if (path.includes('/members') || path.includes('/classes') || path.includes('/events') || path.includes('/meetings') || path.includes('/secretary') || path.includes('/approvals')) setActiveMenu('management');
-        else if (path.includes('/financial') || path.includes('/treasury') || path.includes('/master-treasury')) setActiveMenu('financial');
-        else if (path.includes('/reports') || path.includes('/ranking') || path.includes('/signatures')) setActiveMenu('reports');
-        else if (path.includes('/store')) setActiveMenu('store');
-        else if (path.includes('/settings') || path.includes('/admin') || path.includes('/hierarchy')) setActiveMenu('config');
-    }, [location.pathname]);
+        if (!activeMenu) { // Only auto-set if nothing is active (prevent overriding user toggle? No, usually we want sync)
+            if (path === '/dashboard') setActiveMenu('dashboard');
+            else if (path.includes('/profile') || path.includes('/family') || path.includes('/requirements') || path.includes('/activities')) setActiveMenu('access');
+            else if (path.includes('/members') || path.includes('/classes') || path.includes('/events') || path.includes('/meetings') || path.includes('/secretary') || path.includes('/approvals')) setActiveMenu('management');
+            else if (path.includes('/financial') || path.includes('/treasury') || path.includes('/master-treasury')) setActiveMenu('financial');
+            else if (path.includes('/reports') || path.includes('/ranking') || path.includes('/signatures')) setActiveMenu('reports');
+            else if (path.includes('/store')) setActiveMenu('store');
+            else if (path.includes('/settings') || path.includes('/admin') || path.includes('/hierarchy')) setActiveMenu('config');
+        }
+    }, [location.pathname]); // Removed activeMenu dependency to avoid loops, but we might want it to NOT auto-open if user closed it. 
+    // Actually, marketup style usually keeps it open if you are in that section.
+    // User asked: "quando for clicado o menu retrai de volta". 
+    // This implies clicking the SUB-ITEM should close the drawer.
 
     // Permissions Query (reused logic)
     const { data: clubData } = useQuery({
@@ -217,10 +216,10 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             <aside className={`fixed inset-y-0 left-0 z-50 flex transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
 
                 {/* Level 1: Main Sidebar */}
-                <div style={{ backgroundColor: COLORS.primary }} className="w-24 flex flex-col items-center py-4 h-full shadow-lg relative z-20">
+                <div className="w-24 flex flex-col items-center py-4 h-full shadow-xl relative z-20 bg-slate-900 border-r border-slate-800">
                     <div className="mb-6 px-2">
                         {/* Compact Logo */}
-                        <img src="/logo.png" alt="DBV" className="w-12 h-12 object-contain brightness-0 invert" />
+                        <img src="/logo.png" alt="DBV" className="w-12 h-12 object-contain" />
                     </div>
 
                     <nav className="flex-1 w-full space-y-1 overflow-y-auto scrollbar-none">
@@ -232,64 +231,69 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
                                 <div
                                     key={item.id}
                                     onClick={() => {
-                                        setActiveMenu(item.id);
-                                        // If it has no subitems, we might want to navigate immediately if path exists
-                                        // Usually Link handles navigation. If item has path, it's a Link.
-                                        // If item has subItems, it just opens the drawer.
+                                        // Toggle logic: if already active, close it.
+                                        if (isActive) setActiveMenu(null);
+                                        else setActiveMenu(item.id);
                                     }}
                                     className={`
-                                        group flex flex-col items-center justify-center py-3 cursor-pointer w-full transition-colors relative
-                                        ${isActive ? 'bg-black/10' : 'hover:bg-black/5'}
+                                        group flex flex-col items-center justify-center py-3 cursor-pointer w-full transition-all relative
+                                        ${isActive ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'}
                                     `}
                                 >
                                     {item.path ? (
-                                        <Link to={item.path} className="flex flex-col items-center w-full" onClick={() => setActiveMenu(item.id)}>
-                                            <Icon className="w-8 h-8 text-white mb-1 stroke-[1.5]" />
-                                            <span className="text-[10px] font-medium text-white tracking-wide text-center leading-tight px-1">{item.label}</span>
+                                        <Link
+                                            to={item.path}
+                                            className="flex flex-col items-center w-full"
+                                            onClick={() => setActiveMenu(null)} // If it's a direct link (like Dashboard), close any open drawer? Or just set active?
+                                        // Actually, layout usually keeps dashboard active. 
+                                        // But if I click 'Dashboard', I expect to go there.
+                                        // Let's rely on the parent onClick for toggle IF it has subItems. 
+                                        // If it has NO subItems (like Dashboard), parent onClick sets it active.
+                                        >
+                                            <Icon className={`w-8 h-8 mb-1 stroke-[1.5] ${isActive ? 'text-blue-500' : 'text-slate-400 group-hover:text-white'}`} />
+                                            <span className="text-[10px] font-medium tracking-wide text-center leading-tight px-1">{item.label}</span>
                                         </Link>
                                     ) : (
                                         <div className="flex flex-col items-center w-full">
-                                            <Icon className="w-8 h-8 text-white mb-1 stroke-[1.5]" />
-                                            <span className="text-[10px] font-medium text-white tracking-wide text-center leading-tight px-1">{item.label}</span>
+                                            <Icon className={`w-8 h-8 mb-1 stroke-[1.5] ${isActive ? 'text-blue-500' : 'text-slate-400 group-hover:text-white'}`} />
+                                            <span className="text-[10px] font-medium tracking-wide text-center leading-tight px-1">{item.label}</span>
                                         </div>
                                     )}
 
                                     {/* Active Indicator Bar on Left */}
                                     {isActive && (
-                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/80 rounded-r" />
+                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r" />
                                     )}
                                 </div>
                             );
                         })}
                     </nav>
 
-                    <div className="pt-4 border-t border-white/20 w-full flex flex-col items-center">
-                        <button onClick={logout} className="p-2 hover:bg-black/10 rounded-lg transition-colors group">
-                            <LogOut className="w-6 h-6 text-white/80 group-hover:text-white" />
+                    <div className="pt-4 border-t border-slate-800 w-full flex flex-col items-center">
+                        <button onClick={logout} className="p-2 hover:bg-slate-800 rounded-lg transition-colors group">
+                            <LogOut className="w-6 h-6 text-slate-500 group-hover:text-red-400" />
                         </button>
                     </div>
                 </div>
 
                 {/* Level 2: Submenu Drawer */}
-                {/* This drawer appears NEXT to the main sidebar when an item with subItems is active */}
-
+                {/* Dark Theme for Drawer */}
                 <div
                     className={`
-                        w-64 bg-white border-r border-slate-200 shadow-xl h-full transition-all duration-300 ease-in-out
+                        w-64 bg-slate-900 border-r border-slate-800 shadow-2xl h-full transition-all duration-300 ease-in-out
                         flex flex-col
                         ${activeItem?.subItems ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 w-0 overflow-hidden'}
                     `}
-                    style={{ backgroundColor: '#F8F9FA' }} // Light gray for contrast against green 
                 >
                     {activeItem?.subItems && (
                         <>
-                            <div className="p-5 border-b border-slate-200/60 bg-white">
-                                <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2">
-                                    <activeItem.icon className="w-5 h-5 text-lime-600" />
+                            <div className="p-5 border-b border-slate-800 bg-slate-900">
+                                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <activeItem.icon className="w-5 h-5 text-blue-500" />
                                     {activeItem.label}
                                 </h2>
                             </div>
-                            <div className="p-4 space-y-1 overflow-y-auto flex-1">
+                            <div className="p-4 space-y-1 overflow-y-auto flex-1 bg-slate-900">
                                 {activeItem.subItems.map(sub => {
                                     const SubIcon = sub.icon;
                                     const isSubActive = location.pathname === sub.path;
@@ -297,15 +301,18 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
                                         <Link
                                             key={sub.id}
                                             to={sub.path || '#'}
-                                            onClick={() => setMobileOpen(false)} // Close mobile menu on navigate
+                                            onClick={() => {
+                                                setMobileOpen(false); // Close mobile
+                                                setActiveMenu(null); // Retract drawer (User request)
+                                            }}
                                             className={`
                                                 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
                                                 ${isSubActive
-                                                    ? 'bg-lime-100 text-lime-700 shadow-sm'
-                                                    : 'text-slate-500 hover:text-slate-800 hover:bg-white hover:shadow-sm'}
+                                                    ? 'bg-blue-600/20 text-blue-400 shadow-sm border border-blue-600/20'
+                                                    : 'text-slate-400 hover:text-white hover:bg-slate-800'}
                                             `}
                                         >
-                                            <SubIcon className={`w-4 h-4 ${isSubActive ? 'text-lime-600' : 'text-slate-400'}`} />
+                                            <SubIcon className={`w-4 h-4 ${isSubActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-white'}`} />
                                             {sub.label}
                                         </Link>
                                     );
