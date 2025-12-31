@@ -34,11 +34,11 @@ export class PaymentsService implements OnApplicationBootstrap {
             this.logger.log('Payment plans already configured.');
         }
 
-        // Ensure Mercado Pago is enabled by default if plans exist
+        // Ensure defaults exist
         const settings = await this.getPublicSettings();
-        if (settings.mercadopago_enabled === undefined) {
-            await this.updateSystemSettings('mercadopago_enabled', true);
-        }
+        if (settings.mercadopago_enabled === undefined) await this.updateSystemSettings('mercadopago_enabled', true);
+        if (settings.referral_system_enabled === undefined) await this.updateSystemSettings('referral_system_enabled', true);
+        if (settings.pix_payment_enabled === undefined) await this.updateSystemSettings('pix_payment_enabled', false);
     }
 
     // --- MERCADO PAGO SUBSCRIPTIONS ---
@@ -83,7 +83,7 @@ export class PaymentsService implements OnApplicationBootstrap {
     }
 
     async getPublicSettings() {
-        const keys = ['mercadopago_enabled', 'mercadopago_plan_ids'];
+        const keys = ['mercadopago_enabled', 'mercadopago_plan_ids', 'referral_system_enabled', 'pix_payment_enabled'];
         const settings = await this.prisma.systemSetting.findMany({
             where: { key: { in: keys } }
         });
