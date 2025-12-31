@@ -77,9 +77,11 @@ export function MemberForm({ isOpen, onClose, onSubmit, initialData, units, club
                                     className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                                 >
                                     <option value="">Selecione o Clube</option>
-                                    {Array.from(new Map(clubs.map((c: any) => [c.name, c])).values()).map((c: any) => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
+                                    {Array.from(new Map(clubs.map((c: any) => [c.name, c])).values())
+                                        .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                                        .map((c: any) => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
                                 </select>
                             </div>
                         )}
