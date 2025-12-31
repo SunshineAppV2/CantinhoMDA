@@ -53,7 +53,7 @@ export function Register() {
     // Create Mode State
     const [clubName, setClubName] = useState('');
     const [region, setRegion] = useState('');
-    const [district] = useState('');
+    const [district, setDistrict] = useState('');
     const [mission, setMission] = useState('');
     const [union, setUnion] = useState('');
 
@@ -528,15 +528,13 @@ export function Register() {
                                     association: mission,
                                     mission,
                                     region,
-                                    district: '' // Add district state if needed, but Register currently doesn't have it. Let's add it.
+                                    district
                                 }}
                                 onChange={(val) => {
                                     setUnion(val.union);
                                     setMission(val.association);
                                     setRegion(val.region);
-                                    // If we want to support district in Register, we need a state for it.
-                                    // The original Register didn't have district input for CREATE mode, but user asked for it.
-                                    // I'll add setDistrict(val.district) but I need to declare the state first.
+                                    setDistrict(val.district);
                                 }}
                             />
 
