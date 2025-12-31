@@ -219,12 +219,10 @@ export function HierarchySelector({ value, onChange, readOnly = false }: Hierarc
                     <div className="relative">
                         <Combobox.Input
                             className="w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-slate-900 disabled:bg-slate-100 disabled:text-slate-400"
-                            onChange={(event) => setQueryRegion(event.target.value)}
-                            onBlur={() => {
-                                // Auto-select typed value on blur if valid and different
-                                if (queryRegion && queryRegion !== value.region) {
-                                    handleChange('region', queryRegion);
-                                }
+                            onChange={(event) => {
+                                const val = event.target.value;
+                                setQueryRegion(val);
+                                handleChange('region', val);
                             }}
                             displayValue={(val: string) => val}
                             placeholder={value.association ? "R1, Região 1..." : "Selecione a Associação primeiro"}
@@ -236,7 +234,7 @@ export function HierarchySelector({ value, onChange, readOnly = false }: Hierarc
                     {value.association && (
                         <Combobox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
                             {/* Allow Creating New Option */}
-                            {queryRegion.length > 0 && !regions.includes(queryRegion) && (
+                            {queryRegion.length > 0 && !regions.some(r => r.toLowerCase() === queryRegion.toLowerCase()) && (
                                 <Combobox.Option
                                     value={queryRegion}
                                     className={({ active }) =>
@@ -286,12 +284,10 @@ export function HierarchySelector({ value, onChange, readOnly = false }: Hierarc
                     <div className="relative">
                         <Combobox.Input
                             className="w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-slate-900 disabled:bg-slate-100 disabled:text-slate-400"
-                            onChange={(event) => setQueryDistrict(event.target.value)}
-                            onBlur={() => {
-                                // Auto-select typed value on blur if valid and different
-                                if (queryDistrict && queryDistrict !== value.district) {
-                                    handleChange('district', queryDistrict);
-                                }
+                            onChange={(event) => {
+                                const val = event.target.value;
+                                setQueryDistrict(val);
+                                handleChange('district', val);
                             }}
                             displayValue={(val: string) => val}
                             placeholder={value.region ? "Distrito Central..." : "Selecione a Região primeiro"}
