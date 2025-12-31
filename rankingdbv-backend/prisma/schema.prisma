@@ -145,6 +145,8 @@ model User {
   region                 String?
   district               String?
   association            String?
+  union                  String?
+  mission                String?
   isActive               Boolean             @default(true)
   mustChangePassword     Boolean             @default(false)
   schoolShift            String?

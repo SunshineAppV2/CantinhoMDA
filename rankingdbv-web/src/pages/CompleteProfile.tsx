@@ -58,7 +58,7 @@ export function CompleteProfile() {
             }
 
             // Update Backend
-            await api.put(`/users/${user?.uid}`, {
+            await api.patch(`/users/${user?.id}`, {
                 union: hierarchy.union,
                 association: hierarchy.association,
                 mission: hierarchy.association, // Synced
