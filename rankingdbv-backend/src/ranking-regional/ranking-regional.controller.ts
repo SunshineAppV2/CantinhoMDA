@@ -17,6 +17,11 @@ export class RankingRegionalController {
 
         let scope: any = { district, region, association };
 
+        // Restrição para Diretores: Ver apenas o próprio clube
+        if (user.role === 'DIRECTOR' || user.role === 'OWNER' || user.role === 'ADMIN') {
+            scope = { clubId: user.clubId };
+        }
+
         if (user.role === 'COORDINATOR_DISTRICT') scope = { district: user.district };
         if (user.role === 'COORDINATOR_REGIONAL') scope = { region: user.region };
         if (user.role === 'COORDINATOR_AREA') scope = { association: user.association };

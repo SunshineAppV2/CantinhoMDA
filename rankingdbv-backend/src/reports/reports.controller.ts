@@ -30,6 +30,8 @@ export class ReportsController {
         let finalRegion = region;
         let finalDistrict = district;
 
+        let finalClubId = undefined; // For single club scope
+
         // Regional Coordinator: Force Association & Region
         if (user.role === 'COORDINATOR_REGIONAL') {
             if (!user.association || !user.region) throw new ForbiddenException('Perfil incompleto para Coordenador Regional');
@@ -43,7 +45,12 @@ export class ReportsController {
             finalAssociation = user.association;
             finalRegion = user.region;
             finalDistrict = user.district;
-        } else if (['MASTER', 'ADMIN', 'OWNER'].includes(user.role)) {
+        }
+        // Director/Owner/Admin: Force Club ID
+        else if (['DIRECTOR', 'OWNER', 'ADMIN'].includes(user.role)) {
+            finalClubId = user.clubId;
+        }
+        else if (['MASTER'].includes(user.role)) {
             // No strict enforcement, use query params
         }
 
@@ -59,6 +66,7 @@ export class ReportsController {
             association: finalAssociation,
             region: finalRegion,
             district: finalDistrict,
+            clubId: finalClubId,
             startDate,
             endDate
         });

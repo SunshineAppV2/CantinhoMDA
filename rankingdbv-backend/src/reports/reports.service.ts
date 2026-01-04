@@ -9,16 +9,18 @@ export class ReportsService {
         association?: string;
         region?: string;
         district?: string;
+        clubId?: string;
         startDate?: string;
         endDate?: string;
     }) {
-        const { association, region, district, startDate, endDate } = filters;
+        const { association, region, district, clubId, startDate, endDate } = filters;
 
         // 1. Build Club Filter
         const clubFilter: any = {};
         if (association) clubFilter.association = association;
         if (region) clubFilter.region = region;
         if (district) clubFilter.district = district;
+        if (clubId) clubFilter.id = clubId;
 
         // Helper to get club IDs for further filtering
         const clubs = await this.prisma.club.findMany({
