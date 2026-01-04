@@ -26,6 +26,8 @@ import { MasterTreasuryModule } from './master-treasury/master-treasury.module';
 import { PaymentsModule } from './payments/payments.module';
 import { RankingRegionalModule } from './ranking-regional/ranking-regional.module';
 
+import { AuditModule } from './audit/audit.module';
+
 @Module({
   imports: [
     PrismaModule,
@@ -52,6 +54,7 @@ import { RankingRegionalModule } from './ranking-regional/ranking-regional.modul
     PaymentsModule,
     AchievementsModule,
     RankingRegionalModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],

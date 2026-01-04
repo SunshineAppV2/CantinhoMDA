@@ -9,8 +9,10 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import * as fs from 'fs';
 
+import { ClubAccessGuard } from '../auth/club-access.guard';
+
 @Controller('treasury')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ClubAccessGuard)
 export class TreasuryController {
     constructor(private readonly treasuryService: TreasuryService) {
         // Ensure uploads directory exists
@@ -31,17 +33,13 @@ export class TreasuryController {
 
     @Get('club/:clubId')
     findAll(@Param('clubId') clubId: string, @Request() req) {
-        if (req.user.email !== 'master@cantinhodbv.com' && req.user.clubId !== clubId) {
-            throw new UnauthorizedException('Acesso negado aos dados deste clube.');
-        }
+        // Access check handled by ClubAccessGuard
         return this.treasuryService.findAll(clubId);
     }
 
     @Get('balance/:clubId')
     getBalance(@Param('clubId') clubId: string, @Request() req) {
-        if (req.user.email !== 'master@cantinhodbv.com' && req.user.clubId !== clubId) {
-            throw new UnauthorizedException('Acesso negado.');
-        }
+        // Access check handled by ClubAccessGuard
         return this.treasuryService.getBalance(clubId);
     }
 

@@ -47,6 +47,7 @@ model Club {
   referrerClub          Club?               @relation("ClubReferrals", fields: [referrerClubId], references: [id])
   referrals             Club[]              @relation("ClubReferrals")
   referralRewardClaimed Boolean             @default(false)
+  auditLogs             AuditLog[]
 
   @@map("clubs")
 }
@@ -166,6 +167,7 @@ model User {
   parent                 User?               @relation("ParentChildren", fields: [parentId], references: [id])
   children               User[]              @relation("ParentChildren")
   unit                   Unit?               @relation(fields: [unitId], references: [id])
+  auditLogs              AuditLog[]
 
   @@map("users")
 }
@@ -558,4 +560,23 @@ enum MinuteType {
   EXTRAORDINARIA
   ATO_ADMINISTRATIVO
   OUTRO
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String   // CREATE, UPDATE, DELETE, LOGIN, CHANGE_ROLE, ETC
+  resource  String   // User, Club, Transaction, SystemSetting
+  resourceId String?
+  details   Json?    // Stores 'before' and 'after' or specific details
+  ipAddress String?
+  
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+
+  clubId    String?
+  club      Club?    @relation(fields: [clubId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
 }
