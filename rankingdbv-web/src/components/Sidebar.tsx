@@ -58,7 +58,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
     };
 
     // Permissions Query (reused logic)
-    const { data: clubData } = useQuery({
+    const { data: clubData, isLoading: clubLoading } = useQuery({
         queryKey: ['club-settings-sidebar', user?.clubId],
         queryFn: async () => {
             if (!user?.clubId) return null;
@@ -71,18 +71,51 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
 
     const hasAccess = (moduleKey: string) => {
         if (!user) return false;
+
+        // 1. Force FULL Access for High-Level Roles regardless of subscription status
+        // This ensures they can access menus even if clubData is restricted/overdue
         if (['OWNER', 'ADMIN', 'MASTER', 'DIRECTOR'].includes(user.role)) return true;
-        const perms = clubData?.settings?.permissions || {
+
+        // 2. Fallback Defaults if clubData is missing or permissions object is empty
+        const defaultPermissions = {
             SECRETARY: ['SECRETARY', 'MEMBERS', 'ATTENDANCE', 'EVENTS'],
             TREASURER: ['TREASURY'],
             COUNSELOR: ['MEMBERS', 'ATTENDANCE', 'EVENTS'],
             INSTRUCTOR: ['CLASSES', 'MEMBERS', 'EVENTS'],
         };
+
+        // Use club defined permissions OR fallback to defaults
+        const perms = (clubData?.settings?.permissions && Object.keys(clubData.settings.permissions).length > 0)
+            ? clubData.settings.permissions
+            : defaultPermissions;
+
         return perms[user.role]?.includes(moduleKey);
     };
 
     const getMenuItems = (): MenuItem[] => {
         const items: MenuItem[] = [];
+
+        // 0. Safety Check: If loading, show NOTHING to prevent flash of authorized content
+        if (clubLoading) {
+            return [];
+        }
+
+        // Check subscription status FIRST
+        const subscriptionStatus = clubData?.subscriptionStatus;
+        const clubStatus = clubData?.status;
+        const isCritical = subscriptionStatus === 'OVERDUE' || clubStatus === 'SUSPENDED' || clubStatus === 'INACTIVE';
+
+        // LOCKDOWN MODE: If overdue, show ONLY subscription page
+        // (Admins/Owners are NOT exempt here per user request "ocultar os menus" for overdue clubs)
+        if (isCritical) {
+            items.push({
+                id: 'subscription',
+                label: 'ASSINATURA',
+                icon: CreditCard,
+                path: '/dashboard/subscription'
+            });
+            return items;
+        }
 
         // Detect roles
         const isMaster = user?.role === 'MASTER' || user?.email === 'master@cantinhodbv.com';
@@ -229,21 +262,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
                 label: 'CONFIG',
                 icon: Settings,
                 subItems: configSubItems
-            });
-        }
-
-        // 8. ASSINATURA (Conditional Link)
-        // Check local data or user status. Ideally we use clubData from query.
-        const subscriptionStatus = clubData?.subscriptionStatus;
-        const clubStatus = clubData?.status;
-        const isCritical = subscriptionStatus === 'OVERDUE' || clubStatus === 'SUSPENDED' || clubStatus === 'INACTIVE';
-
-        if (isCritical && ['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '')) {
-            items.push({
-                id: 'subscription',
-                label: 'ASSINATURA',
-                icon: CreditCard,
-                path: '/dashboard/subscription'
             });
         }
 

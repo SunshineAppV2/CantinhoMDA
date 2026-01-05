@@ -1,114 +1,99 @@
-# 🚀 Guia Completo de Deploy para Produção - Ranking DBV
+# 🚀 Guia de Migração e Deploy: Vercel + Firebase + GitHub
 
-Este guia orienta o processo de colocar o sistema **Ranking DBV** (Backend NestJS + Frontend React + Banco PostgreSQL) em produção na nuvem.
-
----
-
-## 🏗️ 1. Arquitetura Sugerida (Custo-Benefício)
-
-Para iniciar com estabilidade e baixo custo/grátis, sugerimos a seguinte stack:
-
-*   **Banco de Dados (PostgreSQL):** [Supabase](https://supabase.com/) ou [Railway](https://railway.app/) (Plano Hobby).
-*   **Backend (API NestJS):** [Railway](https://railway.app/) ou [Render](https://render.com/).
-*   **Frontend (Web/PWA):** [Vercel](https://vercel.com/) (Melhor integração com React) ou Netlify.
-*   **Imagens/Arquivos:** O Supabase já oferece Storage, ou utilize AWS S3.
+Este guia descreve como colocar o sistema **Ranking DBV** em produção utilizando a infraestrutura da **Vercel** (Frontend e Backend Serverless) e **Firebase** (Notificações, Storage e Auth).
 
 ---
 
-## 🗄️ 2. Banco de Dados (PostgreSQL no Supabase)
+## 🏗️ 1. Nova Arquitetura
 
-1.  Crie uma conta no [Supabase](https://supabase.com/).
-2.  Crie um novo projeto (ex: `rankingdbv-prod`).
-3.  Vá em **Project Settings > Database** e copie a **Connection String** (URI).
-    *   Exemplo: `postgresql://postgres:[SENHA]@db.xyz.supabase.co:5432/postgres`
-    *   *Dica: Adicione `?pgbouncer=true` no final se usar serverless, mas para VPS/Railway direto não precisa.*
-
-### Migração do Schema
-No seu ambiente local (VS Code), atualize o `.env` do backend temporariamente ou rode o comando direto:
-
-```bash
-# Na pasta do backend
-npx prisma db push --schema=./prisma/schema.prisma
-# (Opcional) Se tiver dados locais importantes, você precisará exportar e importar via SQL.
-```
+*   **Hospedagem (Front & Back):** [Vercel](https://vercel.com). O projeto foi configurado como um Monorepo.
+    *   Frontend acessível em `https://seu-projeto.vercel.app`
+    *   Backend acessível em `https://seu-projeto.vercel.app/api` (Sem problemas de CORS!)
+*   **Banco de Dados (PostgreSQL):** [Vercel Postgres](https://vercel.com/docs/storage/vercel-postgres), [Neon](https://neon.tech) ou [Supabase](https://supabase.com). **Serverless**.
+*   **Tempo Real & Arquivos:** [Firebase](https://firebase.google.com).
+    *   Notificações: Firestore (Substituindo Socket.IO).
+    *   Uploads: Firebase Storage (Substituindo pasta local).
 
 ---
 
-## ⚙️ 3. Deploy do Backend (API)
+## 🛠️ 2. Passo a Passo para Configuração
 
-Vamos usar o **Railway** (recomendado pela facilidade com Docker e variáveis).
+### Passo 1: Configurar Banco de Dados (Nuvem)
 
-1.  Crie conta no [Railway](https://railway.app/).
-2.  Crie um **New Project** > **Deploy from GitHub repo**.
-3.  Selecione o repositório do `rankingdbv-backend`.
-4.  **Configuração de Variáveis (Variables):**
-    Adicione as seguintes chaves (copie do seu `.env` local e ajuste para produção):
-    *   `DATABASE_URL`: (A string de conexão do Supabase passo 2)
-    *   `JWT_SECRET`: (Gere uma senha forte e longa)
-    *   `PORT`: `3000` (ou `8080`, o Railway injeta automaticamente, mas deixe 3000 no código)
-    *   `FRONTEND_URL`: `https://rankingdbv.vercel.app` (Colocaremos a URL real do front depois)
-    *   `CORS_ORIGIN`: `*` (ou a URL do front para segurança)
+Você precisa de um banco Postgres acessível publicamente (com senha).
+1.  Crie um banco no **Vercel Postgres**, **Supabase** ou **Neon**.
+2.  Obtenha a **Connection String** (`DATABASE_URL`).
+    *   *Exemplo*: `postgres://usuario:senha@host-na-nuvem.com/db?sslmode=require`
 
-5.  **Build Command:** O Railway detecta `package.json`. Certifique-se que o comando de start está correto:
-    *   `npm run build` e depois `npm run start:prod`.
+### Passo 2: Configurar Firebase
 
-6.  **Gerar URL:** Vá em **Settings > Networking** no Railway e clique em "Generate Domain".
-    *   Copie essa URL (ex: `https://rankingdbv-backend-production.up.railway.app`).
+1.  Acesse o [Console do Firebase](https://console.firebase.google.com/).
+2.  Crie um projeto (ex: `rankingdbv-prod`).
+3.  **Firestore**: Crie o banco de dados (Modo Produção).
+4.  **Storage**: Ative o Storage.
+5.  **Auth**: Ative o Authentication (Email/Password).
+6.  **Service Account (Backend)**:
+    *   Vá em *Configurações do Projeto > Contas de Serviço*.
+    *   Gere uma nova Chave Privada (JSON).
+    *   *Nota*: Para Vercel, você precisará transformar esse JSON em variáveis de ambiente ou usar as credenciais padrão do Google Application Credentials.
+    *   **Dica Prática**: Converta o JSON em string base64 ou adicione os campos (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`) nas variáveis da Vercel.
 
----
+### Passo 3: Configurar Repositório GitHub
 
-## 🖥️ 4. Deploy do Frontend (Web)
+1.  Crie um repositório no GitHub.
+2.  Faça o push do código atual:
+    ```bash
+    git init
+    git add .
+    git commit -m "Migração Vercel e Firebase"
+    git branch -M main
+    git remote add origin https://github.com/SEU_USUARIO/SEU_REPO.git
+    git push -u origin main
+    ```
 
-Vamos usar a **Vercel**.
+### Passo 4: Deploy na Vercel
 
-1.  Crie conta na [Vercel](https://vercel.com/).
+1.  Acesse [Vercel Dashboard](https://vercel.com/dashboard).
 2.  Clique em **Add New > Project**.
-3.  Importe o repositório do `rankingdbv-web`.
-4.  **Build Settings:**
-    *   Framework Preset: **Vite**
-    *   Root Directory: `rankingdbv-web` (se estiver em monorepo, senão deixe raiz).
-5.  **Environment Variables:**
-    *   `VITE_API_URL`: Cole a URL do Backend gerada no passo 3 (ex: `https://rankingdbv-backend-production.up.railway.app`).
-    *   *Nota: Não coloque a barra `/` no final se o seu código adiciona.*
+3.  Importe o repositório do GitHub.
+4.  **Configurações de Build**:
+    *   A Vercel deve detectar o `vercel.json` na raiz e entender a estrutura.
+    *   Se perguntar o `Root Directory`, mantenha a raiz (`.`).
+5.  **Variáveis de Ambiente (Environment Variables)**:
+    Adicione todas as variáveis do seu `.env` (Backend e Frontend):
+    
+    **Backend:**
+    *   `DATABASE_URL`: (Sua string de conexão do Passo 1)
+    *   `JWT_SECRET`: (Gere uma senha forte)
+    *   `FIREBASE_PROJECT_ID`: (ID do projeto Firebase)
+    *   `FIREBASE_CLIENT_EMAIL`: (Email da conta de serviço)
+    *   `FIREBASE_PRIVATE_KEY`: (Chave privada da conta de serviço - *Atenção com as quebras de linha `\n`*)
+    
+    **Frontend:**
+    *   `VITE_FIREBASE_API_KEY`: ...
+    *   `VITE_FIREBASE_AUTH_DOMAIN`: ...
+    *   `VITE_FIREBASE_PROJECT_ID`: ...
+    *   (Etc... todas as vars do `firebaseConfig`)
+    *   `VITE_API_URL`: `/api` (Isso mesmo, apenas `/api` pois estamos no mesmo domínio!)
+
 6.  Clique em **Deploy**.
 
-Após finalizar, você terá a URL oficial (ex: `https://rankingdbv.vercel.app`).
-**Volte no Backend (Railway)** e atualize a variável `FRONTEND_URL` com esse link oficial.
+---
+
+## 🔄 3. O que mudou no Código?
+
+1.  **Backend**:
+    *   **Socket.IO Removido**: Vercel Functions não suportam conexões persistentes.
+    *   **Notificações**: Agora gravam direto no Firestore.
+    *   **Static Assets**: O serviço de arquivos locais foi removido. Uploads devem ir para o Firebase Storage (precisa ser implementado no `uploads.service.ts` se ainda não estiver - *Pendente de Verificação*).
+2.  **Frontend**:
+    *   **Socket Client Removido**: O "Sininho" agora escuta o Firestore diretamente.
+    *   **API URL**: Agora usa `/api` relativo.
 
 ---
 
-## 📱 5. Gerar APK para Produção
+## ✅ Checklist de Verificação
 
-Agora que o backend está online, você deve gerar o APK apontando para ele, não para o localhost.
-
-1.  No arquivo `.env` do Frontend (ou direto no código `src/lib/axios.ts` se estiver hardcoded), aponte para a URL de produção.
-    *   No arquivo `src/lib/axios.ts`, garanta que ele lê `import.meta.env.VITE_API_URL`.
-2.  Gere o build Web novamente:
-    ```bash
-    npm run build
-    npx cap sync
-    ```
-3.  Abra o Android Studio:
-    ```bash
-    npx cap open android
-    ```
-4.  Gere o **Signed APK** (ou Bundle `.aab` para Google Play):
-    *   Menu **Build > Generate Signed Bundle / APK**.
-    *   Crie uma chave (KeyStore) e guarde-a em local seguro (se perder, não atualiza mais o app na loja).
-
----
-
-## ✅ Checklist Final
-
-1.  [ ] **Banco de Dados:** Tabelas criadas no Supabase/Prod.
-2.  [ ] **Backend:** Rodando sem erros de conexão no Railway. Logs estão limpos?
-3.  [ ] **Frontend:** Acessível via URL Vercel. Login funciona?
-4.  [ ] **Imagens:** Uploads estão funcionando? (Se usar disco local no Railway, os arquivos somem a cada deploy. Configure o S3 ou Supabase Storage no backend).
-5.  [ ] **Cron Jobs:** Se tiver rotinas agendadas, o backend precisa ficar sempre ligado (evite plano gratuito que "dorme").
-
----
-
-## 🆘 Suporte
-
-Se houver erros de **CORS**, verifique e variável `CORS_ORIGIN` no Backend.
-Se houver erro de **Conexão com Banco**, verifique se o IP do Railway é permitido no Supabase (geralmente "Allow all" `0.0.0.0/0` para conexões externas resolve).
+1.  [ ] Deploy na Vercel ficou verde (Success)?
+2.  [ ] Login funciona? (Testa conexão com Banco + Auth).
+3.  [ ] Notificações aparecem? (Testa integração Firestore).

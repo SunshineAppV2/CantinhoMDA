@@ -33,15 +33,15 @@ async function bootstrap() {
     });
 
     // Default Uploads (App Internal)
-    app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-        prefix: '/uploads/',
-    });
+    // app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    //     prefix: '/uploads/',
+    // });
 
     // External Images Repository (User Request)
     // Serve files from G:/Ranking DBV/IMAGENS at /imagens/ URL path
-    app.useStaticAssets('G:/Ranking DBV/IMAGENS', {
-        prefix: '/imagens/',
-    });
+    // app.useStaticAssets('G:/Ranking DBV/IMAGENS', {
+    //     prefix: '/imagens/',
+    // });
 
     app.useGlobalPipes(new ValidationPipe({
         transform: true,

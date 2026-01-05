@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
     Menu,
     AlertTriangle,
@@ -24,7 +24,7 @@ export function DashboardLayout() {
     const { user } = useAuth();
 
     // Fetch Club Settings for Permissions (Still needed for Overdue check?)
-    const { data: clubData } = useQuery({
+    const { data: clubData, isLoading: isClubLoading } = useQuery({
         queryKey: ['club-settings-layout', user?.clubId],
         queryFn: async () => {
             if (!user?.clubId) return null;
@@ -51,28 +51,34 @@ export function DashboardLayout() {
         }
     }
 
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        if (!isClubLoading && isClubOverdue && location.pathname !== '/dashboard/subscription' && !location.pathname.includes('/change-password')) {
+            navigate('/dashboard/subscription', { replace: true });
+        }
+    }, [isClubOverdue, isClubLoading, location.pathname, navigate]);
+
+    if (isClubLoading) {
+        return (
+            <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+        );
+    }
+
+    // Block Outlet if overdue and not on allowed page (Double safety against flashing)
+    const isAllowedPage = location.pathname === '/dashboard/subscription' || location.pathname.includes('/change-password');
+    const shouldBlockContent = isClubOverdue && !isAllowedPage;
+
     return (
         <div className="min-h-screen bg-slate-100 flex relative">
             <Sidebar mobileOpen={sidebarOpen} setMobileOpen={setSidebarOpen} />
 
-            {/* Main Content */}
-            {/* Added ml-24 lg:ml-24 to offset the fixed sidebar width. 
-                Wait, if sidebar is sticky/fixed, the flex container might behave differently. 
-                Let's use the 'flex' layout of the parent. 
-                The Sidebar component returns an 'aside' with fixed position. 
-                So we need to add left margin to main content equal to sidebar width (Level 1: w-24 = 6rem).
-                If Level 2 is open, it pushes content? MarketUP usually pushes content or overlays.
-                Let's make it push content by calculating width? No, that's complex with React state.
-                Simplest: Fixed Sidebar (Level 1) + Drawer (Level 2).
-                Main content should probably start after Level 1.
-            */}
-
             <div
                 className="flex-1 flex flex-col min-h-screen transition-all duration-200 ease-out lg:pl-24"
             >
-                {/* Pull Indicator */}
-
-
                 {/* Overdue Banner */}
                 {isClubOverdue && (
                     <div className="bg-red-600 text-white px-4 py-3 text-center font-bold flex flex-col md:flex-row items-center justify-center gap-2 z-50 shadow-lg">
@@ -127,7 +133,13 @@ export function DashboardLayout() {
 
                 {/* Page Content */}
                 <main ref={mainRef} className="flex-1 overflow-auto p-6 bg-slate-50 relative z-10">
-                    <Outlet />
+                    {shouldBlockContent ? (
+                        <div className="flex items-center justify-center h-full text-slate-500">
+                            Redirecionando...
+                        </div>
+                    ) : (
+                        <Outlet />
+                    )}
                 </main>
             </div>
             <HelpButton />
