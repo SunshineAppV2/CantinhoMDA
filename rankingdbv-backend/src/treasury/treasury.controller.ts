@@ -5,16 +5,21 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { SettleTransactionDto } from './dto/settle-transaction.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import * as fs from 'fs';
+
 import { ClubAccessGuard } from '../auth/club-access.guard';
-import { UploadsService } from '../uploads/uploads.service';
 
 @Controller('treasury')
 @UseGuards(JwtAuthGuard, ClubAccessGuard)
 export class TreasuryController {
-    constructor(
-        private readonly treasuryService: TreasuryService,
-        private readonly uploadsService: UploadsService
-    ) { }
+    constructor(private readonly treasuryService: TreasuryService) {
+        // Ensure uploads directory exists
+        if (!fs.existsSync('./uploads')) {
+            fs.mkdirSync('./uploads');
+        }
+    }
 
     @Post()
     create(@Body() createTransactionDto: CreateTransactionDto) {
@@ -69,14 +74,18 @@ export class TreasuryController {
     }
 
     @Post(':id/pay')
-    @UseInterceptors(FileInterceptor('file'))
-    async pay(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Body('proofUrl') proofUrl?: string) {
-        let finalUrl = proofUrl;
-
-        if (file) {
-            const result = await this.uploadsService.uploadFile(file, 'treasury_proofs');
-            finalUrl = result.url;
-        }
+    @UseInterceptors(FileInterceptor('file', {
+        storage: diskStorage({
+            destination: './uploads',
+            filename: (req, file, cb) => {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const ext = extname(file.originalname);
+                cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+            }
+        })
+    }))
+    pay(@Param('id') id: string, @UploadedFile() file: Express.Multer.File, @Body('proofUrl') proofUrl?: string) {
+        const finalUrl = file ? `/uploads/${file.filename}` : proofUrl;
 
         if (!finalUrl) {
             throw new BadRequestException('É necessário enviar um arquivo ou link de comprovante.');
