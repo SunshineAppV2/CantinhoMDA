@@ -16,67 +16,51 @@ Este guia descreve como colocar o sistema **Ranking DBV** em produção utilizan
 
 ---
 
-## 🛠️ 2. Passo a Passo para Configuração
+## 🛠️ 2. Passo a Passo para Configuração na Vercel
 
-### Passo 1: Configurar Banco de Dados (Nuvem)
+Para garantir estabilidade e evitar conflitos de build, faremos o deploy de **Dois Projetos** separados na Vercel, ambos conectados ao mesmo repositório do GitHub.
 
-Você precisa de um banco Postgres acessível publicamente (com senha).
-1.  Crie um banco no **Vercel Postgres**, **Supabase** ou **Neon**.
-2.  Obtenha a **Connection String** (`DATABASE_URL`).
-    *   *Exemplo*: `postgres://usuario:senha@host-na-nuvem.com/db?sslmode=require`
+### 2.1. Deploy do Backend (API)
 
-### Passo 2: Configurar Firebase
-
-1.  Acesse o [Console do Firebase](https://console.firebase.google.com/).
-2.  Crie um projeto (ex: `rankingdbv-prod`).
-3.  **Firestore**: Crie o banco de dados (Modo Produção).
-4.  **Storage**: Ative o Storage.
-5.  **Auth**: Ative o Authentication (Email/Password).
-6.  **Service Account (Backend)**:
-    *   Vá em *Configurações do Projeto > Contas de Serviço*.
-    *   Gere uma nova Chave Privada (JSON).
-    *   *Nota*: Para Vercel, você precisará transformar esse JSON em variáveis de ambiente ou usar as credenciais padrão do Google Application Credentials.
-    *   **Dica Prática**: Converta o JSON em string base64 ou adicione os campos (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`) nas variáveis da Vercel.
-
-### Passo 3: Configurar Repositório GitHub
-
-1.  Crie um repositório no GitHub.
-2.  Faça o push do código atual:
-    ```bash
-    git init
-    git add .
-    git commit -m "Migração Vercel e Firebase"
-    git branch -M main
-    git remote add origin https://github.com/SEU_USUARIO/SEU_REPO.git
-    git push -u origin main
-    ```
-
-### Passo 4: Deploy na Vercel
-
-1.  Acesse [Vercel Dashboard](https://vercel.com/dashboard).
-2.  Clique em **Add New > Project**.
-3.  Importe o repositório do GitHub.
-4.  **Configurações de Build**:
-    *   A Vercel deve detectar o `vercel.json` na raiz e entender a estrutura.
-    *   Se perguntar o `Root Directory`, mantenha a raiz (`.`).
-5.  **Variáveis de Ambiente (Environment Variables)**:
-    Adicione todas as variáveis do seu `.env` (Backend e Frontend):
-    
-    **Backend:**
-    *   `DATABASE_URL`: (Sua string de conexão do Passo 1)
+1.  No Dashboard da Vercel, clique em **Add New > Project**.
+2.  Importe o repositório `cantinhodbv` (ou o nome que você usou).
+3.  **Configuração do Root Directory:**
+    *   Clique em "Edit" ao lado de **Root Directory**.
+    *   Selecione a pasta `rankingdbv-backend`.
+4.  **Framework Preset:** A Vercel deve detectar "Other" ou "NestJS". Se não, escolha "Other".
+5.  **Variáveis de Ambiente (Environment Variables):**
+    Cole as seguintes variáveis (Settings > Environment Variables):
+    *   `DATABASE_URL`: (Sua string de conexão do Postgres na Nuvem)
     *   `JWT_SECRET`: (Gere uma senha forte)
     *   `FIREBASE_PROJECT_ID`: (ID do projeto Firebase)
     *   `FIREBASE_CLIENT_EMAIL`: (Email da conta de serviço)
-    *   `FIREBASE_PRIVATE_KEY`: (Chave privada da conta de serviço - *Atenção com as quebras de linha `\n`*)
-    
-    **Frontend:**
-    *   `VITE_FIREBASE_API_KEY`: ...
-    *   `VITE_FIREBASE_AUTH_DOMAIN`: ...
-    *   `VITE_FIREBASE_PROJECT_ID`: ...
-    *   (Etc... todas as vars do `firebaseConfig`)
-    *   `VITE_API_URL`: `/api` (Isso mesmo, apenas `/api` pois estamos no mesmo domínio!)
-
+    *   `FIREBASE_PRIVATE_KEY`: (Chave privada da conta de serviço - copie todo o conteúdo do `-----BEGIN...` até `...END KEY-----`)
 6.  Clique em **Deploy**.
+7.  **Anote a URL do Backend:** (ex: `https://rankingdbv-backend.vercel.app`). Você precisará dela no próximo passo.
+
+### 2.2. Deploy do Frontend (Web)
+
+1.  Volte a Dashboard e clique em **Add New > Project** novamente.
+2.  Importe o **mesmo repositório** (`cantinhodbv`).
+3.  **Configuração do Root Directory:**
+    *   Clique em "Edit" ao lado de **Root Directory**.
+    *   Selecione a pasta `rankingdbv-web`.
+4.  **Framework Preset:** Deve detectar **Vite**.
+5.  **Variáveis de Ambiente:**
+    *   Todas as `VITE_FIREBASE_...` (API Key, Project ID, etc).
+    *   `VITE_API_URL`: **Cole a URL do Backend** que você gerou no passo anterior (ex: `https://rankingdbv-backend.vercel.app`).
+    *   *Nota*: Não coloque `/api` no final se o seu código já adiciona, mas verifique. O padrão do axios no código é basear na URL.
+6.  Clique em **Deploy**.
+
+---
+
+### Passo 3: Finalização
+
+1.  Acesse o link do Frontend gerado (ex: `https://rankingdbv-web.vercel.app`).
+2.  Teste o Login.
+3.  Teste as Notificações (use o sininho).
+
+---
 
 ---
 
