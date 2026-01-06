@@ -419,7 +419,9 @@ export class UsersService {
 
   // Atualiza um usuário
   async update(id: string, updateUserDto: UpdateUserDto, currentUser?: any): Promise<User> {
-    console.log('UsersService.update:', id, updateUserDto);
+    console.log(`[UsersService.update] Target ID: ${id}, Current User: ${currentUser?.email} (${currentUser?.role})`);
+    console.log(`[UsersService.update] Raw DTO:`, JSON.stringify(updateUserDto, null, 2));
+
     // Destructure properties to sanitize or exclude
     const {
       password,
@@ -441,16 +443,21 @@ export class UsersService {
     if (currentUser) {
       let userToUpdate = await this.prisma.user.findUnique({ where: { id } });
 
-      // Fallback: If ID not found (e.g. Frontend sent UID), try finding by Context User ID
-      if (!userToUpdate && currentUser.userId) {
-        console.warn(`[Update] User ${id} not found. Trying fallback to context ID ${currentUser.userId}...`);
-        userToUpdate = await this.prisma.user.findUnique({ where: { id: currentUser.userId } });
+      // Fallback: If ID not found by MongoDB ID, try finding by Firebase UID
+      if (!userToUpdate) {
+        userToUpdate = await this.prisma.user.findUnique({ where: { uid: id } });
         if (userToUpdate) {
-          id = currentUser.userId; // Correct the ID for subsequent update call
+          console.log(`[Update] Found user by UID: ${id} -> ID: ${userToUpdate.id}`);
+          id = userToUpdate.id; // Map to DB ID
         }
       }
 
-      if (!userToUpdate) throw new NotFoundException('Usuário não encontrado');
+      if (!userToUpdate) {
+        console.error(`[Update] User NOT FOUND for ID/UID: ${id}`);
+        throw new NotFoundException('Usuário não encontrado');
+      }
+
+      console.log(`[Update] ACL Check for Current User: ${currentUser.email} (${currentUser.role}) editing Target User: ${userToUpdate.email} (${userToUpdate.id})`);
 
       const isMaster = currentUser.email === 'master@cantinhodbv.com';
       const isSelf = currentUser.userId === id;
@@ -553,10 +560,13 @@ export class UsersService {
     }
 
     try {
+      console.log(`[UsersService.update] Final data for Prisma update:`, JSON.stringify(dataToUpdate, null, 2));
       const updatedUser = await this.prisma.user.update({
         where: { id },
         data: dataToUpdate,
       });
+
+      console.log(`[UsersService.update] SUCCESSFULLY updated user: ${updatedUser.id}`);
 
       // Firebase Sync: Support updating password if provided
       if (password && updatedUser.email) {

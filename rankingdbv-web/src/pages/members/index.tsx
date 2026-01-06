@@ -78,13 +78,14 @@ function MembersContent() {
     });
 
     const { data: units = [] } = useQuery<Unit[]>({
-        queryKey: ['units', user?.clubId],
+        queryKey: ['units', editingMember?.clubId || user?.clubId],
         queryFn: async () => {
-            if (!user?.clubId) return [];
-            const res = await api.get(`/units?clubId=${user?.clubId}`);
+            const targetClubId = editingMember?.clubId || user?.clubId;
+            if (!targetClubId) return [];
+            const res = await api.get(`/units?clubId=${targetClubId}`);
             return res.data;
         },
-        enabled: !!user?.clubId
+        enabled: !!(editingMember?.clubId || user?.clubId)
     });
 
     const { data: clubs = [] } = useQuery({
@@ -202,6 +203,7 @@ function MembersContent() {
 
     // Handlers
     const handleFormSubmit = (formData: any) => {
+        console.log('[Members] Submitting Form Data:', formData);
         const payload: any = { ...formData };
         if (!payload.password) delete payload.password;
 
@@ -214,10 +216,16 @@ function MembersContent() {
         });
 
         // cleanup system fields
-        ['id', 'classProgress', 'requirements', 'createdAt', 'updatedAt', 'UserRequirements', 'club', 'unit', 'status'].forEach(k => delete payload[k]);
+        ['id', 'classProgress', 'requirements', 'createdAt', 'updatedAt', 'UserRequirements', 'club', 'unit', 'status', 'children'].forEach(k => delete payload[k]);
 
-        if (editingMember) updateMutation.mutate({ id: editingMember.id, updates: payload });
-        else createMutation.mutate(payload);
+        console.log('[Members] Cleaned Payload to Backend:', payload);
+
+        if (editingMember) {
+            console.log('[Members] Updating existing member:', editingMember.id);
+            updateMutation.mutate({ id: editingMember.id, updates: payload });
+        } else {
+            createMutation.mutate(payload);
+        }
     };
 
     const closeModal = () => { setIsModalOpen(false); setEditingMember(null); };

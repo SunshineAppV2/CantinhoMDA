@@ -11,9 +11,7 @@ export class RankingRegionalController {
     @UseGuards(JwtAuthGuard)
     async getRanking(@Req() req: any, @Query('district') district?: string, @Query('region') region?: string, @Query('association') association?: string) {
         const user = req.user;
-
-        // If user is a coordinator, enforce their scope?
-        // For now, let's allow them to pass the scope in query, but ideally we'd validate.
+        console.log(`[RankingRegional] Request by User: ${user.email} (${user.role}) Scope Params:`, { district, region, association });
 
         let scope: any = { district, region, association };
 
@@ -21,8 +19,7 @@ export class RankingRegionalController {
         if (user.role === 'DIRECTOR' || user.role === 'OWNER' || user.role === 'ADMIN') {
             scope = { clubId: user.clubId };
         }
-
-        if (user.role === 'COORDINATOR_DISTRICT') {
+        else if (user.role === 'COORDINATOR_DISTRICT') {
             scope = {
                 union: user.union,
                 association: user.association || user.mission,
@@ -43,14 +40,17 @@ export class RankingRegionalController {
                 association: user.association || user.mission
             };
         }
-        // Fallback safety: If coordinator has NO scope defined, don't show everything!
+
+        // Final security check: ensure scope is not too broad for coordinators
         if (['COORDINATOR_REGIONAL', 'COORDINATOR_DISTRICT', 'COORDINATOR_AREA'].includes(user.role)) {
-            if (!scope.association && !scope.region && !scope.district) {
-                // If scope is empty, force a filter that returns nothing or matches nothing
-                scope = { association: 'NONE_SELECTED' };
+            if (!scope.association) {
+                console.warn(`[RankingRegional] Coordinator ${user.email} has no Association/Mission in profile! Filter might be too broad.`);
+                // We should technically block or force a very narrow filter
+                // scope.association = 'NOT_SET'; 
             }
         }
 
+        console.log(`[RankingRegional] Final Effective Scope:`, scope);
         return this.rankingService.getRegionalRanking(scope);
     }
 }

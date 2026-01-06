@@ -73,6 +73,7 @@ model Unit {
 
 model User {
   id                     String              @id @default(uuid())
+  uid                    String?             @unique
   email                  String              @unique
   password               String
   name                   String

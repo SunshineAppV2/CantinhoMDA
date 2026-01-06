@@ -8,16 +8,24 @@ export class RankingRegionalService {
 
     async getRegionalRanking(scope: { union?: string, region?: string, district?: string, association?: string, clubId?: string }) {
         const where: any = {};
+
+        console.log(`[RankingService] Calculating Ranking for scope:`, scope);
+
         if (scope.union) where.union = scope.union;
+
         if (scope.association) {
+            // Priority 1: Association/Mission matching
             where.OR = [
                 { association: scope.association },
                 { mission: scope.association }
             ];
         }
+
         if (scope.region) where.region = scope.region;
         if (scope.district) where.district = scope.district;
         if (scope.clubId) where.id = scope.clubId;
+
+        console.log(`[RankingService] Prisma query filter (where):`, JSON.stringify(where, null, 2));
 
         const clubs = await this.prisma.club.findMany({
             where,
@@ -27,6 +35,9 @@ export class RankingRegionalService {
                 }
             }
         });
+
+        console.log(`[RankingService] Found ${clubs.length} clubs matching criteria.`);
+
 
         // For each club, calculate points.
         // For simplicity in this first version, we'll sum all points from activity logs of users in that club.
