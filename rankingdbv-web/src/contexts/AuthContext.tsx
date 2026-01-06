@@ -243,7 +243,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const refreshUser = async () => {
         if (auth.currentUser) {
+            // 1. Update decoded user state
             await checkBackendToken(auth.currentUser);
+
+            // 2. Request new Token with updated claims (Hierarchy, etc)
+            try {
+                const res = await api.get('/auth/refresh');
+                if (res.data?.access_token) {
+                    safeLocalStorage.setItem('token', res.data.access_token);
+                    console.log('[Auth] Token refreshed successfully');
+                }
+            } catch (err) {
+                console.warn('[Auth] Token refresh failed:', err);
+            }
         }
     };
 

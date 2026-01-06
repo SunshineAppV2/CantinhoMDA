@@ -242,4 +242,10 @@ export class AuthService {
       throw new UnauthorizedException('Falha ao validar login com Google.');
     }
   }
+
+  async refreshToken(userId: string) {
+    const user = await this.usersService.findOne(userId);
+    if (!user) throw new UnauthorizedException('Usuário não encontrado');
+    return this.login(user);
+  }
 }

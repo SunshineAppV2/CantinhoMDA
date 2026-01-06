@@ -24,6 +24,7 @@ export class RankingRegionalController {
 
         if (user.role === 'COORDINATOR_DISTRICT') {
             scope = {
+                union: user.union,
                 association: user.association || user.mission,
                 region: user.region,
                 district: user.district
@@ -31,12 +32,14 @@ export class RankingRegionalController {
         }
         else if (user.role === 'COORDINATOR_REGIONAL') {
             scope = {
+                union: user.union,
                 association: user.association || user.mission,
                 region: user.region
             };
         }
         else if (user.role === 'COORDINATOR_AREA') {
             scope = {
+                union: user.union,
                 association: user.association || user.mission
             };
         }

@@ -6,11 +6,17 @@ import { PrismaService } from '../prisma/prisma.service';
 export class RankingRegionalService {
     constructor(private prisma: PrismaService) { }
 
-    async getRegionalRanking(scope: { region?: string, district?: string, association?: string, clubId?: string }) {
+    async getRegionalRanking(scope: { union?: string, region?: string, district?: string, association?: string, clubId?: string }) {
         const where: any = {};
+        if (scope.union) where.union = scope.union;
+        if (scope.association) {
+            where.OR = [
+                { association: scope.association },
+                { mission: scope.association }
+            ];
+        }
         if (scope.region) where.region = scope.region;
         if (scope.district) where.district = scope.district;
-        if (scope.association) where.association = scope.association;
         if (scope.clubId) where.id = scope.clubId;
 
         const clubs = await this.prisma.club.findMany({

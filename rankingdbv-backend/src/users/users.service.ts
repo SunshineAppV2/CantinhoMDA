@@ -71,12 +71,20 @@ export class UsersService {
         where.dbvClass = currentUser.dbvClass;
       }
       if (currentUser.clubId) where.clubId = currentUser.clubId;
-    } else if (currentUser && currentUser.role === 'COORDINATOR_DISTRICT') {
-      where.club = { district: currentUser.district || '' };
-    } else if (currentUser && currentUser.role === 'COORDINATOR_REGIONAL') {
-      where.club = { region: currentUser.region || '' };
-    } else if (currentUser && currentUser.role === 'COORDINATOR_AREA') {
-      where.club = { association: currentUser.association || '' };
+    } else if (currentUser && (currentUser.role === 'COORDINATOR_DISTRICT' || currentUser.role === 'COORDINATOR_REGIONAL' || currentUser.role === 'COORDINATOR_AREA')) {
+      const clubFilter: any = {};
+      if (currentUser.union) clubFilter.union = currentUser.union;
+      if (currentUser.association || currentUser.mission) {
+        clubFilter.OR = [
+          { association: currentUser.association || currentUser.mission },
+          { mission: currentUser.association || currentUser.mission }
+        ];
+      }
+
+      if (currentUser.role === 'COORDINATOR_DISTRICT') clubFilter.district = currentUser.district || '';
+      if (currentUser.role === 'COORDINATOR_REGIONAL') clubFilter.region = currentUser.region || '';
+
+      where.club = clubFilter;
     } else if (currentUser?.clubId) {
       where.clubId = currentUser.clubId;
     }

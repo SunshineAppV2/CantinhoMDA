@@ -1,6 +1,7 @@
-﻿import { Body, Controller, Post, HttpCode, HttpStatus, UnauthorizedException } from '@nestjs/common';
+﻿import { Body, Controller, Post, HttpCode, HttpStatus, UnauthorizedException, Get, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 class LoginDto {
   @IsEmail()
@@ -36,5 +37,11 @@ export class AuthController {
   @Post('sync')
   async sync(@Body('idToken') idToken: string) {
     return this.authService.syncWithFirebase(idToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('refresh')
+  async refresh(@Req() req: any) {
+    return this.authService.refreshToken(req.user.userId);
   }
 }
