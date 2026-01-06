@@ -111,7 +111,19 @@ export function HierarchySelector({ value, onChange, readOnly = false }: Hierarc
                     <div className="relative">
                         <Combobox.Input
                             className="w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-slate-900"
-                            onChange={(event) => setQueryUnion(event.target.value)}
+                            onChange={(event) => {
+                                setQueryUnion(event.target.value);
+                                // Also allow typing custom values
+                                if (!uniaoOptions.includes(event.target.value)) {
+                                    handleChange('union', event.target.value);
+                                }
+                            }}
+                            onBlur={() => {
+                                // If after blur we have a query that matches exactly one option, pick it
+                                if (filteredUnions.length === 1 && queryUnion.length > 3) {
+                                    handleChange('union', filteredUnions[0]);
+                                }
+                            }}
                             displayValue={(val: string) => val}
                             placeholder="Selecione ou digite..."
                         />
@@ -120,35 +132,29 @@ export function HierarchySelector({ value, onChange, readOnly = false }: Hierarc
                         </Combobox.Button>
                     </div>
                     <Combobox.Options className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
-                        {filteredUnions.length === 0 && queryUnion !== '' ? (
-                            <div className="relative cursor-default select-none py-2 px-4 text-slate-500">
-                                Nenhuma união encontrada.
-                            </div>
-                        ) : (
-                            filteredUnions.map((u) => (
-                                <Combobox.Option
-                                    key={u}
-                                    value={u}
-                                    className={({ active }) =>
-                                        `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-green-100 text-green-900' : 'text-slate-900'
-                                        }`
-                                    }
-                                >
-                                    {({ selected, active }) => (
-                                        <>
-                                            <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                                {u}
+                        {filteredUnions.map((u) => (
+                            <Combobox.Option
+                                key={u}
+                                value={u}
+                                className={({ active }) =>
+                                    `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-green-100 text-green-900' : 'text-slate-900'
+                                    }`
+                                }
+                            >
+                                {({ selected, active }) => (
+                                    <>
+                                        <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                            {u}
+                                        </span>
+                                        {selected ? (
+                                            <span className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? 'text-green-600' : 'text-green-600'}`}>
+                                                <Check className="w-5 h-5" />
                                             </span>
-                                            {selected ? (
-                                                <span className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? 'text-green-600' : 'text-green-600'}`}>
-                                                    <Check className="w-5 h-5" />
-                                                </span>
-                                            ) : null}
-                                        </>
-                                    )}
-                                </Combobox.Option>
-                            ))
-                        )}
+                                        ) : null}
+                                    </>
+                                )}
+                            </Combobox.Option>
+                        ))}
                     </Combobox.Options>
                 </Combobox>
             </div>
@@ -165,41 +171,45 @@ export function HierarchySelector({ value, onChange, readOnly = false }: Hierarc
                         <div className="relative">
                             <Combobox.Input
                                 className="w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-slate-900"
-                                onChange={(event) => setQueryAssoc(event.target.value)}
+                                onChange={(event) => {
+                                    setQueryAssoc(event.target.value);
+                                    if (!assocOptions.includes(event.target.value)) {
+                                        handleChange('association', event.target.value);
+                                    }
+                                }}
+                                onBlur={() => {
+                                    if (filteredAssocs.length === 1 && queryAssoc.length > 3) {
+                                        handleChange('association', filteredAssocs[0]);
+                                    }
+                                }}
                                 displayValue={(val: string) => val}
-                                placeholder="Selecione..."
+                                placeholder="Selecione ou digite..."
                             />
                             <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400">
                                 <ChevronsUpDown className="w-4 h-4" />
                             </Combobox.Button>
                         </div>
                         <Combobox.Options className="absolute z-40 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
-                            {filteredAssocs.length === 0 && queryAssoc !== '' ? (
-                                <div className="relative cursor-default select-none py-2 px-4 text-slate-500">
-                                    Nenhuma associação encontrada.
-                                </div>
-                            ) : (
-                                filteredAssocs.map((a) => (
-                                    <Combobox.Option
-                                        key={a}
-                                        value={a}
-                                        className={({ active }) =>
-                                            `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-green-100 text-green-900' : 'text-slate-900'}`
-                                        }
-                                    >
-                                        {({ selected }) => (
-                                            <>
-                                                <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>{a}</span>
-                                                {selected && (
-                                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-green-600">
-                                                        <Check className="w-5 h-5" />
-                                                    </span>
-                                                )}
-                                            </>
-                                        )}
-                                    </Combobox.Option>
-                                ))
-                            )}
+                            {filteredAssocs.map((a) => (
+                                <Combobox.Option
+                                    key={a}
+                                    value={a}
+                                    className={({ active }) =>
+                                        `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-green-100 text-green-900' : 'text-slate-900'}`
+                                    }
+                                >
+                                    {({ selected }) => (
+                                        <>
+                                            <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>{a}</span>
+                                            {selected && (
+                                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-green-600">
+                                                    <Check className="w-5 h-5" />
+                                                </span>
+                                            )}
+                                        </>
+                                    )}
+                                </Combobox.Option>
+                            ))}
                         </Combobox.Options>
                     </Combobox>
                 </div>

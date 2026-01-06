@@ -37,12 +37,9 @@ export function CompleteProfile() {
 
         try {
             if (!hierarchy.union || !hierarchy.association || !hierarchy.region) {
-                // District might be optional for Regional Coord, but mandatory for District Coord.
-                // However, user said "Region/District" generic compliance.
-                // Let's enforce District only if role implies it or generally if possible.
-                // User said: "REGIONAL ACHA DADOS DA SUA REGIAO EM DIANTE"
-                // Let's enforce everything for completeness sake if meaningful.
-                // But strictly: Regional needs Association+Region. District needs Association+Region+District.
+                toast.error('Por favor, preencha União, Associação/Missão e Região.');
+                setLoading(false);
+                return;
             }
 
             if (user?.role === 'COORDINATOR_DISTRICT' && !hierarchy.district) {
