@@ -22,9 +22,31 @@ export class RankingRegionalController {
             scope = { clubId: user.clubId };
         }
 
-        if (user.role === 'COORDINATOR_DISTRICT') scope = { district: user.district };
-        if (user.role === 'COORDINATOR_REGIONAL') scope = { region: user.region };
-        if (user.role === 'COORDINATOR_AREA') scope = { association: user.association };
+        if (user.role === 'COORDINATOR_DISTRICT') {
+            scope = {
+                association: user.association || user.mission,
+                region: user.region,
+                district: user.district
+            };
+        }
+        else if (user.role === 'COORDINATOR_REGIONAL') {
+            scope = {
+                association: user.association || user.mission,
+                region: user.region
+            };
+        }
+        else if (user.role === 'COORDINATOR_AREA') {
+            scope = {
+                association: user.association || user.mission
+            };
+        }
+        // Fallback safety: If coordinator has NO scope defined, don't show everything!
+        if (['COORDINATOR_REGIONAL', 'COORDINATOR_DISTRICT', 'COORDINATOR_AREA'].includes(user.role)) {
+            if (!scope.association && !scope.region && !scope.district) {
+                // If scope is empty, force a filter that returns nothing or matches nothing
+                scope = { association: 'NONE_SELECTED' };
+            }
+        }
 
         return this.rankingService.getRegionalRanking(scope);
     }

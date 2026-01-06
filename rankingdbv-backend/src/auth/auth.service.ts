@@ -102,8 +102,13 @@ export class AuthService {
       email: user.email,
       sub: user.id,
       clubId: user.clubId,
-      unitId: user.unitId, // Include unitId
-      role: user.role
+      unitId: user.unitId,
+      role: user.role,
+      union: user.union,
+      association: user.association,
+      mission: user.mission,
+      region: user.region,
+      district: user.district
     };
 
     return {
