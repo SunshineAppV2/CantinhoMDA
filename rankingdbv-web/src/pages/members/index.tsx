@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/axios';
-import { Share2, Plus, ListChecks, AlertTriangle } from 'lucide-react';
+import { Share2, Plus, ListChecks, AlertTriangle, Search, FilterX, ArrowDownUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
 import { Modal } from '../../components/Modal';
@@ -14,7 +14,7 @@ import { MemberForm } from './components/MemberForm';
 import { MembersTable } from './components/MembersTable';
 import { PendingApprovalsList, PendingDeliveriesList } from './components/PendingList';
 import { UserApprovalsList } from './components/UserApprovalsList';
-import type { Member, Unit } from './types';
+import { type Member, type Unit, ROLE_TRANSLATIONS } from './types'; // Import ROLE_TRANSLATIONS
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -55,6 +55,11 @@ function MembersContent() {
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<Member | null>(null);
+
+    // Filters & Sorting State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState('');
+    const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'alphabetical'>('newest');
 
     // Assign Modal State
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -241,6 +246,46 @@ function MembersContent() {
 
     const isLimitReached = clubStatus && clubStatus.activeMembers >= clubStatus.memberLimit;
 
+    // Filter and Sort Logic
+    const filteredMembers = React.useMemo(() => {
+        let result = [...members];
+
+        // 1. Text Search
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            result = result.filter(m =>
+                m.name.toLowerCase().includes(lowerTerm) ||
+                m.email.toLowerCase().includes(lowerTerm) ||
+                m.club?.name.toLowerCase().includes(lowerTerm)
+            );
+        }
+
+        // 2. Role Filter
+        if (roleFilter) {
+            result = result.filter(m => m.role === roleFilter);
+        }
+
+        // 3. Sorting
+        result.sort((a, b) => {
+            if (sortOrder === 'alphabetical') {
+                return a.name.localeCompare(b.name);
+            }
+            if (sortOrder === 'newest') {
+                const dateA = new Date(a.createdAt || 0).getTime();
+                const dateB = new Date(b.createdAt || 0).getTime();
+                return dateB - dateA; // Descending
+            }
+            if (sortOrder === 'oldest') {
+                const dateA = new Date(a.createdAt || 0).getTime();
+                const dateB = new Date(b.createdAt || 0).getTime();
+                return dateA - dateB; // Ascending
+            }
+            return 0;
+        });
+
+        return result;
+    }, [members, searchTerm, roleFilter, sortOrder]);
+
 
     const handleCopyInvite = async () => {
         if (!user?.clubId) return toast.error('Erro: ID do clube não encontrado.');
@@ -346,12 +391,76 @@ function MembersContent() {
                 </div>
             )}
 
+
+            {/* FILTERS AND CONTROLS */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 space-y-4 md:space-y-0 md:flex md:items-center md:gap-4">
+                {/* Search */}
+                <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input
+                        type="text"
+                        placeholder="Buscar por nome ou email..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                </div>
+
+                {/* Role Filter */}
+                <div className="min-w-[200px]">
+                    <select
+                        value={roleFilter}
+                        onChange={e => setRoleFilter(e.target.value)}
+                        className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-600"
+                    >
+                        <option value="">Todos os Cargos</option>
+                        {Object.entries(ROLE_TRANSLATIONS)
+                            .sort(([, a], [, b]) => a.localeCompare(b))
+                            .map(([key, label]) => (
+                                <option key={key} value={key}>{label}</option>
+                            ))
+                        }
+                    </select>
+                </div>
+
+                {/* Sort Order */}
+                <div className="min-w-[180px]">
+                    <div className="relative">
+                        <ArrowDownUp className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                        <select
+                            value={sortOrder}
+                            onChange={(e: any) => setSortOrder(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-slate-600 appearance-none"
+                        >
+                            <option value="newest">Mais Recentes</option>
+                            <option value="oldest">Mais Antigos</option>
+                            <option value="alphabetical">Ordem Alfabética</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Clear Filters Button */}
+                {(searchTerm || roleFilter || sortOrder !== 'newest') && (
+                    <button
+                        onClick={() => {
+                            setSearchTerm('');
+                            setRoleFilter('');
+                            setSortOrder('newest');
+                        }}
+                        className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip"
+                        title="Limpar Filtros"
+                    >
+                        <FilterX className="w-5 h-5" />
+                    </button>
+                )}
+            </div>
+
             <UserApprovalsList />
             <PendingApprovalsList ref={pendingApprovalsRef} />
             <PendingDeliveriesList />
 
             <MembersTable
-                members={members}
+                members={filteredMembers}
                 units={units}
                 onInspect={(m) => { setInspectingMember(m); setIsDetailsOpen(true); }}
                 onEdit={(m) => { setEditingMember(m); setIsModalOpen(true); }}

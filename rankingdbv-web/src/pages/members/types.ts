@@ -65,6 +65,7 @@ export interface Member {
     healthNotes?: string;
     parentId?: string | null;
     children?: { id: string }[];
+    createdAt?: string;
 }
 
 export interface Unit {
