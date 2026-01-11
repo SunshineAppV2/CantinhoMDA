@@ -202,7 +202,6 @@ export function Register() {
                 if (!role) throw new Error('Selecione sua função.');
             } else {
                 if (!clubName) throw new Error('Digite o nome do seu Clube.');
-                if (!clubName) throw new Error('Digite o nome do seu Clube.');
                 if (!region || !mission || !union || !district) throw new Error('Preencha todos os dados hierárquicos (União, Associação, Região e Distrito).');
             }
 
