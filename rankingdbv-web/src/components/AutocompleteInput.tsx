@@ -25,7 +25,8 @@ export function AutocompleteInput({
 
     // Filter suggestions based on input
     const filteredSuggestions = useMemo(() => {
-        const query = value.toLowerCase();
+        if (!suggestions || !Array.isArray(suggestions)) return [];
+        const query = (value || '').toLowerCase();
         return suggestions
             .filter(s => s && s.toLowerCase().includes(query))
             .filter(s => s !== value) // Don't show if already exactly matches
