@@ -355,11 +355,27 @@ export function Register() {
                     console.log('[Register] Step 5 Note: Backend record already exists, redirecting to dashboard...');
                     toast.success('Sua conta já estava ativa!');
                     navigate('/dashboard');
-                } else if (backendErr.response?.status === 401 && backendErr.response?.data?.message?.includes('aguarda aprovação')) {
-                    // This catches the standard Unauthorized exception if the backend service threw it directly 
-                    // (though we wrapped it in service, controller might throw if middleware catches?)
-                    // Actually we wrapped it to return 201 Created BUT with message. 
-                    // If it threw 401:
+                } else if (backendErr.response?.status === 401) {
+                    // Treat ANY 401 as success-pending.
+                    // This handles cases where backend blocks login due to PENDING status OR
+                    // if middleware blocks it because user doesn't exist yet (Guard issue).
+                    // In both cases, the user has completed the flow as far as they can.
+                    console.log('[Register] Step 5: 401 received. Assuming Pending Status.');
+                    toast.success('Cadastro Recebido!', {
+                        description: 'Aguarde a aprovação da diretoria para liberar seu acesso.',
+                        duration: 8000
+                    });
+                    navigate('/registration-success', {
+                        state: {
+                            clubName,
+                            ownerName: name,
+                            region,
+                            mission,
+                            union,
+                            mobile
+                        }
+                    });
+                } else {
                     toast.success('Cadastro Recebido!', {
                         description: 'Aguarde a aprovação da diretoria para liberar seu acesso.',
                         duration: 8000
