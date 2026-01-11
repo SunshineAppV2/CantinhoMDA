@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { TermsModal } from '../components/TermsModal';
-import { UserPlus, Mail, Lock, User, ArrowRight, Home, Users, Award, Eye, EyeOff, CreditCard } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, ArrowRight, Home, Users, Award, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { HierarchySelector } from '../components/HierarchySelector';
 import { safeLocalStorage } from '../lib/storage';
@@ -297,8 +297,6 @@ export function Register() {
                     mission: (mode === 'CREATE') ? mission : undefined,
                     union: (mode === 'CREATE') ? union : undefined,
                     referralCode: (mode === 'CREATE') ? referralCode : undefined,
-                    union: (mode === 'CREATE') ? union : undefined,
-                    referralCode: (mode === 'CREATE') ? referralCode : undefined,
                     mobile, // Send to backend
                     cpf,
                     paymentPeriod: (mode === 'CREATE') ? paymentPeriod : undefined
@@ -583,6 +581,38 @@ export function Register() {
                                         placeholder="Ex: Clube Águias"
                                     />
                                 </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Forma de Pagamento</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button
+                                        type='button'
+                                        onClick={() => setPaymentPeriod('MENSAL')}
+                                        className={`px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${paymentPeriod === 'MENSAL' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+                                    >
+                                        Mensal
+                                    </button>
+                                    <button
+                                        type='button'
+                                        onClick={() => setPaymentPeriod('TRIMESTRAL')}
+                                        className={`px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${paymentPeriod === 'TRIMESTRAL' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+                                    >
+                                        Trimestral
+                                    </button>
+                                    <button
+                                        type='button'
+                                        onClick={() => setPaymentPeriod('ANUAL')}
+                                        className={`px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${paymentPeriod === 'ANUAL' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+                                    >
+                                        Anual
+                                    </button>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    {paymentPeriod === 'MENSAL' && 'Renovação todo mês.'}
+                                    {paymentPeriod === 'TRIMESTRAL' && 'Renovação a cada 3 meses.'}
+                                    {paymentPeriod === 'ANUAL' && 'Renovação uma vez por ano.'}
+                                </p>
                             </div>
                         </>
                     )}
