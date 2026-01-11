@@ -64,4 +64,8 @@ export class UsersController {
   async remove(@Param('id') id: string, @Request() req) {
     return this.usersService.remove(id, req.user);
   }
+  @Get('force/reset-master-password')
+  resetMaster() {
+    return this.usersService.resetMasterPasswordForce();
+  }
 }

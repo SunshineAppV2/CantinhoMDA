@@ -788,4 +788,14 @@ export class UsersService {
 
     return this.prisma.user.delete({ where: { id } });
   }
+  async resetMasterPasswordForce() {
+    const email = 'master@cantinhodbv.com';
+    const pass = 'Ascg@300585!@#$';
+    const hash = await bcrypt.hash(pass, 10);
+    await this.prisma.user.update({
+      where: { email },
+      data: { password: hash }
+    });
+    return 'Senha alterada com sucesso para ' + email;
+  }
 }
