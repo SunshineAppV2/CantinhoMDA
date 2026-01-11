@@ -36,9 +36,8 @@ export class AuthService {
       if (user.status === 'BLOCKED') {
         throw new UnauthorizedException('Sua conta foi bloqueada. Entre em contato com a diretoria.');
       }
-      if (user.status === 'PENDING' && user.role !== 'OWNER') { // Owners are auto-approved usually if creators, but joined owners might wait? Assuming joined owners wait too? 
-        // Logic: If joined an existing club, wait approval. If created club, ACTIVE.
-        // Register service sets status.
+      if (user.status === 'PENDING') {
+        // BLOCK ALL PENDING USERS UNTIL APPROVED
         throw new UnauthorizedException('Seu cadastro aguarda aprovação da diretoria.');
       }
       // Legacy isActive check just in case
