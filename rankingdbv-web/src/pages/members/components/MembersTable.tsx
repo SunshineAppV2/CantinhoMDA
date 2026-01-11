@@ -94,7 +94,7 @@ export function MembersTable({ members, units, onInspect, onEdit, onDelete, onTo
                             {renderTh("Contato", "email")}
                             {renderTh("Classe", "dbvClass")}
                             {user?.email === 'master@cantinhodbv.com' && renderTh("Clube", "clubName")}
-                            {renderTh("Unidade", "unitName")}
+                            {renderTh("Cadastro", "createdAt")}
                             {renderTh("Cargo", "role")}
                             <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Ações</th>
                         </tr>
@@ -115,7 +115,9 @@ export function MembersTable({ members, units, onInspect, onEdit, onDelete, onTo
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600"><Mail className="w-4 h-4 inline mr-1" />{member.email}</td>
                                 <td className="px-6 py-4 whitespace-nowrap"><span className={`text-xs px-2 py-1 rounded-full ${member.dbvClass ? 'bg-blue-50 text-blue-700' : 'text-slate-400'}`}>{member.dbvClass || 'Nenhuma'}</span></td>
                                 {user?.email === 'master@cantinhodbv.com' && <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-bold">{member.club?.name || '-'}</td>}
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{units?.find(u => u.id === member.unitId)?.name || '-'}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                    {(member.createdAt || (member as any).created_at) ? new Date(member.createdAt || (member as any).created_at).toLocaleDateString('pt-BR') : '-'}
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap"><span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-medium">{ROLE_TRANSLATIONS[member.role] || member.role}</span></td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                     <div className="flex justify-end gap-2">
