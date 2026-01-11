@@ -304,8 +304,20 @@ export function Register() {
                     clubSize: (mode === 'CREATE') ? clubSize : undefined
                 };
 
+                // --- CRITICAL FIX: Ensure Token is Ready ---
+                let token = null;
+                if (auth.currentUser) {
+                    console.log('[Register] Step 5: Refreshing Token for Backend...');
+                    token = await auth.currentUser.getIdToken(true);
+                }
+
                 const { api } = await import('../lib/axios');
-                const res = await api.post('/auth/register', registerPayload);
+
+                // Manually inject token if available, or rely on interceptor (but interceptor might race?)
+                // Safe bet: Pass config directly to override
+                const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
+                const res = await api.post('/auth/register', registerPayload, config);
 
                 // Backend might return success with a "pending" message inside if login was blocked
                 if (res.data && res.data.message && res.data.message.includes('Waiting for approval')) {
