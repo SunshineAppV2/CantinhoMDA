@@ -172,6 +172,7 @@ export class UsersService {
         // disabilities: true,
         // healthNotes: true,
         parentId: true,
+        createdAt: true,
         children: {
           select: { id: true }
         }
