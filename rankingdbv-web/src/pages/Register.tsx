@@ -307,6 +307,19 @@ export function Register() {
                 const { api } = await import('../lib/axios');
                 const res = await api.post('/auth/register', registerPayload);
 
+                // Backend might return success with a "pending" message inside if login was blocked
+                if (res.data && res.data.message && res.data.message.includes('Waiting for approval')) {
+                    toast.success('Cadastro realizado com sucesso!', {
+                        description: 'Aguarde a aprovação da diretoria para acessar o sistema.',
+                        duration: 8000,
+                    });
+                    // Clear token just in case
+                    safeLocalStorage.removeItem('token');
+                    // Navigate to login with a special flag/message? Or just home.
+                    navigate('/login');
+                    return;
+                }
+
                 if (res.data && res.data.access_token) {
                     console.log('[Register] Step 5 Success: Backend token received');
                     safeLocalStorage.setItem('token', res.data.access_token);
@@ -323,6 +336,16 @@ export function Register() {
                     console.log('[Register] Step 5 Note: Backend record already exists, redirecting to dashboard...');
                     toast.success('Sua conta já estava ativa!');
                     navigate('/dashboard');
+                } else if (backendErr.response?.status === 401 && backendErr.response?.data?.message?.includes('aguarda aprovação')) {
+                    // This catches the standard Unauthorized exception if the backend service threw it directly 
+                    // (though we wrapped it in service, controller might throw if middleware catches?)
+                    // Actually we wrapped it to return 201 Created BUT with message. 
+                    // If it threw 401:
+                    toast.success('Cadastro Recebido!', {
+                        description: 'Aguarde a aprovação da diretoria para liberar seu acesso.',
+                        duration: 8000
+                    });
+                    navigate('/login');
                 } else {
                     toast.error("Erro ao sincronizar com o servidor.");
                     throw backendErr;
