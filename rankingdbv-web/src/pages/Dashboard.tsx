@@ -214,15 +214,27 @@ function DirectorDashboard() {
                             </div>
                         </div>
 
-                        <div className="flex gap-3 max-w-lg mt-4">
-                            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-sm font-mono flex-1 truncate border border-white/10">
+                        <div className="flex gap-2 w-full mt-4">
+                            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-sm font-mono flex-1 truncate border border-white/10 hidden md:block">
                                 {`${window.location.origin}/register?ref=${clubStatus.referralCode}`}
                             </div>
+
                             <button
                                 onClick={handleCopyReferral}
-                                className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-50 transition-colors"
+                                className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-50 transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm"
                             >
-                                Copiar Link
+                                <span>Copiar Link</span>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    const link = `${window.location.origin}/register?ref=${clubStatus.referralCode}`;
+                                    const msg = encodeURIComponent(`Olá! Quero te indicar o *Ranking DBV* para a gestão do seu Clube de Desbravadores.\n\nÉ um sistema completo que estou usando e recomendo. Crie sua conta pelo meu link:\n${link}`);
+                                    window.open(`https://wa.me/?text=${msg}`, '_blank');
+                                }}
+                                className="bg-[#25D366] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#128C7E] transition-colors flex items-center gap-2 shadow-sm"
+                            >
+                                Enviar no WhatsApp
                             </button>
                         </div>
                     </div>

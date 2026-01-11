@@ -655,6 +655,20 @@ export function Register() {
                         </>
                     )}
 
+                    {/* REFERRAL BANNER */}
+                    {referralCode && mode === 'CREATE' && (
+                        <div className="bg-gradient-to-r from-purple-100 to-indigo-100 border border-indigo-200 p-4 rounded-lg my-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                            <div className="bg-white p-2 rounded-full shadow-sm">
+                                <Award className="w-6 h-6 text-indigo-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-indigo-900">Indicação Aplicada!</p>
+                                <p className="text-xs text-indigo-700">Você foi indicado por um parceiro oficial. Seu clube terá prioridade na aprovação.</p>
+                            </div>
+                        </div>
+                    )}
+
+
                     <div className="flex items-start gap-3 pt-2">
                         <input
                             type="checkbox"
