@@ -48,6 +48,14 @@ export class ClubsController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Get('admin/referrals')
+    getReferralReport(@Request() req) {
+        const isMaster = req.user.email === 'master@cantinhodbv.com' || req.user.role === 'MASTER';
+        if (!isMaster) throw new Error('Acesso negado');
+        return this.clubsService.getReferralReport();
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Get()
     findAll() {
         return this.clubsService.findAll();

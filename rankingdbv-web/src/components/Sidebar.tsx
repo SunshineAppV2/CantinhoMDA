@@ -254,6 +254,8 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
                 configSubItems.push({ id: 'master-clubs', label: 'Gerenciar Clubes', icon: Globe, path: '/dashboard/clubs' });
                 configSubItems.push({ id: 'master-hierarchy', label: 'Hierarquia', icon: Globe, path: '/dashboard/hierarchy' });
                 configSubItems.push({ id: 'master-treasury', label: 'Tesouraria Master', icon: DollarSign, path: '/dashboard/master-treasury' });
+                configSubItems.push({ id: 'referral-control', label: 'Controle Indicações', icon: Award, path: '/dashboard/referrals' });
+                configSubItems.push({ id: 'all-approvals', label: 'Aprovações Pendentes', icon: Shield, path: '/dashboard/approvals' });
                 configSubItems.push({ id: 'system-messages', label: 'Mensagens Sistema', icon: AlertTriangle, path: '/dashboard/system-messages' });
             }
 

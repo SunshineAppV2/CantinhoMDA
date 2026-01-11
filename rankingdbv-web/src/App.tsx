@@ -44,6 +44,7 @@ import { RegionalDashboard } from './pages/reports/RegionalDashboard';
 import { ClubDirectory } from './pages/ClubDirectory';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { CoordinatorApprovals } from './pages/CoordinatorApprovals';
+import { ReferralControl } from './pages/admin/ReferralControl';
 
 import { CompleteProfile } from './pages/CompleteProfile';
 // import { SocketProvider } from './contexts/SocketContext';
@@ -141,6 +142,7 @@ function App() {
               <Route element={<ProtectedRoute allowedRoles={['MASTER']} />}>
                 <Route path="master-requirements" element={<MasterRequirements />} />
                 <Route path="master-specialties" element={<MasterSpecialties />} />
+                <Route path="referrals" element={<ReferralControl />} />
               </Route>
             </Route>
           </Route>

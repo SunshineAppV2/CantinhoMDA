@@ -626,4 +626,61 @@ export class ClubsService implements OnModuleInit {
             throw new UnauthorizedException(`Ação Bloqueada: O clube ${club.name} está com assinatura vencida.`);
         }
     }
+    async getReferralReport() {
+        // 1. Get all clubs that were referred
+        const referrals = await this.prisma.club.findMany({
+            where: {
+                referrerClubId: { not: null }
+            },
+            select: {
+                id: true,
+                name: true,
+                createdAt: true,
+                subscriptionStatus: true,
+                referrerClubId: true,
+                users: {
+                    where: { role: 'OWNER' },
+                    select: { name: true, mobile: true }
+                }
+            }
+        });
+
+        // 2. Get Referrer Info
+        const referrerIds = [...new Set(referrals.map(r => r.referrerClubId).filter(Boolean))];
+        const referrers = await this.prisma.club.findMany({
+            where: { id: { in: referrerIds as string[] } },
+            select: {
+                id: true,
+                name: true,
+                users: {
+                    where: { role: 'OWNER' },
+                    select: { name: true }
+                }
+            }
+        });
+
+        // 3. Mount Report
+        const report = referrers.map(referrer => {
+            const myReferrals = referrals.filter(r => r.referrerClubId === referrer.id);
+            const activeCount = myReferrals.filter(r => r.subscriptionStatus === 'ACTIVE').length;
+
+            return {
+                referrerId: referrer.id,
+                referrerName: referrer.name,
+                referrerDirector: referrer.users[0]?.name || 'N/A',
+                totalIndications: myReferrals.length,
+                validatedIndications: activeCount,
+                details: myReferrals.map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    director: r.users[0]?.name || 'N/A',
+                    mobile: r.users[0]?.mobile || '',
+                    status: r.subscriptionStatus,
+                    date: r.createdAt
+                }))
+            };
+        });
+
+        return report.sort((a, b) => b.totalIndications - a.totalIndications);
+    }
 }
