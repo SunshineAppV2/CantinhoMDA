@@ -271,13 +271,13 @@ function MembersContent() {
                 return a.name.localeCompare(b.name);
             }
             if (sortOrder === 'newest') {
-                const dateA = new Date(a.createdAt || 0).getTime();
-                const dateB = new Date(b.createdAt || 0).getTime();
+                const dateA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
+                const dateB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
                 return dateB - dateA; // Descending
             }
             if (sortOrder === 'oldest') {
-                const dateA = new Date(a.createdAt || 0).getTime();
-                const dateB = new Date(b.createdAt || 0).getTime();
+                const dateA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
+                const dateB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
                 return dateA - dateB; // Ascending
             }
             return 0;
@@ -345,7 +345,7 @@ function MembersContent() {
                 <h1 className="text-2xl font-bold text-slate-800">{user?.role === 'COUNSELOR' ? 'Minha Unidade' : 'Membros'}</h1>
                 <div className="flex gap-2">
                     {(['COUNSELOR', 'OWNER', 'ADMIN', 'INSTRUCTOR'].includes(user?.role || '') || user?.email === 'master@cantinhodbv.com') && (
-                        <button onClick={() => { setIsAssignModalOpen(true); setSelectedMemberIds(members.map(m => m.id)); }} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+                        <button onClick={() => { setIsAssignModalOpen(true); setSelectedMemberIds(filteredMembers.map(m => m.id)); }} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
                             <ListChecks className="w-5 h-5" /> Enviar Requisito
                         </button>
                     )}
@@ -491,7 +491,7 @@ function MembersContent() {
                         {requirements.map(r => <option key={r.id} value={r.id}>{r.code} - {r.description}</option>)}
                     </select>
                     <div className="max-h-60 overflow-y-auto border rounded p-2">
-                        {members.map(m => (
+                        {filteredMembers.map(m => (
                             <label key={m.id} className="flex items-center gap-2 p-2 hover:bg-gray-50">
                                 <input type="checkbox" checked={selectedMemberIds.includes(m.id)} onChange={() => {
                                     setSelectedMemberIds(prev => prev.includes(m.id) ? prev.filter(id => id !== m.id) : [...prev, m.id])
