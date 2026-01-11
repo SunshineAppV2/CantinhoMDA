@@ -171,16 +171,35 @@ export class AuthService {
     }
 
     // 4. Create User
-    const user = await this.usersService.create({
-      ...createUserDto,
-      password: createUserDto.password, // Pass RAW password to service (it will hash it)
-      clubId: clubId,
-      role: role as any,
-      status: status, // NEW: Explicitly pass status
-      isActive: status === 'ACTIVE'
-    });
+    // First, check if user exists locally to prevent 500 Prisma Error
+    const existingUser = await this.usersService.findOneByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new UnauthorizedException('Este e-mail já está cadastrado no sistema.');
+    }
 
-    return this.login(user);
+    try {
+      const user = await this.usersService.create({
+        ...createUserDto,
+        password: createUserDto.password, // Pass RAW password to service (it will hash it)
+        clubId: clubId,
+        role: role as any,
+        status: status, // NEW: Explicitly pass status
+        isActive: status === 'ACTIVE'
+      });
+
+      return this.login(user);
+
+    } catch (error) {
+      console.error("Register Error:", error);
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      // Handle constraint errors
+      if (error.code === 'P2002') {
+        throw new UnauthorizedException('Dados duplicados (Email ou CPF já cadastrados).');
+      }
+      throw new Error('Falha ao registrar usuário no sistema (Backend).');
+    }
   }
 
   // SYNC: Trust Firebase Auth and Link/Create Backend User
