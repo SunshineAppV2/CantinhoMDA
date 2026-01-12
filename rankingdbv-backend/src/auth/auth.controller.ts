@@ -37,16 +37,26 @@ export class AuthController {
     @Headers('authorization') authorization: string,
     @Body() createUserDto: any
   ) {
-    console.log('[AuthController] /register called');
+    console.log('[AuthController] ============ /register called ============');
+    console.log('[AuthController] Body received:', JSON.stringify(createUserDto, null, 2));
+    console.log('[AuthController] Authorization header present:', !!authorization);
 
     // If no token provided, allow registration without Firebase validation
     // (for cases where backend creates users directly)
     if (!authorization || !authorization.startsWith('Bearer ')) {
       console.log('[AuthController] No token provided, proceeding without Firebase validation');
-      return this.authService.register(createUserDto);
+      try {
+        const result = await this.authService.register(createUserDto);
+        console.log('[AuthController] Registration result:', JSON.stringify(result, null, 2));
+        return result;
+      } catch (error: any) {
+        console.error('[AuthController] Registration error:', error.message);
+        throw error;
+      }
     }
 
     const token = authorization.split('Bearer ')[1];
+    console.log('[AuthController] Token extracted, length:', token?.length);
 
     try {
       // Validate Firebase token (does NOT require user to exist in Postgres)
@@ -54,7 +64,9 @@ export class AuthController {
 
       if (!admin.apps.length) {
         console.warn('[AuthController] Firebase Admin not initialized, skipping token validation');
-        return this.authService.register(createUserDto);
+        const result = await this.authService.register(createUserDto);
+        console.log('[AuthController] Registration result (no Firebase):', JSON.stringify(result, null, 2));
+        return result;
       }
 
       const decodedToken = await admin.auth().verifyIdToken(token);
@@ -63,23 +75,36 @@ export class AuthController {
       console.log(`[AuthController] Firebase token valid for: ${email} (UID: ${uid})`);
 
       // Pass validated data to service
-      return this.authService.register({
+      const dataToRegister = {
         ...createUserDto,
         uid,
         email: email || createUserDto.email, // Use token email if available
-      });
+      };
+
+      console.log('[AuthController] Calling authService.register with:', JSON.stringify(dataToRegister, null, 2));
+
+      const result = await this.authService.register(dataToRegister);
+      console.log('[AuthController] Registration SUCCESS:', JSON.stringify(result, null, 2));
+      return result;
 
     } catch (error: any) {
-      console.error('[AuthController] Firebase token validation failed:', error.message);
+      console.error('[AuthController] Error in register:', error.message, error.stack);
 
       // If token is invalid/expired, still try to register without Firebase link
       // This gracefully handles edge cases
       if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
         console.log('[AuthController] Token expired/invalid, proceeding without Firebase validation');
-        return this.authService.register(createUserDto);
+        try {
+          const result = await this.authService.register(createUserDto);
+          console.log('[AuthController] Registration result (fallback):', JSON.stringify(result, null, 2));
+          return result;
+        } catch (fallbackError: any) {
+          console.error('[AuthController] Fallback registration error:', fallbackError.message);
+          throw fallbackError;
+        }
       }
 
-      throw new UnauthorizedException('Token Firebase inválido: ' + error.message);
+      throw new UnauthorizedException('Erro no registro: ' + error.message);
     }
   }
 

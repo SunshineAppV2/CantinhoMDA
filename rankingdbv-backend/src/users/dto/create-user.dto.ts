@@ -114,4 +114,10 @@ export class CreateUserDto {
     @IsString() @IsOptional() paymentPeriod?: string;
 
     @IsString() @IsOptional() clubSize?: string;
+
+    // Firebase Integration
+    @IsString() @IsOptional() uid?: string;
+
+    // Status for approval flow
+    @IsString() @IsOptional() status?: string;
 }
