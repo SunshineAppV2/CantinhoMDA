@@ -318,7 +318,10 @@ export class UsersService {
         const clubData = club as any;
 
         // Check BILLING Status first (Robust Dynamic Check)
-        await this.clubsService.checkWriteAccess(clubId);
+        // BYPASS if registering a NEW user (status PENDING or role OWNER) to allow initial signup
+        if (rest.status !== 'PENDING' && rest.role !== 'OWNER') {
+          await this.clubsService.checkWriteAccess(clubId);
+        }
 
         // Calculate PAID/Liable Members (Everyone except PARENTS/MASTER)
         const paidCount = await this.prisma.user.count({
