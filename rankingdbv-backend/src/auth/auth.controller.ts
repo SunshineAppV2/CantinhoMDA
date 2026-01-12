@@ -88,12 +88,20 @@ export class AuthController {
       return result;
 
     } catch (error: any) {
-      console.error('[AuthController] Error in register:', error.message, error.stack);
+      console.error('[AuthController] Error in register:', error.message, error.code, error.stack);
 
       // If token is invalid/expired, still try to register without Firebase link
       // This gracefully handles edge cases
-      if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
-        console.log('[AuthController] Token expired/invalid, proceeding without Firebase validation');
+      const firebaseErrors = [
+        'auth/id-token-expired',
+        'auth/argument-error',
+        'auth/invalid-id-token',
+        'auth/user-not-found',
+        'auth/id-token-revoked'
+      ];
+
+      if (firebaseErrors.includes(error.code) || error.message?.includes('Firebase')) {
+        console.log('[AuthController] Firebase token issue, proceeding without Firebase validation');
         try {
           const result = await this.authService.register(createUserDto);
           console.log('[AuthController] Registration result (fallback):', JSON.stringify(result, null, 2));
@@ -102,6 +110,11 @@ export class AuthController {
           console.error('[AuthController] Fallback registration error:', fallbackError.message);
           throw fallbackError;
         }
+      }
+
+      // If it's already a NestJS exception (from authService), re-throw it
+      if (error.response && error.status) {
+        throw error;
       }
 
       throw new UnauthorizedException('Erro no registro: ' + error.message);
