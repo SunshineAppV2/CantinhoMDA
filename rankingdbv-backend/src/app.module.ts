@@ -25,6 +25,7 @@ import { AchievementsModule } from './achievements/achievements.module';
 import { MasterTreasuryModule } from './master-treasury/master-treasury.module';
 import { PaymentsModule } from './payments/payments.module';
 import { RankingRegionalModule } from './ranking-regional/ranking-regional.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 import { AuditModule } from './audit/audit.module';
 
@@ -54,6 +55,7 @@ import { AuditModule } from './audit/audit.module';
     PaymentsModule,
     AchievementsModule,
     RankingRegionalModule,
+    SubscriptionsModule,
     AuditModule,
   ],
   controllers: [AppController],

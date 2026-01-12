@@ -332,7 +332,10 @@ export function Register() {
                             region,
                             mission,
                             union,
-                            mobile
+                            mobile,
+                            isNewClub: mode === 'CREATE',
+                            paymentPeriod,
+                            clubSize
                         }
                     });
                     return;
@@ -371,7 +374,10 @@ export function Register() {
                             region,
                             mission,
                             union,
-                            mobile
+                            mobile,
+                            isNewClub: mode === 'CREATE',
+                            paymentPeriod,
+                            clubSize
                         }
                     });
                 } else {

@@ -799,4 +799,157 @@ export class UsersService {
     });
     return 'Senha alterada com sucesso para ' + email;
   }
+
+  // ============================================
+  // APPROVAL MANAGEMENT (MASTER ONLY)
+  // ============================================
+
+  /**
+   * Buscar todos os usuários pendentes de aprovação
+   */
+  async findPendingUsers() {
+    return this.prisma.user.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        mobile: true,
+        cpf: true,
+        role: true,
+        status: true,
+        clubId: true,
+        createdAt: true,
+        club: {
+          select: {
+            id: true,
+            name: true,
+            phoneNumber: true,
+            union: true,
+            association: true,
+            mission: true,
+            region: true,
+            district: true,
+            memberLimit: true,
+            settings: true,
+            subscriptionStatus: true,
+            _count: {
+              select: { users: true }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Aprovar usuário pendente
+   * - Atualiza status para ACTIVE
+   * - Se for OWNER, cria pagamento pendente para o clube
+   */
+  async approveUser(userId: string, approvedBy: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { club: true }
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    if (user.status !== 'PENDING') {
+      throw new UnauthorizedException('Usuário não está pendente de aprovação');
+    }
+
+    // Atualizar status do usuário
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: 'ACTIVE',
+        isActive: true
+      }
+    });
+
+    // Se for OWNER de um novo clube, criar pagamento pendente
+    if (user.role === 'OWNER' && user.clubId && user.club) {
+      const settings: any = user.club.settings || {};
+      const memberLimit = settings.memberLimit || user.club.memberLimit || 30;
+      const billingCycle = settings.billingCycle || 'MENSAL';
+
+      // Calcular meses baseado no ciclo
+      const months = billingCycle === 'TRIMESTRAL' ? 3 : billingCycle === 'ANUAL' ? 12 : 1;
+
+      // R$ 2,00 por membro/mês
+      const pricePerMember = 2.00;
+      const amount = memberLimit * pricePerMember * months;
+
+      const planName = months === 1 ? 'Mensal' : months === 3 ? 'Trimestral' : 'Anual';
+      const description = `Assinatura ${planName} - ${memberLimit} Acessos`;
+
+      // Criar pagamento pendente
+      await this.prisma.payment.create({
+        data: {
+          clubId: user.clubId,
+          type: 'SUBSCRIPTION',
+          amount,
+          status: 'PENDING',
+          paymentMethod: 'pix',
+          description,
+          metadata: {
+            memberCount: memberLimit,
+            months,
+            billingCycle,
+            planName,
+            startDate: new Date().toISOString()
+          },
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 dias
+        }
+      });
+
+      console.log(`[ApproveUser] Created pending payment for club ${user.clubId}: R$ ${amount} (${description})`);
+    }
+
+    console.log(`[ApproveUser] User ${userId} approved by ${approvedBy}`);
+
+    return {
+      success: true,
+      message: 'Usuário aprovado com sucesso',
+      user: updatedUser
+    };
+  }
+
+  /**
+   * Rejeitar usuário pendente
+   */
+  async rejectUser(userId: string, rejectedBy: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    if (user.status !== 'PENDING') {
+      throw new UnauthorizedException('Usuário não está pendente de aprovação');
+    }
+
+    // Atualizar status para BLOCKED
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: 'BLOCKED',
+        isActive: false
+      }
+    });
+
+    console.log(`[RejectUser] User ${userId} rejected by ${rejectedBy}`);
+
+    return {
+      success: true,
+      message: 'Usuário rejeitado',
+      user: updatedUser
+    };
+  }
 }

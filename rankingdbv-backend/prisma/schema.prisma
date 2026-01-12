@@ -46,6 +46,7 @@ model Club {
   transactions          Transaction[]
   units                 Unit[]
   users                 User[]
+  payments              Payment[]
 
   @@map("clubs")
 }
@@ -162,6 +163,7 @@ model User {
   parent                 User?               @relation("ParentChildren", fields: [parentId], references: [id])
   children               User[]              @relation("ParentChildren")
   unit                   Unit?               @relation(fields: [unitId], references: [id])
+  confirmedPayments      Payment[]           @relation("PaymentConfirmer")
 
   @@map("users")
 }
@@ -567,4 +569,42 @@ enum MinuteType {
   EXTRAORDINARIA
   ATO_ADMINISTRATIVO
   OUTRO
+}
+
+// ============================================
+// SUBSCRIPTION & PAYMENT MODELS
+// ============================================
+
+model Payment {
+  id            String        @id @default(uuid())
+  clubId        String
+  type          PaymentType   @default(SUBSCRIPTION)
+  amount        Float
+  status        PaymentStatus @default(PENDING)
+  paymentMethod String        @default("pix")
+  description   String
+  metadata      Json?         // { memberCount, months, startDate, newMemberLimit, planName }
+  confirmedAt   DateTime?
+  confirmedBy   String?
+  expiresAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  club            Club  @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  confirmedByUser User? @relation("PaymentConfirmer", fields: [confirmedBy], references: [id])
+
+  @@map("payments")
+}
+
+enum PaymentType {
+  SUBSCRIPTION
+  MEMBER_ADDITION
+  RENEWAL
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  EXPIRED
+  REFUNDED
 }

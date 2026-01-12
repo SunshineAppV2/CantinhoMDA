@@ -46,6 +46,8 @@ import { ClubDirectory } from './pages/ClubDirectory';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { CoordinatorApprovals } from './pages/CoordinatorApprovals';
 import { ReferralControl } from './pages/admin/ReferralControl';
+import { UserApprovals } from './pages/admin/UserApprovals';
+import { PaymentManagement } from './pages/admin/PaymentManagement';
 
 import { CompleteProfile } from './pages/CompleteProfile';
 // import { SocketProvider } from './contexts/SocketContext';
@@ -145,6 +147,8 @@ function App() {
                 <Route path="master-requirements" element={<MasterRequirements />} />
                 <Route path="master-specialties" element={<MasterSpecialties />} />
                 <Route path="referrals" element={<ReferralControl />} />
+                <Route path="user-approvals" element={<UserApprovals />} />
+                <Route path="payment-management" element={<PaymentManagement />} />
               </Route>
             </Route>
           </Route>

@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Param, UseGuards, Patch, Body, Post, Req, Delete, Request, Query } from '@nestjs/common';
+﻿import { Controller, Get, Param, UseGuards, Patch, Body, Post, Req, Delete, Request, Query, ForbiddenException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -6,6 +6,44 @@ import { UpdateUserDto } from './dto/update-user.dto';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
+
+  // ============================================
+  // APPROVAL ENDPOINTS (MASTER ONLY)
+  // ============================================
+
+  @UseGuards(JwtAuthGuard)
+  @Get('pending')
+  async findPendingUsers(@Req() req) {
+    // Apenas MASTER pode ver pendentes
+    if (req.user.role !== 'MASTER' && req.user.email !== 'master@cantinhodbv.com') {
+      throw new ForbiddenException('Apenas o Master pode visualizar cadastros pendentes');
+    }
+    return this.usersService.findPendingUsers();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/approve')
+  async approveUser(@Param('id') id: string, @Req() req) {
+    // Apenas MASTER pode aprovar
+    if (req.user.role !== 'MASTER' && req.user.email !== 'master@cantinhodbv.com') {
+      throw new ForbiddenException('Apenas o Master pode aprovar cadastros');
+    }
+    return this.usersService.approveUser(id, req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/reject')
+  async rejectUser(@Param('id') id: string, @Req() req) {
+    // Apenas MASTER pode rejeitar
+    if (req.user.role !== 'MASTER' && req.user.email !== 'master@cantinhodbv.com') {
+      throw new ForbiddenException('Apenas o Master pode rejeitar cadastros');
+    }
+    return this.usersService.rejectUser(id, req.user.sub);
+  }
+
+  // ============================================
+  // EXISTING ENDPOINTS
+  // ============================================
 
   // Mantemos apenas o que existe no Service: Buscar por ID
   // E corrigimos o tipo de id para String (UUID)
@@ -69,3 +107,4 @@ export class UsersController {
     return this.usersService.resetMasterPasswordForce();
   }
 }
+
