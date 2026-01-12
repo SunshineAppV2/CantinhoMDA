@@ -318,14 +318,13 @@ export function Register() {
 
                 const res = await api.post('/auth/register', registerPayload, config);
 
-                // Backend might return success with a "pending" message inside if login was blocked
-                if (res.data && res.data.message && res.data.message.includes('Waiting for approval')) {
+                // Backend returns success with pending status OR access_token for active users
+                if (res.data && (res.data.success || res.data.message?.includes('Waiting for approval') || res.data.message?.includes('Aguardando aprovação'))) {
+                    console.log('[Register] Step 5 Success: Pending approval status');
                     toast.success('Cadastro realizado com sucesso!', {
                         description: 'Aguarde a aprovação da diretoria para acessar o sistema.',
                         duration: 8000,
                     });
-                    // Clear token just in case
-                    // Navigate to Success Page with Data
                     navigate('/registration-success', {
                         state: {
                             clubName,

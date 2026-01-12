@@ -186,31 +186,29 @@ export class AuthService {
     try {
       const user = await this.usersService.create({
         ...createUserDto,
-        password: createUserDto.password, // Pass RAW password to service (it will hash it)
+        password: createUserDto.password,
         clubId: clubId,
         role: role as any,
-        status: status, // NEW: Explicitly pass status
+        status: status,
         isActive: status === 'ACTIVE'
       });
 
-      // ENFORCE PENDING CHECK
+      console.log(`[Register] User created successfully: ${user.email} (Status: ${user.status})`);
+
+      // For PENDING users, return success WITHOUT trying to login (which would fail)
       if (user.status === 'PENDING') {
-        throw new UnauthorizedException('Seu cadastro aguarda aprovação da diretoria.');
+        return {
+          success: true,
+          message: 'Cadastro realizado com sucesso! Aguardando aprovação.',
+          user: { id: user.id, email: user.email, status: user.status, clubId: user.clubId }
+        };
       }
 
-      try {
-        return await this.login(user);
-      } catch (loginError) {
-        if (loginError instanceof UnauthorizedException && loginError.message.includes('aguarda aprovação')) {
-          return {
-            message: 'Registration successful. Waiting for approval.',
-            user: { id: user.id, email: user.email, status: user.status }
-          };
-        }
-        throw loginError;
-      }
+      // For ACTIVE users, proceed with login
+      return await this.login(user);
+
     } catch (error) {
-      console.error("Register Error:", error);
+      console.error("[Register] Error:", error);
 
       // --- COMPENSATION LOGIC (ROLLBACK) ---
       if (wasNewClubCreated && clubId) {
