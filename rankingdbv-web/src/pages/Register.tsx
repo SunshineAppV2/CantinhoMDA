@@ -303,19 +303,26 @@ export function Register() {
                     clubSize: (mode === 'CREATE') ? clubSize : undefined
                 };
 
-                // --- CRITICAL FIX: Ensure Token is Ready ---
+                // --- STEP 5: SYNC WITH BACKEND ---
+                console.log('[Register] Step 5: Syncing with Backend...');
+
                 let token = null;
                 if (auth.currentUser) {
-                    console.log('[Register] Step 5: Refreshing Token for Backend...');
+                    console.log('[Register] Step 5: Forcing token refresh...');
                     token = await auth.currentUser.getIdToken(true);
                 }
 
                 const { api } = await import('../lib/axios');
 
-                // Manually inject token if available, or rely on interceptor (but interceptor might race?)
-                // Safe bet: Pass config directly to override
-                const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+                // Explicitly set headers to bypass any interceptor issues during registration
+                const config = {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                };
 
+                console.log('[Register] Step 5: Sending request to Postgres backend...');
                 const res = await api.post('/auth/register', registerPayload, config);
 
                 // Backend returns success with pending status OR access_token for active users
