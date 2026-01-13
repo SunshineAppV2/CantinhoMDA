@@ -190,6 +190,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             ];
 
             if (user?.role !== 'OWNER') {
+                coordinatorSubItems.push({ id: 'regional-requirements', label: 'Lançar Requisitos', icon: ListChecks, path: '/dashboard/regional-requirements' });
                 coordinatorSubItems.push({ id: 'club-directory', label: 'Diretório de Clubes', icon: Building2, path: '/dashboard/clubs-directory' });
                 coordinatorSubItems.push({ id: 'coordinator-approvals', label: 'Intervenções', icon: Shield, path: '/dashboard/coordinator-approvals' });
                 coordinatorSubItems.push({ id: 'hierarchy', label: 'Clubes / Hierarquia', icon: Globe, path: '/dashboard/hierarchy' });
