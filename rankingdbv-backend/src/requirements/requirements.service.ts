@@ -136,7 +136,7 @@ export class RequirementsService {
         return { count, errors };
     }
 
-    async findAll(query: { dbvClass?: any, specialtyId?: string, userId?: string, userClubId?: string }) {
+    async findAll(query: { dbvClass?: any, specialtyId?: string, userId?: string, userClubId?: string, region?: string }) {
         const where: any = {};
         if (query.dbvClass) where.dbvClass = query.dbvClass;
         if (query.specialtyId) where.specialtyId = query.specialtyId;
@@ -146,9 +146,13 @@ export class RequirementsService {
         // If not, we might be fetching only Global or All (depends on context, usually Global only for public).
         if (query.userClubId) {
             where.OR = [
-                { clubId: null },
-                { clubId: query.userClubId }
+                { clubId: null, region: null }, // Universal (No Club, No Region)
+                { clubId: query.userClubId }    // Club Specific
             ];
+
+            if (query.region) {
+                where.OR.push({ region: query.region }); // Regional Requirements
+            }
         } else {
             // If no user context, show only GLOBAL Requirements to be safe?
             // Or show all if it's a Super Admin listing? 
