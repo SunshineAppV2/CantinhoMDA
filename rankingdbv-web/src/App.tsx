@@ -50,6 +50,7 @@ import { UserApprovals } from './pages/admin/UserApprovals';
 import { PaymentManagement } from './pages/admin/PaymentManagement';
 import { RegionalRequirements } from './pages/coordinator/RegionalRequirements';
 import { RegionalEventsManager } from './pages/coordinator/RegionalEventsManager';
+import { ClubRegionalEvents } from './pages/club/ClubRegionalEvents';
 
 import { CompleteProfile } from './pages/CompleteProfile';
 // import { SocketProvider } from './contexts/SocketContext';
@@ -135,6 +136,11 @@ function App() {
                 <Route path="clubs-directory" element={<ClubDirectory />} />
                 <Route path="regional-requirements" element={<RegionalRequirements />} />
                 <Route path="regional-events-manager" element={<RegionalEventsManager />} />
+              </Route>
+
+              {/* Club Director Routes for Regional Events */}
+              <Route element={<ProtectedRoute allowedRoles={['MASTER', 'OWNER', 'ADMIN', 'DIRECTOR']} />}>
+                <Route path="club/regional-events" element={<ClubRegionalEvents />} />
               </Route>
 
               <Route element={<ProtectedRoute allowedRoles={['MASTER', 'COORDINATOR_REGIONAL', 'COORDINATOR_DISTRICT', 'COORDINATOR_AREA']} />}>
