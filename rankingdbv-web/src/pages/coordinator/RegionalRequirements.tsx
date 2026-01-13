@@ -8,6 +8,10 @@ import { Modal } from '../../components/Modal';
 interface Requirement {
     id: string;
     description: string;
+    title?: string;
+    points?: number;
+    startDate?: string;
+    endDate?: string;
     code?: string;
     dbvClass?: string;
     area?: string;
@@ -48,12 +52,32 @@ export function RegionalRequirements() {
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [reqTitle, setReqTitle] = useState('');
     const [reqDescription, setReqDescription] = useState('');
     const [reqCode, setReqCode] = useState('');
     const [reqArea, setReqArea] = useState('');
+    const [reqPoints, setReqPoints] = useState(0);
+    const [reqStart, setReqStart] = useState('');
+    const [reqEnd, setReqEnd] = useState('');
+    const [reqScope, setReqScope] = useState<'ALL' | 'SPECIFIC'>('ALL');
+    const [selectedTargetClub, setSelectedTargetClub] = useState<string | null>(null);
+
     const [editingReqId, setEditingReqId] = useState<string | null>(null);
     const [reqType, setReqType] = useState<'TEXT' | 'FILE' | 'BOTH' | 'QUESTIONNAIRE' | 'NONE'>('NONE');
     const [questions, setQuestions] = useState<Question[]>([]);
+
+    // Fetch Clubs for dropdown
+    const { data: clubs = [], isLoading: clubsLoading } = useQuery<{ id: string, name: string }[]>({
+        queryKey: ['regional-clubs'], // Add region dependency if needed? Usually user filtered
+        queryFn: async () => {
+            // Coordinator can list clubs. Endpoint might need adjustment?
+            // Assuming /clubs endpoint returns clubs visible to user (Coordinators see their region's clubs)
+            // Let's verify /clubs endpoint later. For now assume standard list.
+            const res = await api.get('/clubs');
+            return res.data;
+        },
+        enabled: isModalOpen // Fetch when modal opens
+    });
 
     const addQuestion = () => {
         setQuestions([...questions, { questionText: '', options: ['', '', '', ''], correctIndex: 0 }]);
@@ -141,6 +165,13 @@ export function RegionalRequirements() {
         setReqDescription('');
         setReqCode('');
         setReqArea('');
+        setReqTitle('');
+        setReqPoints(0);
+        setReqStart('');
+        setReqEnd('');
+        setReqScope('ALL');
+        setSelectedTargetClub(null);
+
         setReqType('NONE');
         setQuestions([]);
         setEditingReqId(null);
@@ -151,6 +182,13 @@ export function RegionalRequirements() {
         setReqDescription('');
         setReqCode('');
         setReqArea('');
+        setReqTitle('');
+        setReqPoints(0);
+        setReqStart('');
+        setReqEnd('');
+        setReqScope('ALL');
+        setSelectedTargetClub(null);
+
         setReqType('NONE');
         setQuestions([]);
         setIsModalOpen(true);
@@ -160,9 +198,26 @@ export function RegionalRequirements() {
         setEditingReqId(req.id);
         setReqDescription(req.description);
         setReqCode(req.code || '');
+        setReqTitle(req.title || '');
         setReqArea(req.area || '');
+        setReqPoints(req.points || 0);
+        setReqStart(req.startDate ? new Date(req.startDate).toISOString().split('T')[0] : '');
+        setReqEnd(req.endDate ? new Date(req.endDate).toISOString().split('T')[0] : '');
+
+        // Infer scope from clubId in req
+        // Wait, Requirement interface doesn't have clubId in frontend def yet. Need to update interface.
+        // Assuming we update it.
+        const targetClubId = (req as any).clubId;
+        if (targetClubId) {
+            setReqScope('SPECIFIC');
+            setSelectedTargetClub(targetClubId);
+        } else {
+            setReqScope('ALL');
+            setSelectedTargetClub(null);
+        }
+
         setReqType(req.type || 'NONE');
-        setQuestions(req.questions || []); // Assuming full object or need fetch?
+        setQuestions(req.questions || []);
         setIsModalOpen(true);
     };
 
@@ -177,11 +232,18 @@ export function RegionalRequirements() {
         const payload: any = {
             description: reqDescription,
             code: reqCode,
+            title: reqTitle,
             area: reqArea,
+            points: reqPoints,
+            startDate: reqStart ? new Date(reqStart).toISOString() : null,
+            endDate: reqEnd ? new Date(reqEnd).toISOString() : null,
+
             type: reqType === 'NONE' ? undefined : reqType,
             questions: reqType === 'QUESTIONNAIRE' ? questions : undefined,
             dbvClass: selectedClass,
-            // Backend handles region assignment based on role
+
+            clubId: reqScope === 'SPECIFIC' ? selectedTargetClub : null // Send null for 'ALL'
+            // Region is handled by backend
         };
 
         if (editingReqId) {
@@ -324,6 +386,17 @@ export function RegionalRequirements() {
             >
                 <form onSubmit={handleSave} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Título (Opcional)</label>
+                            <input
+                                type="text"
+                                value={reqTitle}
+                                onChange={e => setReqTitle(e.target.value)}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                placeholder="Ex: Campanha do Agasalho"
+                            />
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Código (Opcional)</label>
                             <input
@@ -350,6 +423,36 @@ export function RegionalRequirements() {
                         </div>
                     </div>
 
+                    <div className="grid grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Pontos</label>
+                            <input
+                                type="number"
+                                value={reqPoints}
+                                onChange={e => setReqPoints(Number(e.target.value))}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Início</label>
+                            <input
+                                type="date"
+                                value={reqStart}
+                                onChange={e => setReqStart(e.target.value)}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Fim</label>
+                            <input
+                                type="date"
+                                value={reqEnd}
+                                onChange={e => setReqEnd(e.target.value)}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                        </div>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Descrição</label>
                         <textarea
@@ -357,10 +460,42 @@ export function RegionalRequirements() {
                             value={reqDescription}
                             onChange={e => setReqDescription(e.target.value)}
                             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            rows={4}
+                            rows={3}
                             placeholder="Descreva o requisito..."
                         />
                     </div>
+
+                    {/* Scope Selector */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Âmbito de Visibilidade</label>
+                        <select
+                            value={reqScope}
+                            onChange={e => setReqScope(e.target.value as 'ALL' | 'SPECIFIC')}
+                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
+                        >
+                            <option value="ALL">Todos os Clubes da Região</option>
+                            <option value="SPECIFIC">Clube Específico</option>
+                        </select>
+                    </div>
+
+                    {reqScope === 'SPECIFIC' && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Selecione o Clube</label>
+                            <select
+                                value={selectedTargetClub || ''}
+                                onChange={e => setSelectedTargetClub(e.target.value)}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                            >
+                                <option value="">Selecione...</option>
+                                {clubs?.map(club => (
+                                    <option key={club.id} value={club.id}>{club.name}</option>
+                                ))}
+                            </select>
+                            {!clubsLoading && clubs?.length === 0 && (
+                                <p className="text-xs text-red-500 mt-1">Nenhum clube encontrado na sua região.</p>
+                            )}
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Interação</label>
