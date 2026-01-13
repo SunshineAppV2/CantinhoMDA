@@ -164,7 +164,7 @@ function DirectorDashboard() {
     // Check if profile needs updating (OWNER only)
     useEffect(() => {
         if (user?.role === 'OWNER') {
-            const needsUpdate = !user.mobile || !clubStatus?.union || !clubStatus?.mission || !clubStatus?.region;
+            const needsUpdate = !(user as any).mobile || !clubStatus?.union || !clubStatus?.mission || !clubStatus?.region;
             if (needsUpdate) {
                 setShowProfileUpdate(true);
             } else if (!localStorage.getItem('referralPopupDismissed')) {

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, Save, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Save, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../lib/axios';
 import { HierarchySelector } from './HierarchySelector';
