@@ -27,6 +27,12 @@ export function Hierarchy() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'ACTIVE' | 'SOON' | 'EXPIRED' | 'NO_DATE'>('ALL');
 
+    // New Hierarchy Filters
+    const [filterUnion, setFilterUnion] = useState('');
+    const [filterMission, setFilterMission] = useState('');
+    const [filterRegion, setFilterRegion] = useState('');
+    const [filterDistrict, setFilterDistrict] = useState('');
+
     // --- QUERY: TREE DATA ---
     const { data: tree = {}, refetch: refetchTree } = useQuery({
         queryKey: ['hierarchy-tree'],
@@ -100,6 +106,19 @@ export function Hierarchy() {
         const isWarning = !isExpired && daysTo <= 30 && club.nextBillingDate;
 
 
+
+
+
+        if (filterStatus === 'ALL') {
+            // Pass through unless filtered by hierarchy below
+        }
+
+        // 3. Hierarchy Filters
+        if (filterUnion && club.union !== filterUnion) return false;
+        if (filterMission && (club.mission !== filterMission && club.association !== filterMission)) return false;
+        if (filterRegion && club.region !== filterRegion) return false;
+        if (filterDistrict && club.district !== filterDistrict) return false;
+
         if (filterStatus === 'ALL') return true;
 
 
@@ -121,6 +140,12 @@ export function Hierarchy() {
 
     // Stats
     const totalClubs = allClubs.length;
+
+    // --- UNIQUE VALUES FOR FILTERS ---
+    const unions = Array.from(new Set(allClubs.map((c: any) => c.union).filter(Boolean))).sort();
+    const missions = Array.from(new Set(allClubs.map((c: any) => c.mission || c.association).filter(Boolean))).sort();
+    const regions = Array.from(new Set(allClubs.map((c: any) => c.region).filter(Boolean))).sort();
+    const districts = Array.from(new Set(allClubs.map((c: any) => c.district).filter(Boolean))).sort();
     const activeLicenses = allClubs.filter((c: any) => c.subscriptionStatus === 'ACTIVE' || c.subscriptionStatus === 'TRIAL').length;
     const expiringSoon = allClubs.filter((c: any) => {
         if (!c.nextBillingDate) return false;
@@ -314,6 +339,26 @@ export function Hierarchy() {
                             <LayoutGrid className="w-4 h-4" /> Estrutura
                         </button>
                     </div>
+                </div>
+
+                {/* --- HIERARCHY FILTERS (DROPDOWNS) --- */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2 border-t border-slate-100">
+                    <select value={filterUnion} onChange={e => setFilterUnion(e.target.value)} className="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Todas Uniões</option>
+                        {unions.map((u: any) => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                    <select value={filterMission} onChange={e => setFilterMission(e.target.value)} className="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Todas Associações</option>
+                        {missions.map((m: any) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <select value={filterRegion} onChange={e => setFilterRegion(e.target.value)} className="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Todas Regiões</option>
+                        {regions.map((r: any) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                    <select value={filterDistrict} onChange={e => setFilterDistrict(e.target.value)} className="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Todos Distritos</option>
+                        {districts.map((d: any) => <option key={d} value={d}>{d}</option>)}
+                    </select>
                 </div>
 
                 {/* Status Filters (Pills) */}

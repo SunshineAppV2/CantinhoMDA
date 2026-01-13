@@ -55,7 +55,11 @@ export function CompleteProfile() {
             }
 
             // Update Backend
-            await api.patch(`/users/${user?.id}`, {
+            // Use 'me' if user.id is missing to leverage backend alias resolution
+            const targetId = user?.id || 'me';
+            console.log('Updating Profile for:', targetId);
+
+            await api.patch(`/users/${targetId}`, {
                 union: hierarchy.union,
                 association: hierarchy.association,
                 mission: hierarchy.association, // Synced

@@ -187,11 +187,11 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
         // 3.5 COORDENAÇÃO (Coordinator Section)
         if (isCoordinator) {
             const coordinatorSubItems: MenuItem[] = [
-                { id: 'regional-ranking', label: 'Ranking Regional', icon: Award, path: '/dashboard/regional-ranking' }
+                { id: 'regional-ranking', label: 'Ranking Regional', icon: Award, path: '/dashboard/regional-ranking' },
+                { id: 'regional-requirements', label: 'Eventos Regionais', icon: Calendar, path: '/dashboard/regional-events-manager' }
             ];
 
             if (user?.role !== 'OWNER') {
-                coordinatorSubItems.push({ id: 'regional-requirements', label: 'Requisitos Regionais', icon: ListChecks, path: '/dashboard/regional-requirements' });
                 coordinatorSubItems.push({ id: 'club-directory', label: 'Diretório de Clubes', icon: Building2, path: '/dashboard/clubs-directory' });
                 coordinatorSubItems.push({ id: 'coordinator-approvals', label: 'Intervenções', icon: Shield, path: '/dashboard/coordinator-approvals' });
                 coordinatorSubItems.push({ id: 'hierarchy', label: 'Clubes / Hierarquia', icon: Globe, path: '/dashboard/hierarchy' });
@@ -204,6 +204,11 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
                 subItems: coordinatorSubItems
             });
         }
+
+        // Ensure it appears for Club Management too if not already covered (though logic splits them)
+        // Note: isCoordinator includes OWNER. Pure Coordinators don't see GESTÃO.
+        // So this covers checks for OWNER/ADMIN/DIRECTOR in the GESTÃO block above.
+
 
         // 4. FINANCEIRO - Hide for Pure Coordinators
         if (!isPureCoordinator) {

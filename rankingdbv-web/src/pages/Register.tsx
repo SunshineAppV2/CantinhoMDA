@@ -191,6 +191,26 @@ export function Register() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // DEBUG: Verify Config
+        console.log('[Register] Checking Config...');
+        const configDebug = {
+            apiKey: import.meta.env.VITE_FIREBASE_API_KEY ? 'Present' : 'MISSING',
+            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ? import.meta.env.VITE_FIREBASE_AUTH_DOMAIN : 'MISSING',
+            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ? 'Present' : 'MISSING',
+        };
+        console.log('[Register] Firebase Config State:', configDebug);
+
+        if (configDebug.apiKey === 'MISSING') {
+            toast.error('Erro de Configuração: API Key do Firebase não encontrada. Verifique o arquivo .env');
+            return;
+        }
+
+        if (!termsAccepted) {
+            setShowTerms(true);
+            return;
+        }
+
         setLoading(true);
         setError('');
 
