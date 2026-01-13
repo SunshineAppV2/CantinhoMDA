@@ -171,12 +171,6 @@ export function ProfileUpdateModal({ user, club, onUpdate }: ProfileUpdateModalP
                                     district: hierarchyData.district || ''
                                 });
                             }}
-                            required={{
-                                union: true,
-                                mission: true,
-                                region: true,
-                                district: false
-                            }}
                         />
                     </div>
 
