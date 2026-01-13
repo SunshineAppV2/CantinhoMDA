@@ -44,7 +44,7 @@ export function ProfileUpdateModal({ user, club, onUpdate }: ProfileUpdateModalP
 
         try {
             // Update user profile
-            await api.put(`/users/${user.id}`, {
+            await api.patch(`/users/${user.id}`, {
                 name: formData.name,
                 mobile: formData.mobile,
                 phone: formData.phone
@@ -52,7 +52,7 @@ export function ProfileUpdateModal({ user, club, onUpdate }: ProfileUpdateModalP
 
             // Update club hierarchy
             if (club?.id) {
-                await api.put(`/clubs/${club.id}`, {
+                await api.patch(`/clubs/${club.id}`, {
                     union: formData.union,
                     mission: formData.mission,
                     region: formData.region,
