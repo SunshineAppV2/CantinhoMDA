@@ -511,6 +511,11 @@ export class ClubsService implements OnModuleInit {
                 nextBillingDate: true,
                 gracePeriodDays: true,
                 referralCode: true,
+                union: true,
+                association: true,
+                mission: true,
+                region: true,
+                district: true,
                 referralCredits: {
                     where: { status: 'AVAILABLE' }
                 }

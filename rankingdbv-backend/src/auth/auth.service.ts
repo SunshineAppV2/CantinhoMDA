@@ -52,9 +52,10 @@ export class AuthService {
   }
 
   async login(user: any) {
+    let club = null;
     if (user.clubId) {
       try {
-        const club = await this.clubsService.getClubStatus(user.clubId);
+        club = await this.clubsService.getClubStatus(user.clubId);
 
         let isOverdue = club.subscriptionStatus === 'OVERDUE' || club.subscriptionStatus === 'CANCELED';
 
@@ -103,11 +104,11 @@ export class AuthService {
       clubId: user.clubId,
       unitId: user.unitId,
       role: user.role,
-      union: user.union,
-      association: user.association,
-      mission: user.mission,
-      region: user.region,
-      district: user.district
+      union: user.union || (club as any)?.union,
+      association: user.association || (club as any)?.association,
+      mission: user.mission || (club as any)?.mission,
+      region: user.region || (club as any)?.region,
+      district: user.district || (club as any)?.district
     };
 
     return {
