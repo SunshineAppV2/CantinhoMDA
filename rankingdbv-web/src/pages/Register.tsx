@@ -325,9 +325,10 @@ export function Register() {
                 console.log('[Register] Step 5: Sending request to Postgres backend...');
                 const res = await api.post('/auth/register', registerPayload, config);
 
-                // Backend returns success with pending status OR access_token for active users
-                if (res.data && (res.data.success || res.data.message?.includes('Waiting for approval') || res.data.message?.includes('Aguardando aprovação'))) {
-                    console.log('[Register] Step 5 Success: Pending approval status');
+                // ===== SUCCESS RESPONSE =====
+                // Backend returns { success: true, message: '...', user: {...} } for PENDING users
+                if (res.data && res.data.success) {
+                    console.log('[Register] ✅ Registration successful!');
                     toast.success('Cadastro realizado com sucesso!', {
                         description: 'Aguarde a aprovação da diretoria para acessar o sistema.',
                         duration: 8000,
@@ -348,48 +349,37 @@ export function Register() {
                     return;
                 }
 
-                if (res.data && res.data.access_token) {
-                    console.log('[Register] Step 5 Success: Backend token received');
-                    safeLocalStorage.setItem('token', res.data.access_token);
-                }
-
-                toast.success(mode === 'CREATE' ? `Clube "${clubName}" criado!` : 'Cadastro realizado!');
-                console.log('[Register] Registration Fully Complete!');
-                navigate('/dashboard');
+                // Fallback: If we got here without explicit success, something is wrong
+                console.warn('[Register] ⚠️ Unexpected response format:', res.data);
+                toast.error('Resposta inesperada do servidor.');
 
             } catch (backendErr: any) {
                 console.error("[Register] Step 5 Error: Backend registration failed:", backendErr);
-                // If it's a conflict in backend too, it might mean user is fully registered
-                if (backendErr.response?.status === 409 || backendErr.response?.data?.message?.includes('already exists')) {
-                    console.log('[Register] Step 5 Note: Backend record already exists, redirecting to dashboard...');
-                    toast.success('Sua conta já estava ativa!');
-                    navigate('/dashboard');
-                } else if (backendErr.response?.status === 401) {
-                    // Treat ANY 401 as success-pending.
-                    // This handles cases where backend blocks login due to PENDING status OR
-                    // if middleware blocks it because user doesn't exist yet (Guard issue).
-                    // In both cases, the user has completed the flow as far as they can.
-                    console.log('[Register] Step 5: 401 received. Assuming Pending Status.');
-                    toast.success('Cadastro Recebido!', {
-                        description: 'Aguarde a aprovação da diretoria para liberar seu acesso.',
-                        duration: 8000
-                    });
-                    navigate('/registration-success', {
-                        state: {
-                            clubName,
-                            ownerName: name,
-                            region,
-                            mission,
-                            union,
-                            mobile,
-                            isNewClub: mode === 'CREATE',
-                            paymentPeriod,
-                            clubSize
-                        }
-                    });
+
+                // ===== HANDLE SPECIFIC ERROR CODES =====
+                const status = backendErr.response?.status;
+                const message = backendErr.response?.data?.message;
+
+                if (status === 409) {
+                    // Conflict - User already exists
+                    const msg = message || 'Este e-mail já está cadastrado no sistema.';
+                    toast.error(msg);
+                    setError(msg);
+                } else if (status === 403) {
+                    // Forbidden - Plan limit or access issue
+                    const msg = message || 'Ação não permitida.';
+                    toast.error(msg);
+                    setError(msg);
+                } else if (status === 400) {
+                    // Bad Request - Validation error
+                    const msg = message || 'Dados inválidos. Verifique os campos e tente novamente.';
+                    toast.error(msg);
+                    setError(msg);
                 } else {
-                    toast.error("Erro ao sincronizar com o servidor.");
-                    throw backendErr;
+                    // Generic error
+                    const msg = message || 'Erro ao sincronizar com o servidor.';
+                    toast.error(msg);
+                    setError(msg);
                 }
             }
 
@@ -398,8 +388,10 @@ export function Register() {
             if (err.code === 'auth/weak-password') {
                 setError('A senha deve ter pelo menos 6 caracteres.');
             } else {
-                setError(err.message || 'Erro ao criar conta.');
-                toast.error(err.message || 'Erro ao criar conta.');
+                // Try to get message from axios response if it was rethrown without processing
+                const msg = err.response?.data?.message || err.message || 'Erro ao criar conta.';
+                setError(msg);
+                toast.error(msg);
             }
         } finally {
             setLoading(false);
