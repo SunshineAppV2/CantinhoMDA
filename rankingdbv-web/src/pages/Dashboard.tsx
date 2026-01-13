@@ -161,18 +161,19 @@ function DirectorDashboard() {
         staleTime: 1000 * 60 * 5
     });
 
+    // TEMPORARILY DISABLED - Profile update check
     // Check if profile needs updating (OWNER only)
-    useEffect(() => {
-        if (user?.role === 'OWNER') {
-            const needsUpdate = !(user as any).mobile || !clubStatus?.union || !clubStatus?.mission || !clubStatus?.region;
-            if (needsUpdate) {
-                setShowProfileUpdate(true);
-            } else if (!localStorage.getItem('referralPopupDismissed')) {
-                // Show referral popup after profile is complete
-                setShowReferralPopup(true);
-            }
-        }
-    }, [user, clubStatus]);
+    // useEffect(() => {
+    //     if (user?.role === 'OWNER') {
+    //         const needsUpdate = !(user as any).mobile || !clubStatus?.union || !clubStatus?.mission || !clubStatus?.region;
+    //         if (needsUpdate) {
+    //             setShowProfileUpdate(true);
+    //         } else if (!localStorage.getItem('referralPopupDismissed')) {
+    //             // Show referral popup after profile is complete
+    //             setShowReferralPopup(true);
+    //         }
+    //     }
+    // }, [user, clubStatus]);
 
     // 3. Early Loading Return
     if (statsLoading && user?.clubId) {
