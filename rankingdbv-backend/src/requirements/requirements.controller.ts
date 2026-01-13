@@ -26,16 +26,21 @@ export class RequirementsController {
         const userClubId = req.user.clubId;
         const isMaster = req.user.email === 'master@cantinhodbv.com' || req.user.role === 'MASTER';
         const isRegionalCoordinator = req.user.role === 'COORDINATOR_REGIONAL';
+        const isDistrictCoordinator = req.user.role === 'COORDINATOR_DISTRICT';
 
         if (isRegionalCoordinator) {
             createDto.region = req.user.region;
             // If they sent a clubId, we keep it (Target: Specific Club in Region)
-            // If they sent clubId=null, it's for ALL clubs in Region
             if (!createDto.clubId) {
                 delete createDto.clubId;
-            } else {
-                // Optimization: Could verify if this clubId really belongs to req.user.region
-                // For now, trusting the frontend/user selection
+            }
+        } else if (isDistrictCoordinator) {
+            createDto.district = req.user.district;
+            // District Coordinator implicitly belongs to a Region too, usually.
+            // But the requirement is specific to the DISTRICT.
+            // We stamp district so only clubs in that district see it.
+            if (!createDto.clubId) {
+                delete createDto.clubId;
             }
         } else if (userClubId && !isMaster) {
             // Club Admin: Force clubId
@@ -90,7 +95,9 @@ export class RequirementsController {
 
         const userClubId = req.user.clubId;
         const region = req.user.region;
-        return this.requirementsService.findAll({ dbvClass, specialtyId, userId, userClubId, region });
+        const district = req.user.district; // Capture District from JWT
+
+        return this.requirementsService.findAll({ dbvClass, specialtyId, userId, userClubId, region, district });
     }
 
     @UseGuards(JwtAuthGuard)

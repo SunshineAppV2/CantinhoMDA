@@ -136,17 +136,16 @@ export class RequirementsService {
         return { count, errors };
     }
 
-    async findAll(query: { dbvClass?: any, specialtyId?: string, userId?: string, userClubId?: string, region?: string }) {
+    async findAll(query: { dbvClass?: any, specialtyId?: string, userId?: string, userClubId?: string, region?: string, district?: string }) {
         const where: any = {};
         if (query.dbvClass) where.dbvClass = query.dbvClass;
         if (query.specialtyId) where.specialtyId = query.specialtyId;
 
-        // Filter by Club (Global + User's Club)
-        // If userClubId is provided, we fetch Global AND Club's requirements.
-        // If not, we might be fetching only Global or All (depends on context, usually Global only for public).
-        if (query.userClubId || query.region) {
+        // Filter by Club (Global + User's Club + User's Hierarchy)
+        // Levels: Global (club=null, region=null, district=null), Club, Region, District
+        if (query.userClubId || query.region || query.district) {
             where.OR = [
-                { clubId: null, region: null }, // Universal
+                { clubId: null, region: null, district: null }, // Universal Global
             ];
 
             if (query.userClubId) {
@@ -154,12 +153,19 @@ export class RequirementsService {
             }
 
             if (query.region) {
-                where.OR.push({ region: query.region });
+                where.OR.push({ region: query.region, district: null }); // Regional (applies to all districts in region)
+                // Note: Some systems allow region=X, district=null to mean "Applicable for whole region".
+                // If a requirement has region=X AND district=Y, it is District specific.
+            }
+
+            if (query.district) {
+                where.OR.push({ district: query.district });
             }
         } else {
-            // If no user context, show only GLOBAL Requirements
+            // If no context, show GLOBAL only
             where.clubId = null;
             where.region = null;
+            where.district = null;
         }
 
         const rawRequirements = await this.prisma.requirement.findMany({

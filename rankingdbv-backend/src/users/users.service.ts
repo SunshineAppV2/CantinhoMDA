@@ -321,10 +321,19 @@ export class UsersService {
       referralCode,
       paymentPeriod, // Club field
       clubSize, // Club field
+      // Don't strip hierarchy fields! We need them.
+      // clubName, mission, union, district, region, association -> These might be in DTO if creating club or independent user
       ...rest
     } = createUserDto;
 
     console.log(`[UsersService.create] Creating user: ${rest.email}`);
+
+    // Capture hierarchy from DTO or Club
+    let finalUnion = createUserDto.union;
+    let finalMission = createUserDto.mission || createUserDto.association; // Alias
+    let finalRegion = createUserDto.region;
+    let finalDistrict = createUserDto.district;
+    let finalAssociation = createUserDto.association || createUserDto.mission; // Both fields for safety
 
     // ===== STEP 1: VALIDATE SUBSCRIPTION LIMITS =====
     if (clubId) {
@@ -370,6 +379,20 @@ export class UsersService {
     const validDbvClass = dbvClass === '' ? undefined : dbvClass;
     const validUnitId = unitId === '' ? undefined : unitId;
 
+    // ===== STEP 1.5: HIERARCHY INHERITANCE =====
+    if (clubId) {
+      const club = await this.prisma.club.findUnique({ where: { id: clubId } });
+      if (club) {
+        // If user joining a club, FORCE hierarchy to match club
+        finalUnion = club.union;
+        finalMission = club.mission || club.association;
+        finalAssociation = club.association || club.mission;
+        finalRegion = club.region;
+        finalDistrict = club.district;
+        console.log(`[UsersService.create] Inherited hierarchy from Club: ${club.name} (${finalUnion}/${finalMission})`);
+      }
+    }
+
     // Sanitize Date
     let validBirthDate: Date | undefined;
     if (birthDate && typeof birthDate === 'string' && birthDate.trim() !== '') {
@@ -385,6 +408,13 @@ export class UsersService {
     const user = await this.prisma.user.create({
       data: {
         ...rest,
+        // Persist Hierarchy
+        union: finalUnion,
+        mission: finalMission,
+        association: finalAssociation,
+        region: finalRegion,
+        district: finalDistrict,
+
         password: hashedPassword, // Use Hashed Password
         birthDate: validBirthDate,
         dbvClass: validDbvClass as any, // Cast to any or correct Enum type if imported
@@ -481,59 +511,80 @@ export class UsersService {
       ...rest
     } = updateUserDto as any;
 
-    // Strict ACL Check for Update
+    // 1. RESOLVE TARGET ID (Handle 'me' alias)
     if (currentUser) {
-      let userToUpdate = await this.prisma.user.findUnique({ where: { id } });
-
-      // Fallback: If ID not found by MongoDB ID, try finding by Firebase UID
-      if (!userToUpdate) {
-        userToUpdate = await this.prisma.user.findUnique({ where: { uid: id } });
-        if (userToUpdate) {
-          console.log(`[Update] Found user by UID: ${id} -> ID: ${userToUpdate.id}`);
-          id = userToUpdate.id; // Map to DB ID
+      if (id === 'me' || id === 'undefined' || id === 'null') {
+        if (currentUser.userId) {
+          console.log(`[Update] Resolving alias '${id}' to authenticated User ID: ${currentUser.userId}`);
+          id = currentUser.userId;
+        } else if (currentUser.email) {
+          // Fallback: Try Resolving by email if userId missing in token
+          const u = await this.prisma.user.findUnique({ where: { email: currentUser.email } });
+          if (u) id = u.id;
         }
       }
+    }
 
-      if (!userToUpdate) {
-        console.error(`[Update] User NOT FOUND for ID/UID: ${id}`);
-        throw new NotFoundException('Usuário não encontrado');
+    // 2. FETCH EXISTING USER (Needed for Logic & ACL)
+    let userToUpdate = await this.prisma.user.findUnique({ where: { id } });
+
+    // Fallback: Try by UID
+    if (!userToUpdate) {
+      console.log(`[Update] User not found by UUID: ${id}. Trying UID...`);
+      userToUpdate = await this.prisma.user.findUnique({ where: { uid: id } });
+      if (userToUpdate) {
+        console.log(`[Update] Found user by UID: ${id} -> ID: ${userToUpdate.id}`);
+        id = userToUpdate.id; // Map to DB ID for subsequent operations
       }
+    }
 
-      console.log(`[Update] ACL Check for Current User: ${currentUser.email} (${currentUser.role}) editing Target User: ${userToUpdate.email} (${userToUpdate.id})`);
+    // Fallback: Try by Email (from Token)
+    if (!userToUpdate && currentUser?.email) {
+      console.log(`[Update] User not found by ID/UID. Trying Email: ${currentUser.email}`);
+      userToUpdate = await this.prisma.user.findUnique({ where: { email: currentUser.email } });
+      if (userToUpdate) {
+        console.log(`[Update] Found user by Email (Fallback): ${currentUser.email} -> ID: ${userToUpdate.id}`);
+        id = userToUpdate.id;
+      }
+    }
 
-      const isMaster = currentUser.email === 'master@cantinhodbv.com';
-      const isSelf = currentUser.userId === id;
+    if (!userToUpdate) {
+      console.error(`[Update] ❌ User NOT FOUND for ID/UID: ${id} (User: ${currentUser?.email})`);
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    // 3. ACL CHECK
+    if (currentUser) {
+      const isMaster = currentUser.role === 'MASTER' || currentUser.email === 'master@cantinhodbv.com';
+      const isSelf = currentUser.userId === userToUpdate.id || currentUser.email === userToUpdate.email;
       const isClubAdmin = ['OWNER', 'ADMIN', 'DIRECTOR'].includes(currentUser.role) && userToUpdate.clubId === currentUser.clubId;
 
-      // Allow: Master, Self, or Club Admin (for non-master/non-self updates to their club members)
+      console.log(`[Update] ACL Check: Master=${isMaster}, Self=${isSelf}, ClubAdmin=${isClubAdmin}`);
+
       if (!isMaster && !isSelf && !isClubAdmin) {
         throw new UnauthorizedException('Permissão negada para editar este usuário.');
       }
     }
 
+    // 4. PREPARE DATA
     let dataToUpdate: any = { ...rest };
     if (pointsHistory) {
       dataToUpdate.pointsHistory = pointsHistory;
     }
 
+    // Role Security Check
     if (dataToUpdate.role === 'OWNER' || dataToUpdate.role === 'COORDINATOR_REGIONAL' || dataToUpdate.role === 'COORDINATOR_AREA' || dataToUpdate.role === 'COORDINATOR_DISTRICT') {
-      // Allow if Master
       const isMaster = currentUser?.email === 'master@cantinhodbv.com';
       if (!isMaster) {
-        // If not Master, check if we are simply maintaining the existing role
-        const userToUpdate = await this.prisma.user.findUnique({ where: { id }, select: { role: true } });
-        if (userToUpdate && userToUpdate.role === dataToUpdate.role) {
-          // Allow keeping the same role
-        } else {
-          // Prevent escalation to OWNER/COORDINATORS
-          dataToUpdate.role = 'PATHFINDER';
+        // If not Master, prevent escalation to OWNER/COORDINATORS if the role is changing
+        if (userToUpdate.role !== dataToUpdate.role) {
+          dataToUpdate.role = 'PATHFINDER'; // Prevent escalation
         }
       }
 
       // Logic to ensure only ONE OWNER per club
       if (dataToUpdate.role === 'OWNER') {
-        const userToUpdate = await this.prisma.user.findUnique({ where: { id }, select: { clubId: true } });
-        const targetClubId = dataToUpdate.clubId !== undefined ? dataToUpdate.clubId : userToUpdate?.clubId;
+        const targetClubId = dataToUpdate.clubId !== undefined ? dataToUpdate.clubId : userToUpdate.clubId;
 
         if (targetClubId) {
           await this.prisma.user.updateMany({
@@ -599,6 +650,43 @@ export class UsersService {
       dataToUpdate.children = {
         set: childrenConnect
       };
+    }
+
+    // ===== HIERARCHY UPDATE LOGIC =====
+    // Logic:
+    // 1. If Club changes, Inherit from new Club.
+    // 2. If Club doesn't change, respect DTO values (allow manual override).
+
+    const targetClubId = dataToUpdate.clubId;
+    const currentClubId = userToUpdate.clubId;
+
+    // Check if Club is changing (and not just re-sending the same ID)
+    const isClubChanging = targetClubId && targetClubId !== currentClubId;
+
+    if (isClubChanging) {
+      // CASE 1: CHANGING CLUB -> SYNC
+      console.log(`[UsersService.update] Club changed (${currentClubId} -> ${targetClubId}). Syncing hierarchy.`);
+      const club = await this.prisma.club.findUnique({ where: { id: targetClubId } });
+      if (club) {
+        dataToUpdate.union = club.union;
+        dataToUpdate.mission = club.mission || club.association;
+        dataToUpdate.association = club.association || club.mission;
+        dataToUpdate.region = club.region;
+        dataToUpdate.district = club.district;
+      }
+    } else {
+      // CASE 2: SAME CLUB (OR NO CLUB) -> MANUAL UPDATE
+      // We only update fields if they are explicitly passed in DTO
+      // This prevents overwriting with nulls if not sent, and allows manual correction
+      console.log(`[UsersService.update] Manual hierarchy update (Club unchanged).`);
+
+      if (rest.union !== undefined) dataToUpdate.union = rest.union;
+      if (rest.mission !== undefined) dataToUpdate.mission = rest.mission;
+      if (rest.association !== undefined) dataToUpdate.association = rest.association;
+      // Special handling for 'Associação' alias if needed, but 'rest.association' is standard
+
+      if (rest.region !== undefined) dataToUpdate.region = rest.region;
+      if (rest.district !== undefined) dataToUpdate.district = rest.district;
     }
 
     try {

@@ -164,6 +164,7 @@ model User {
   children               User[]              @relation("ParentChildren")
   unit                   Unit?               @relation(fields: [unitId], references: [id])
   confirmedPayments      Payment[]           @relation("PaymentConfirmer")
+  createdEvents          RegionalEvent[]     @relation("EventCreator")
 
   @@map("users")
 }
@@ -280,6 +281,8 @@ model Requirement {
   questions    Question[]
   club         Club?             @relation(fields: [clubId], references: [id], onDelete: Cascade)
   specialty    Specialty?        @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  regionalEventId String?
+  regionalEvent RegionalEvent? @relation(fields: [regionalEventId], references: [id], onDelete: SetNull)
   userProgress UserRequirement[]
 
   @@map("requirements")
@@ -353,6 +356,24 @@ model Event {
   club          Club                @relation(fields: [clubId], references: [id], onDelete: Cascade)
 
   @@map("events")
+}
+
+model RegionalEvent {
+  id            String        @id @default(uuid())
+  title         String
+  description   String?
+  startDate     DateTime
+  endDate       DateTime?
+  region        String?       // If set, applies to this region
+  district      String?       // If set, applies to this district
+  creatorId     String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  requirements  Requirement[]
+  creator       User          @relation("EventCreator", fields: [creatorId], references: [id])
+
+  @@map("regional_events")
 }
 
 model EventRegistration {

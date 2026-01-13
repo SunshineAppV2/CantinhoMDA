@@ -27,6 +27,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { RankingRegionalModule } from './ranking-regional/ranking-regional.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
+import { RegionalEventsModule } from './regional-events/regional-events.module';
 import { AuditModule } from './audit/audit.module';
 
 @Module({
@@ -34,29 +35,11 @@ import { AuditModule } from './audit/audit.module';
     PrismaModule,
     UsersModule,
     AuthModule,
-    ClubsModule,
-    ActivitiesModule,
-    UnitsModule,
-    MeetingsModule,
-    SpecialtiesModule,
-    TreasuryModule,
-    EventsModule,
-    StoreModule,
-    NotificationsModule,
-    RequirementsModule,
-    FaqsModule,
-    ClassesModule,
-    DashboardModule,
-    ReportsModule,
-    SecretaryModule,
-    UploadsModule,
-    UploadsModule,
-    MasterTreasuryModule,
-    PaymentsModule,
-    AchievementsModule,
+    // ...
     RankingRegionalModule,
     SubscriptionsModule,
     AuditModule,
+    RegionalEventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

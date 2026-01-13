@@ -52,15 +52,15 @@ export class AuthService {
   }
 
   async login(user: any) {
-    let club = null;
+    let club: any = null;
     if (user.clubId) {
       try {
         club = await this.clubsService.getClubStatus(user.clubId);
 
-        let isOverdue = club.subscriptionStatus === 'OVERDUE' || club.subscriptionStatus === 'CANCELED';
+        let isOverdue = club?.subscriptionStatus === 'OVERDUE' || club?.subscriptionStatus === 'CANCELED';
 
         // Check Dynamic Date (if status is not explicitly overdue yet)
-        if (!isOverdue && club.nextBillingDate) {
+        if (!isOverdue && club?.nextBillingDate) {
           const today = new Date();
           const billingDate = new Date(club.nextBillingDate);
           const gracePeriod = (club.gracePeriodDays && !isNaN(Number(club.gracePeriodDays))) ? Number(club.gracePeriodDays) : 0;

@@ -49,6 +49,14 @@ export class CreateRequirementDto {
     @IsOptional()
     region?: string;
 
+    @IsString()
+    @IsOptional()
+    district?: string;
+
+    @IsString()
+    @IsOptional()
+    regionalEventId?: string;
+
     @IsEnum(RequirementType)
     @IsOptional()
     type?: RequirementType;
