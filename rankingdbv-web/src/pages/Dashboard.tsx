@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Users, Trophy, Calendar, DollarSign } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Skeleton } from '../components/Skeleton';
 import { Modal } from '../components/Modal';
+import { ProfileUpdateModal } from '../components/ProfileUpdateModal';
+import { ReferralPopup } from '../components/ReferralPopup';
 
 import { ROLE_TRANSLATIONS } from './members/types';
 
@@ -46,9 +48,11 @@ export function Dashboard() {
 }
 
 function DirectorDashboard() {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const navigate = useNavigate();
     const [showBirthdaysModal, setShowBirthdaysModal] = useState(false);
+    const [showProfileUpdate, setShowProfileUpdate] = useState(false);
+    const [showReferralPopup, setShowReferralPopup] = useState(false);
 
     // 1. Stats Query from Firestore (Optimized)
     const { data: stats, isLoading: statsLoading } = useQuery({
@@ -156,6 +160,19 @@ function DirectorDashboard() {
         },
         staleTime: 1000 * 60 * 5
     });
+
+    // Check if profile needs updating (OWNER only)
+    useEffect(() => {
+        if (user?.role === 'OWNER') {
+            const needsUpdate = !user.mobile || !clubStatus?.union || !clubStatus?.mission || !clubStatus?.region;
+            if (needsUpdate) {
+                setShowProfileUpdate(true);
+            } else if (!localStorage.getItem('referralPopupDismissed')) {
+                // Show referral popup after profile is complete
+                setShowReferralPopup(true);
+            }
+        }
+    }, [user, clubStatus]);
 
     // 3. Early Loading Return
     if (statsLoading && user?.clubId) {
@@ -344,6 +361,31 @@ function DirectorDashboard() {
                     </ul>
                 )}
             </Modal>
+
+            {/* Profile Update Modal (Blocking for incomplete OWNER profiles) */}
+            {showProfileUpdate && user?.role === 'OWNER' && (
+                <ProfileUpdateModal
+                    user={user}
+                    club={clubStatus}
+                    onUpdate={async () => {
+                        await refreshUser();
+                        setShowProfileUpdate(false);
+                        // Show referral popup after profile update
+                        if (!localStorage.getItem('referralPopupDismissed')) {
+                            setShowReferralPopup(true);
+                        }
+                    }}
+                />
+            )}
+
+            {/* Referral Popup (After login for OWNER) */}
+            {showReferralPopup && clubStatus?.referralCode && (
+                <ReferralPopup
+                    referralCode={clubStatus.referralCode}
+                    clubName={clubStatus.name || 'seu clube'}
+                    onClose={() => setShowReferralPopup(false)}
+                />
+            )}
         </div >
 
     );
