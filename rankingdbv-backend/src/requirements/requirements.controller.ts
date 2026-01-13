@@ -22,14 +22,20 @@ export class RequirementsController {
     create(@Body() createDto: CreateRequirementDto, @Request() req) {
         console.log('[RequirementsController] Received create request:', JSON.stringify(createDto));
         console.log('[RequirementsController] User:', req.user.email, req.user.role);
-        // ... (existing logic)
+
         const userClubId = req.user.clubId;
         const isMaster = req.user.email === 'master@cantinhodbv.com' || req.user.role === 'MASTER';
+        const isRegionalCoordinator = req.user.role === 'COORDINATOR_REGIONAL';
 
-        if (userClubId && !isMaster) {
+        if (isRegionalCoordinator) {
+            // Regional Coordinator: Force region from user profile, ensure clubId is null
+            createDto.region = req.user.region; // Assuming region is in JWT payload or user object
+            createDto.clubId = null;
+        } else if (userClubId && !isMaster) {
+            // Club Admin: Force clubId
             createDto.clubId = userClubId;
         }
-        // If Master, we respect the createDto.clubId (which can be null for Universal)
+        // If Master, we respect the createDto values (can be Global, specific Club, etc)
 
         return this.requirementsService.create(createDto);
     }
@@ -77,7 +83,8 @@ export class RequirementsController {
         }
 
         const userClubId = req.user.clubId;
-        return this.requirementsService.findAll({ dbvClass, specialtyId, userId, userClubId });
+        const region = req.user.region;
+        return this.requirementsService.findAll({ dbvClass, specialtyId, userId, userClubId, region });
     }
 
     @UseGuards(JwtAuthGuard)
