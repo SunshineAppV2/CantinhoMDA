@@ -117,6 +117,13 @@ export class AuthController {
         throw error;
       }
 
+      // If it's a service error (from authService), re-throw it
+      if (error.name === 'ConflictException' || error.name === 'BadRequestException' || error.name === 'ForbiddenException') {
+        throw error;
+      }
+
+      // Last resort: throw as UnauthorizedException only for actual auth failures
+      console.error('[AuthController] Unexpected error during registration:', error);
       throw new UnauthorizedException('Erro no registro: ' + error.message);
     }
   }
