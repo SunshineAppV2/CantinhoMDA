@@ -305,7 +305,24 @@ export class UsersService {
 
   // Cria um novo usuário
   async create(createUserDto: any): Promise<User> {
-    const { clubId, unitId, dbvClass, birthDate, schoolShift, clubName, mission, union, childrenIds, password, referralCode, ...rest } = createUserDto; // Strip extra fields
+    // Strip fields that belong to club or are not part of user schema
+    const {
+      clubId,
+      unitId,
+      dbvClass,
+      birthDate,
+      schoolShift,
+      clubName,
+      mission,
+      union,
+      district,
+      childrenIds,
+      password,
+      referralCode,
+      paymentPeriod, // Club field
+      clubSize, // Club field
+      ...rest
+    } = createUserDto;
 
     console.log(`[UsersService.create] Creating user: ${rest.email}`);
 
