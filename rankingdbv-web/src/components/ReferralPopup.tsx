@@ -26,11 +26,10 @@ export function ReferralPopup({ referralCode, clubName, onClose }: ReferralPopup
 
     const handleWhatsAppShare = () => {
         const message = encodeURIComponent(
-            `🎉 Venha fazer parte do *Ranking DBV*!\n\n` +
-            `Somos do clube *${clubName}* e estamos usando uma plataforma incrível para gerenciar nosso clube.\n\n` +
-            `Cadastre seu clube e ganhe benefícios especiais!\n\n` +
+            `🎉 Venha fazer parte do CantinhoDBV.\n` +
+            `Sistema que vai mudar o engajamento no seu clube\n\n` +
             `Use meu código de indicação: *${referralCode}*\n\n` +
-            `Link: ${referralLink}`
+            `Cadastre-se aqui: ${referralLink}`
         );
         window.open(`https://wa.me/?text=${message}`, '_blank');
     };
