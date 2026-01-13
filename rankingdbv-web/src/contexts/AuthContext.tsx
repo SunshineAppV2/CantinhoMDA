@@ -62,8 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     if (res.data) {
                         backendData = res.data;
                     }
-                } catch (apiErr) {
-                    console.warn("Could not fetch user profile from API, using fallback name:", apiErr);
+                } catch (apiErr: any) {
+                    // Expected error when user is not fully authenticated yet
+                    if (apiErr.response?.status !== 401) {
+                        console.warn("Could not fetch user profile from API:", apiErr);
+                    }
                 }
 
                 setUser({

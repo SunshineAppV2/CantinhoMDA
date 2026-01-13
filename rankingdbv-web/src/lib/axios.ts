@@ -33,7 +33,8 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            console.warn('Unauthorized access (401). Token might be invalid.');
+            // Expected 401 when not authenticated - no action needed
+            console.log('Unauthorized access (401) - user not authenticated');
             // safeLocalStorage.removeItem('token');
             // safeLocalStorage.removeItem('user');
             // Do not force redirect/reload to avoid loops. Let the UI handle the error.
