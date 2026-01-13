@@ -130,7 +130,12 @@ export function RegionalRequirements() {
     // So I should probably filter client side for `region !== null`.
     const myRegionalRequirements = requirements.filter(r => r.region);
 
-    const createMutation = useMutation({
+    // Check Permissions
+    // We can use a hook or check local storage user
+    const userRole = JSON.parse(localStorage.getItem('user_dbv') || '{}').role;
+    const isCoordinator = ['COORDINATOR_REGIONAL', 'COORDINATOR_DISTRICT', 'COORDINATOR_AREA', 'MASTER'].includes(userRole);
+
+    const createMutation = useMutation({ // ... existing mutation code ...
         mutationFn: async (data: any) => await api.post('/requirements', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['regional-requirements'] });
@@ -281,12 +286,14 @@ export function RegionalRequirements() {
                     <p className="text-slate-500">Cadastre requisitos extras para os clubes da sua região.</p>
                 </div>
                 <div className="flex gap-2">
-                    <button
-                        onClick={openCreateModal}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-colors"
-                    >
-                        <Plus className="w-5 h-5" /> Novo Requisito
-                    </button>
+                    {isCoordinator && (
+                        <button
+                            onClick={openCreateModal}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm transition-colors"
+                        >
+                            <Plus className="w-5 h-5" /> Novo Requisito
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -355,20 +362,24 @@ export function RegionalRequirements() {
                                                 </span>
                                             </div>
                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    onClick={() => openEditModal(req)}
-                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Editar"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(req.id)}
-                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Excluir"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {isCoordinator && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => openEditModal(req)}
+                                                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Editar"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(req.id)}
+                                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Excluir"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     ))}

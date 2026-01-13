@@ -171,6 +171,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             if (hasAccess('APPROVALS')) managementSubItems.push({ id: 'approvals', label: 'Aprovações', icon: ListChecks, path: '/dashboard/approvals' });
             if (['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '')) {
                 managementSubItems.push({ id: 'units', label: 'Unidades', icon: Shield, path: '/dashboard/units' });
+                managementSubItems.push({ id: 'regional-req-view', label: 'Requisitos Regionais', icon: Award, path: '/dashboard/regional-requirements' });
             }
 
             if (managementSubItems.length > 0) {
@@ -190,7 +191,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             ];
 
             if (user?.role !== 'OWNER') {
-                coordinatorSubItems.push({ id: 'regional-requirements', label: 'Lançar Requisitos', icon: ListChecks, path: '/dashboard/regional-requirements' });
+                coordinatorSubItems.push({ id: 'regional-requirements', label: 'Requisitos Regionais', icon: ListChecks, path: '/dashboard/regional-requirements' });
                 coordinatorSubItems.push({ id: 'club-directory', label: 'Diretório de Clubes', icon: Building2, path: '/dashboard/clubs-directory' });
                 coordinatorSubItems.push({ id: 'coordinator-approvals', label: 'Intervenções', icon: Shield, path: '/dashboard/coordinator-approvals' });
                 coordinatorSubItems.push({ id: 'hierarchy', label: 'Clubes / Hierarquia', icon: Globe, path: '/dashboard/hierarchy' });
