@@ -29,6 +29,10 @@ export class CreateRequirementDto {
     @IsOptional()
     clubId?: string;
 
+    @IsString()
+    @IsOptional()
+    region?: string;
+
     @IsEnum(RequirementType)
     @IsOptional()
     type?: RequirementType;
