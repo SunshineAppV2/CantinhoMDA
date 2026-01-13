@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ROLE_TRANSLATIONS } from '../pages/members/types';
 import { NotificationBell } from '../components/NotificationBell';
 import { HelpButton } from '../components/HelpButton';
+import { ReferralBanner } from '../components/ReferralBanner';
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/axios';
@@ -138,7 +139,10 @@ export function DashboardLayout() {
                             Redirecionando...
                         </div>
                     ) : (
-                        <Outlet />
+                        <>
+                            <ReferralBanner />
+                            <Outlet />
+                        </>
                     )}
                 </main>
             </div>
