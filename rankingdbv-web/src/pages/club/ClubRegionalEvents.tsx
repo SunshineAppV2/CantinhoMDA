@@ -1,11 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/axios';
-import { Calendar, MapPin, Upload, ChevronRight, ArrowLeft, Clock, CheckCircle2, AlertCircle, XCircle, FileText, Trophy, Hourglass } from 'lucide-react';
+import { Calendar, MapPin, Upload, ChevronRight, ArrowLeft, Clock, CheckCircle2, AlertCircle, XCircle, FileText, Trophy, Hourglass, AlertTriangle } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { format, differenceInHours, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -316,10 +314,10 @@ function ClubEventDetails({ eventId, onBack }: { eventId: string, onBack: () => 
                                 setAnsweringReq(req);
                             }}
                             className={`bg-white p-5 rounded-xl border shadow-sm transition-all group relative overflow-hidden ${isApproved
-                                    ? 'border-green-200 bg-green-50/30 opacity-90'
-                                    : isRejected
-                                        ? 'border-red-300 hover:border-red-400 hover:shadow-md cursor-pointer'
-                                        : 'border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
+                                ? 'border-green-200 bg-green-50/30 opacity-90'
+                                : isRejected
+                                    ? 'border-red-300 hover:border-red-400 hover:shadow-md cursor-pointer'
+                                    : 'border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
                                 }`}
                         >
                             {/* Status Stripe */}
