@@ -282,184 +282,186 @@ export function Units() {
     });
 
     // Delete Unit (Backend)
+    // Delete Unit (Backend)
     const deleteUnitMutation = useMutation({
-    },
+        mutationFn: async (unitId: string) => {
+            await api.delete(`/units/${unitId}`);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['units'] });
-            queryClient.invalidateQueries({ queryKey: ['users'] });
             toast.success('Unidade excluída.');
         },
         onError: () => toast.error('Erro ao excluir unidade.')
     });
 
-const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta unidade?')) {
-        await deleteUnitMutation.mutateAsync(id);
-    }
-};
+    const handleDelete = async (id: string) => {
+        if (window.confirm('Tem certeza que deseja excluir esta unidade?')) {
+            await deleteUnitMutation.mutateAsync(id);
+        }
+    };
 
-const handleEdit = (unit: Unit) => {
-    setEditingUnit(unit);
-    setUnitName(unit.name);
-    setUnitType(unit.type || 'MISTA');
-    setActiveTab('info');
-    setIsModalOpen(true);
-};
+    const handleEdit = (unit: Unit) => {
+        setEditingUnit(unit);
+        setUnitName(unit.name);
+        setUnitType(unit.type || 'MISTA');
+        setActiveTab('info');
+        setIsModalOpen(true);
+    };
 
-// Sync selection
-useEffect(() => {
-    if (editingUnit && users.length > 0) {
-        const currentMembers = users
-            .filter(u => u.unitId === editingUnit.id)
-            .map(u => u.id);
-        setSelectedMemberIds(new Set(currentMembers));
-    } else if (!editingUnit) {
+    // Sync selection
+    useEffect(() => {
+        if (editingUnit && users.length > 0) {
+            const currentMembers = users
+                .filter(u => u.unitId === editingUnit.id)
+                .map(u => u.id);
+            setSelectedMemberIds(new Set(currentMembers));
+        } else if (!editingUnit) {
+            setSelectedMemberIds(new Set());
+        }
+    }, [editingUnit, users]);
+
+    const toggleSelection = (id: string) => {
+        const next = new Set(selectedMemberIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedMemberIds(next);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setEditingUnit(null);
+        setUnitName('');
+        setUnitType('MISTA');
         setSelectedMemberIds(new Set());
-    }
-}, [editingUnit, users]);
+        setActiveTab('info');
+    };
 
-const toggleSelection = (id: string) => {
-    const next = new Set(selectedMemberIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedMemberIds(next);
-};
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
 
-const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingUnit(null);
-    setUnitName('');
-    setUnitType('MISTA');
-    setSelectedMemberIds(new Set());
-    setActiveTab('info');
-};
+        if (!user?.clubId) {
+            alert('Erro: Usuário não possui vínculo com um Clube. Contacte o suporte.');
+            return;
+        }
 
-const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+        if (editingUnit) {
+            updateUnitMutation.mutate({
+                id: editingUnit.id,
+                name: unitName,
+                type: unitType,
+                members: Array.from(selectedMemberIds)
+            });
+        } else {
+            createUnitMutation.mutate({
+                name: unitName,
+                type: unitType,
+                clubId: user.clubId,
+                members: Array.from(selectedMemberIds)
+            });
+        }
+    };
 
-    if (!user?.clubId) {
-        alert('Erro: Usuário não possui vínculo com um Clube. Contacte o suporte.');
-        return;
-    }
+    if (isLoading) return <div className="p-8 text-center text-slate-500">Carregando unidades...</div>;
 
-    if (editingUnit) {
-        updateUnitMutation.mutate({
-            id: editingUnit.id,
-            name: unitName,
-            type: unitType,
-            members: Array.from(selectedMemberIds)
-        });
-    } else {
-        createUnitMutation.mutate({
-            name: unitName,
-            type: unitType,
-            clubId: user.clubId,
-            members: Array.from(selectedMemberIds)
-        });
-    }
-};
-
-if (isLoading) return <div className="p-8 text-center text-slate-500">Carregando unidades...</div>;
-
-return (
-    <div>
-        <div className="flex justify-between items-center mb-6">
-            <div>
-                <h1 className="text-2xl font-bold text-slate-800">Unidades</h1>
-                <p className="text-slate-500">Gerencie as unidades e seus membros</p>
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-800">Unidades</h1>
+                    <p className="text-slate-500">Gerencie as unidades e seus membros</p>
+                </div>
+                {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && (
+                    <button
+                        onClick={() => { setEditingUnit(null); setUnitName(''); setUnitType('MISTA'); setIsModalOpen(true); }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                        <Plus className="w-5 h-5" />
+                        Nova Unidade
+                    </button>
+                )}
             </div>
-            {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && (
-                <button
-                    onClick={() => { setEditingUnit(null); setUnitName(''); setUnitType('MISTA'); setIsModalOpen(true); }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                >
-                    <Plus className="w-5 h-5" />
-                    Nova Unidade
-                </button>
-            )}
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...units].sort((a: any, b: any) => a.name.localeCompare(b.name)).map((unit: any) => (
-                <div key={unit.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold ${unit.type === 'MASCULINA' ? 'bg-blue-100 text-blue-600' :
-                                unit.type === 'FEMININA' ? 'bg-pink-100 text-pink-600' :
-                                    'bg-purple-100 text-purple-600'
-                                }`}>
-                                {unit.type === 'MASCULINA' ? 'M' : unit.type === 'FEMININA' ? 'F' : 'Mix'}
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-slate-800">{unit.name}</h3>
-                                <p className="text-sm text-slate-500 flex items-center gap-1">
-                                    <Users className="w-3 h-3" />
-                                    {unit._count?.members || 0} membros
-                                </p>
-                            </div>
-                        </div>
-                        {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && (
-                            <div className="flex gap-1">
-                                <button
-                                    onClick={() => handleEdit(unit)}
-                                    className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
-                                    title="Editar"
-                                >
-                                    <Pencil className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(unit.id)}
-                                    className="p-1 text-slate-400 hover:text-red-600 transition-colors"
-                                    title="Excluir"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Preview Members */}
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="flex -space-x-2">
-                            {[...Array(Math.min(3, unit._count?.members || 0))].map((_, i) => (
-                                <div key={i} className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-slate-400 text-xs shadow-sm">
-                                    <Users className="w-3 h-3" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...units].sort((a: any, b: any) => a.name.localeCompare(b.name)).map((unit: any) => (
+                    <div key={unit.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold ${unit.type === 'MASCULINA' ? 'bg-blue-100 text-blue-600' :
+                                    unit.type === 'FEMININA' ? 'bg-pink-100 text-pink-600' :
+                                        'bg-purple-100 text-purple-600'
+                                    }`}>
+                                    {unit.type === 'MASCULINA' ? 'M' : unit.type === 'FEMININA' ? 'F' : 'Mix'}
                                 </div>
-                            ))}
+                                <div>
+                                    <h3 className="font-bold text-slate-800">{unit.name}</h3>
+                                    <p className="text-sm text-slate-500 flex items-center gap-1">
+                                        <Users className="w-3 h-3" />
+                                        {unit._count?.members || 0} membros
+                                    </p>
+                                </div>
+                            </div>
+                            {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && (
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => handleEdit(unit)}
+                                        className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                                        title="Editar"
+                                    >
+                                        <Pencil className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(unit.id)}
+                                        className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                                        title="Excluir"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                        {(unit._count?.members || 0) > 3 && (
-                            <span className="text-xs text-slate-500">+{(unit._count?.members || 0) - 3}</span>
-                        )}
+
+                        {/* Preview Members */}
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="flex -space-x-2">
+                                {[...Array(Math.min(3, unit._count?.members || 0))].map((_, i) => (
+                                    <div key={i} className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-slate-400 text-xs shadow-sm">
+                                        <Users className="w-3 h-3" />
+                                    </div>
+                                ))}
+                            </div>
+                            {(unit._count?.members || 0) > 3 && (
+                                <span className="text-xs text-slate-500">+{(unit._count?.members || 0) - 3}</span>
+                            )}
+                        </div>
                     </div>
-                </div>
-            ))}
+                ))}
 
-            {units.length === 0 && (
-                <div className="col-span-full py-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                    <Shield className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-                    <p className="text-slate-500 font-medium">Nenhuma unidade cadastrada</p>
-                    <p className="text-slate-400 text-sm">Clique em "Nova Unidade" para começar</p>
-                </div>
-            )}
+                {units.length === 0 && (
+                    <div className="col-span-full py-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                        <Shield className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                        <p className="text-slate-500 font-medium">Nenhuma unidade cadastrada</p>
+                        <p className="text-slate-400 text-sm">Clique em "Nova Unidade" para começar</p>
+                    </div>
+                )}
+            </div>
+
+            <UnitModal
+                isOpen={isModalOpen}
+                onClose={closeModal}
+                title={editingUnit ? 'Editar Unidade' : 'Nova Unidade'}
+                unitName={unitName}
+                setUnitName={setUnitName}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                selectedMemberIds={selectedMemberIds}
+                toggleSelection={toggleSelection}
+                counselors={counselors}
+                members={members}
+                unitMap={unitMap}
+                editingUnitId={editingUnit?.id}
+                handleSubmit={handleSubmit}
+                isSaving={createUnitMutation.isPending || updateUnitMutation.isPending}
+            />
         </div>
-
-        <UnitModal
-            isOpen={isModalOpen}
-            onClose={closeModal}
-            title={editingUnit ? 'Editar Unidade' : 'Nova Unidade'}
-            unitName={unitName}
-            setUnitName={setUnitName}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            selectedMemberIds={selectedMemberIds}
-            toggleSelection={toggleSelection}
-            counselors={counselors}
-            members={members}
-            unitMap={unitMap}
-            editingUnitId={editingUnit?.id}
-            handleSubmit={handleSubmit}
-            isSaving={createUnitMutation.isPending || updateUnitMutation.isPending}
-        />
-    </div>
-);
+    );
 }
