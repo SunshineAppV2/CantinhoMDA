@@ -17,7 +17,6 @@ const HIERARCHY_DATA: any = {
 export function RegionalDashboard() {
     const { user } = useAuth();
     const [stats, setStats] = useState<any>(null);
-    const [loading, setLoading] = useState(false);
 
     // Filters
     const [period, setPeriod] = useState('ALL');
@@ -77,7 +76,6 @@ export function RegionalDashboard() {
     }, [selectedAssociation, selectedRegion, selectedDistrict]);
 
     const fetchStats = async () => {
-        setLoading(true);
         try {
             const params: any = {};
             if (selectedAssociation) params.association = selectedAssociation;
@@ -104,16 +102,12 @@ export function RegionalDashboard() {
         } catch (error) {
             toast.error('Erro ao carregar dados do painel.');
             console.error(error);
-        } finally {
-            setLoading(false);
         }
     };
 
     useEffect(() => {
         fetchStats();
     }, [period, customStart, customEnd, selectedAssociation, selectedRegion, selectedDistrict, selectedClub]);
-
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#EC4899'];
 
     const genderData = stats ? [
         { name: 'Masculino', value: stats.genderDistribution.male },
@@ -210,6 +204,7 @@ export function RegionalDashboard() {
                 {period === 'CUSTOM' ? (
                     <div className="flex gap-1">
                         <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="w-full p-2 border text-xs rounded-lg" />
+                        <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="w-full p-2 border text-xs rounded-lg" />
                     </div>
                 ) : <div></div>}
             </div>
