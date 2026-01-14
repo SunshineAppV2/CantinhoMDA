@@ -119,7 +119,7 @@ export function ClubRegionalEvents() {
                                                 }}
                                                 className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-3 py-1.5 rounded transition-colors"
                                             >
-                                                Quero Participar!
+                                                QUERO PARTICIPAR AGORA!
                                             </button>
                                         )
                                     )}
