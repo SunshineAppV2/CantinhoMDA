@@ -1,4 +1,4 @@
-import { IsString } from 'class-validator';
+import { IsArray, IsOptional, IsString, IsIn } from 'class-validator';
 
 export class CreateUnitDto {
     @IsString()
@@ -7,8 +7,13 @@ export class CreateUnitDto {
     @IsString()
     clubId: string;
 
+    @IsOptional()
     @IsString()
+    @IsIn(['MASCULINA', 'FEMININA', 'MISTA'])
     type?: 'MASCULINA' | 'FEMININA' | 'MISTA';
 
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
     members?: string[];
 }

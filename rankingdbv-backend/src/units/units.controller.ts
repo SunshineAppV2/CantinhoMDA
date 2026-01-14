@@ -10,8 +10,14 @@ export class UnitsController {
   constructor(private readonly unitsService: UnitsService) { }
 
   @Post()
-  create(@Body() createUnitDto: CreateUnitDto) {
-    return this.unitsService.create(createUnitDto);
+  async create(@Body() createUnitDto: CreateUnitDto) {
+    console.log('[UnitsController] Creating unit:', createUnitDto);
+    try {
+      return await this.unitsService.create(createUnitDto);
+    } catch (error) {
+      console.error('[UnitsController] Error creating unit:', error);
+      throw error;
+    }
   }
 
   @Get('club/:clubId')
