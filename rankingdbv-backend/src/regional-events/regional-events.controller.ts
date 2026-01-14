@@ -69,4 +69,20 @@ export class RegionalEventsController {
         // Add check ownership logic if needed
         return this.regionalEventsService.remove(id);
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Post(':id/subscribe')
+    subscribe(@Param('id') id: string, @Request() req) {
+        const clubId = req.user.clubId;
+        if (!clubId) throw new ForbiddenException('Apenas diretores de clube podem se inscrever.');
+        return this.regionalEventsService.subscribe(id, clubId);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post(':id/unsubscribe')
+    unsubscribe(@Param('id') id: string, @Request() req) {
+        const clubId = req.user.clubId;
+        if (!clubId) throw new ForbiddenException('Apenas diretores de clube podem cancelar inscrição.');
+        return this.regionalEventsService.unsubscribe(id, clubId);
+    }
 }

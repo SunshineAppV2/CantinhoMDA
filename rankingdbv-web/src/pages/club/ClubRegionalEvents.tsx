@@ -5,6 +5,8 @@ import { Calendar, MapPin, Upload, ChevronRight, ArrowLeft, Clock } from 'lucide
 import { Modal } from '../../components/Modal';
 import { format } from 'date-fns';
 
+import { useAuth } from '../../contexts/AuthContext';
+
 // Types (Mirrors backend)
 interface RegionalEvent {
     id: string;
@@ -12,6 +14,7 @@ interface RegionalEvent {
     description?: string;
     startDate: string;
     endDate?: string;
+    participatingClubs?: { id: string, name: string }[];
     _count?: {
         requirements: number;
     }
@@ -32,6 +35,8 @@ interface Requirement {
 }
 
 export function ClubRegionalEvents() {
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
     // Fetch Events available for this Club
@@ -40,6 +45,17 @@ export function ClubRegionalEvents() {
         queryFn: async () => {
             const res = await api.get('/regional-events');
             return res.data;
+        }
+    });
+
+    const subscribeMutation = useMutation({
+        mutationFn: async (eventId: string) => await api.post(`/regional-events/${eventId}/subscribe`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['club-regional-events'] });
+            import('sonner').then(({ toast }) => toast.success('Inscrição confirmada!'));
+        },
+        onError: () => {
+            import('sonner').then(({ toast }) => toast.error('Erro ao realizar inscrição.'));
         }
     });
 
@@ -61,27 +77,50 @@ export function ClubRegionalEvents() {
                 <div className="flex justify-center p-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {events.map(event => (
-                        <div key={event.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-300 transition-all cursor-pointer group" onClick={() => setSelectedEventId(event.id)}>
-                            <div className="flex justify-between items-start mb-2">
-                                <div className="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    {format(new Date(event.startDate), 'dd/MM/yyyy')}
+                    {events.map(event => {
+                        const isSubscribed = event.participatingClubs?.some(c => c.id === user?.clubId);
+
+                        return (
+                            <div
+                                key={event.id}
+                                className={`bg-white p-4 rounded-xl shadow-sm border border-slate-200 transition-all cursor-pointer group ${isSubscribed ? 'hover:border-blue-300' : 'hover:border-slate-300'}`}
+                                onClick={() => {
+                                    if (isSubscribed) setSelectedEventId(event.id);
+                                }}
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                                        <Calendar className="w-3 h-3" />
+                                        {format(new Date(event.startDate), 'dd/MM/yyyy')}
+                                    </div>
+                                    {isSubscribed && <div className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">Inscrito</div>}
+                                </div>
+                                <h3 className="font-bold text-lg text-slate-800 mb-1 group-hover:text-blue-700 transition-colors">{event.title}</h3>
+                                <p className="text-sm text-slate-500 line-clamp-2 mb-4 h-10">{event.description}</p>
+
+                                <div className="flex items-center justify-between mt-auto pt-3 border-t">
+                                    <span className="text-xs text-slate-500 font-medium">
+                                        {event._count?.requirements || 0} Requisitos
+                                    </span>
+                                    {isSubscribed ? (
+                                        <span className="text-blue-600 text-sm font-bold flex items-center group-hover:translate-x-1 transition-transform">
+                                            Acessar <ChevronRight className="w-4 h-4 ml-1" />
+                                        </span>
+                                    ) : (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm('Deseja inscrever seu clube neste evento?')) subscribeMutation.mutate(event.id);
+                                            }}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-3 py-1.5 rounded transition-colors"
+                                        >
+                                            Inscrever-se
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                            <h3 className="font-bold text-lg text-slate-800 mb-1 group-hover:text-blue-700 transition-colors">{event.title}</h3>
-                            <p className="text-sm text-slate-500 line-clamp-2 mb-4 h-10">{event.description}</p>
-
-                            <div className="flex items-center justify-between mt-auto pt-3 border-t">
-                                <span className="text-xs text-slate-500 font-medium">
-                                    {event._count?.requirements || 0} Requisitos
-                                </span>
-                                <span className="text-blue-600 text-sm font-bold flex items-center group-hover:translate-x-1 transition-transform">
-                                    Acessar <ChevronRight className="w-4 h-4 ml-1" />
-                                </span>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {events.length === 0 && (
                         <div className="col-span-full text-center py-10 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300">
                             Nenhum evento disponível para sua região no momento.

@@ -48,6 +48,7 @@ model Club {
   units                 Unit[]
   users                 User[]
   payments              Payment[]
+  participatingEvents   RegionalEvent[] @relation("EventParticipants")
 
   @@map("clubs")
 }
@@ -375,6 +376,7 @@ model RegionalEvent {
   
   requirements  Requirement[]
   creator       User          @relation("EventCreator", fields: [creatorId], references: [id])
+  participatingClubs Club[]   @relation("EventParticipants")
 
   @@map("regional_events")
 }

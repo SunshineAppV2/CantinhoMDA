@@ -7,11 +7,15 @@ import { UpdateRegionalEventDto } from './dto/update-regional-event.dto';
 export class RegionalEventsService {
     constructor(private prisma: PrismaService) { }
 
-    async create(createDto: CreateRegionalEventDto, creatorId: string) {
+    async create(createDto: CreateRegionalEventDto & { clubIds?: string[] }, creatorId: string) {
+        const { clubIds, ...rest } = createDto;
         return this.prisma.regionalEvent.create({
             data: {
-                ...createDto,
-                creatorId
+                ...rest,
+                creatorId,
+                participatingClubs: clubIds?.length ? {
+                    connect: clubIds.map(id => ({ id }))
+                } : undefined
             }
         });
     }
@@ -20,7 +24,7 @@ export class RegionalEventsService {
         const { role, region, district, clubId } = user;
         const where: any = {};
 
-        // 1. Regional/District Coordinator: See created events or events in their scope
+        // 1. Coordinator/Master View
         if (role === 'COORDINATOR_REGIONAL') {
             where.region = region;
         } else if (role === 'COORDINATOR_DISTRICT') {
@@ -29,31 +33,37 @@ export class RegionalEventsService {
                 { region: region, district: null }
             ];
         } else if (role === 'COORDINATOR_AREA') {
-            // See events for their Association
             where.association = user['association'] || user['mission'];
         } else if (['MASTER'].includes(role)) {
-            return this.prisma.regionalEvent.findMany({
-                include: { _count: { select: { requirements: true } } },
-                orderBy: { startDate: 'desc' }
-            });
+            // See ALL
         } else {
+            // 2. Club View (Strict Participation + Legacy Fallback)
             if (!clubId) return [];
 
             const club = await this.prisma.club.findUnique({ where: { id: clubId } });
             if (!club) return [];
 
-            where.OR = [];
+            // Logic:
+            // - Show if Club is explicitly in participatingClubs
+            // - OR if no participatingClubs defined AND matches Region/District (Legacy/Open)
 
-            if (club.district) where.OR.push({ district: club.district });
-            if (club.region) where.OR.push({ region: club.region, district: null });
-            if (club.association || club.mission) where.OR.push({ association: club.association || club.mission, region: null, district: null });
+            const legacyConditions: any[] = [];
+            if (club.district) legacyConditions.push({ district: club.district });
+            if (club.region) legacyConditions.push({ region: club.region, district: null });
+            // Association check if needed
+
+            where.OR = [
+                { participatingClubs: { some: { id: clubId } } },
+                ...legacyConditions
+            ];
         }
 
         return this.prisma.regionalEvent.findMany({
             where,
             orderBy: { startDate: 'desc' },
             include: {
-                _count: { select: { requirements: true } }
+                _count: { select: { requirements: true } },
+                participatingClubs: { select: { id: true, name: true } } // Return participants so UI knows
             }
         });
     }
@@ -74,16 +84,46 @@ export class RegionalEventsService {
         return event;
     }
 
-    async update(id: string, updateDto: UpdateRegionalEventDto) {
+    async update(id: string, updateDto: UpdateRegionalEventDto & { clubIds?: string[] }) {
+        const { clubIds, ...rest } = updateDto;
+        const data: any = { ...rest };
+
+        if (clubIds) {
+            data.participatingClubs = {
+                set: clubIds.map(cid => ({ id: cid })) // Replace existing
+            };
+        }
+
         return this.prisma.regionalEvent.update({
             where: { id },
-            data: updateDto
+            data
         });
     }
 
     async remove(id: string) {
         return this.prisma.regionalEvent.delete({
             where: { id }
+        });
+    }
+    async subscribe(eventId: string, clubId: string) {
+        return this.prisma.regionalEvent.update({
+            where: { id: eventId },
+            data: {
+                participatingClubs: {
+                    connect: { id: clubId }
+                }
+            }
+        });
+    }
+
+    async unsubscribe(eventId: string, clubId: string) {
+        return this.prisma.regionalEvent.update({
+            where: { id: eventId },
+            data: {
+                participatingClubs: {
+                    disconnect: { id: clubId }
+                }
+            }
         });
     }
 }

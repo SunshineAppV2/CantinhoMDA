@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/axios';
-import { Plus, Calendar, MapPin, Trash2, Pencil, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Plus, Calendar, MapPin, Trash2, Pencil, ChevronRight, ArrowLeft, Users } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,6 +15,7 @@ interface RegionalEvent {
     endDate?: string;
     region?: string;
     district?: string;
+    participatingClubs?: { id: string, name: string }[];
     _count?: {
         requirements: number;
     }
@@ -47,12 +48,27 @@ export function RegionalEventsManager() {
         }
     });
 
+    // Fetch Clubs for participation selection
+    const { data: allClubs = [] } = useQuery<{ id: string, name: string, region: string, district: string }[]>({
+        queryKey: ['all-clubs-selection'],
+        queryFn: async () => {
+            const res = await api.get('/clubs');
+            return res.data;
+        },
+        enabled: canManageEvents // Only fetch if user can manage events
+    });
+
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
     const [eventTitle, setEventTitle] = useState('');
     const [eventDesc, setEventDesc] = useState('');
     const [eventStart, setEventStart] = useState('');
     const [eventEnd, setEventEnd] = useState('');
+    const [selectedClubIds, setSelectedClubIds] = useState<string[]>([]); // New state
     const [editingEventId, setEditingEventId] = useState<string | null>(null);
+
+    // Participants Modal State
+    const [isPartModalOpen, setIsPartModalOpen] = useState(false);
+    const [managingPartEventId, setManagingPartEventId] = useState<string | null>(null);
 
     const createEventMutation = useMutation({
         mutationFn: async (data: any) => await api.post('/regional-events', data),
@@ -68,7 +84,8 @@ export function RegionalEventsManager() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['regional-events'] });
             closeEventModal();
-            import('sonner').then(({ toast }) => toast.success('Evento atualizado!'));
+            closePartModal();
+            import('sonner').then(({ toast }) => toast.success('Atualizado com sucesso!'));
         }
     });
 
@@ -89,13 +106,20 @@ export function RegionalEventsManager() {
         setEditingEventId(null);
     }
 
+    const closePartModal = () => {
+        setIsPartModalOpen(false);
+        setManagingPartEventId(null);
+        setSelectedClubIds([]);
+    }
+
     const handleSaveEvent = (e: React.FormEvent) => {
         e.preventDefault();
         const payload = {
             title: eventTitle,
             description: eventDesc,
             startDate: eventStart ? new Date(eventStart).toISOString() : new Date().toISOString(),
-            endDate: eventEnd ? new Date(eventEnd).toISOString() : null
+            endDate: eventEnd ? new Date(eventEnd).toISOString() : null,
+            clubIds: selectedClubIds // Checkbox selection
         };
 
         if (editingEventId) {
@@ -105,12 +129,21 @@ export function RegionalEventsManager() {
         }
     }
 
+    const handleSaveParticipants = () => {
+        if (!managingPartEventId) return;
+        updateEventMutation.mutate({
+            id: managingPartEventId,
+            payload: { clubIds: selectedClubIds }
+        });
+    }
+
     const openCreateEvent = () => {
         setEditingEventId(null);
         setEventTitle('');
         setEventDesc('');
         setEventStart('');
         setEventEnd('');
+        setSelectedClubIds([]);
         setIsEventModalOpen(true);
     }
 
@@ -120,7 +153,14 @@ export function RegionalEventsManager() {
         setEventDesc(evt.description || '');
         setEventStart(evt.startDate.split('T')[0]);
         setEventEnd(evt.endDate ? evt.endDate.split('T')[0] : '');
+        setSelectedClubIds(evt.participatingClubs?.map(c => c.id) || []);
         setIsEventModalOpen(true);
+    }
+
+    const openParticipantsManager = (evt: RegionalEvent) => {
+        setManagingPartEventId(evt.id);
+        setSelectedClubIds(evt.participatingClubs?.map(c => c.id) || []);
+        setIsPartModalOpen(true);
     }
 
     // --- RENDER ---
@@ -172,6 +212,7 @@ export function RegionalEventsManager() {
                                 <Calendar className="w-3 h-3" />
                                 {format(new Date(event.startDate), 'dd/MM/yyyy')}
                             </div>
+
                             {canManageEvents && (
                                 <div className="flex gap-1">
                                     <button onClick={() => openEditEvent(event)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><Pencil className="w-4 h-4" /></button>
@@ -181,6 +222,27 @@ export function RegionalEventsManager() {
                         </div>
                         <h3 className="font-bold text-lg text-slate-800 mb-1">{event.title}</h3>
                         <p className="text-sm text-slate-500 line-clamp-2 mb-4 h-10">{event.description}</p>
+
+                        <div className="flex items-center gap-2 mb-4">
+                            {event.participatingClubs && event.participatingClubs.length > 0 ? (
+                                <button
+                                    onClick={() => canManageEvents && openParticipantsManager(event)}
+                                    className="bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
+                                    title="Gerenciar Inscritos"
+                                >
+                                    <Users className="w-3 h-3" />
+                                    {event.participatingClubs.length} Inscritos
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => canManageEvents && openParticipantsManager(event)}
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 transition-colors"
+                                >
+                                    <Users className="w-3 h-3" />
+                                    Sem Inscrições
+                                </button>
+                            )}
+                        </div>
 
                         <div className="flex items-center justify-between mt-auto pt-3 border-t">
                             <span className="text-xs text-slate-500 font-medium">
@@ -222,10 +284,77 @@ export function RegionalEventsManager() {
                             <input type="date" value={eventEnd} onChange={e => setEventEnd(e.target.value)} className="w-full border rounded-lg p-2" />
                         </div>
                     </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Clubes Participantes (Opcional - Restrito aos selecionados)</label>
+                        <div className="border rounded-lg p-2 h-40 overflow-y-auto bg-slate-50">
+                            {allClubs.map(club => (
+                                <label key={club.id} className="flex items-center gap-2 py-1 px-2 hover:bg-slate-100 rounded cursor-pointer text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedClubIds.includes(club.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) setSelectedClubIds(prev => [...prev, club.id]);
+                                            else setSelectedClubIds(prev => prev.filter(id => id !== club.id));
+                                        }}
+                                        className="rounded text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span>{club.name}</span>
+                                    {(club.region || club.district) && <span className="text-xs text-slate-400">({club.region || club.district})</span>}
+                                </label>
+                            ))}
+                            {allClubs.length === 0 && <p className="text-xs text-slate-400 p-2">Carregando clubes...</p>}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">Se nenhum clube for selecionado, o evento será visível para todos da Região/Distrito conforme regras padrão.</p>
+                    </div>
+
                     <div className="flex justify-end pt-4">
                         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700">Salvar Evento</button>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Participants Management Modal */}
+            <Modal isOpen={isPartModalOpen} onClose={closePartModal} title="Gerenciar Inscrições">
+                <div className="space-y-4">
+                    <p className="text-sm text-slate-500">Selecione os clubes que participarão deste evento. Clubes desmarcados perderão o acesso restrito.</p>
+
+                    {/* Add Search Input if list is long? For now keep simple scroll */}
+
+                    <div className="border rounded-lg p-2 h-64 overflow-y-auto bg-slate-50">
+                        {allClubs.map(club => (
+                            <label key={club.id} className="flex items-center gap-2 py-1 px-2 hover:bg-slate-100 rounded cursor-pointer text-sm border-b border-slate-100 last:border-0">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedClubIds.includes(club.id)}
+                                    onChange={(e) => {
+                                        if (e.target.checked) setSelectedClubIds(prev => [...prev, club.id]);
+                                        else setSelectedClubIds(prev => prev.filter(id => id !== club.id));
+                                    }}
+                                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                />
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-slate-700">{club.name}</span>
+                                    <span className="text-[10px] text-slate-400 uppercase">{club.district} {club.region}</span>
+                                </div>
+                            </label>
+                        ))}
+                        {allClubs.length === 0 && <p className="text-xs text-slate-400 p-2">Carregando clubes...</p>}
+                    </div>
+
+                    <div className="flex justify-between items-center pt-4 border-t">
+                        <div className="text-sm font-bold text-slate-600">
+                            {selectedClubIds.length} Clubes Selecionados
+                        </div>
+                        <button
+                            onClick={handleSaveParticipants}
+                            disabled={updateEventMutation.isPending}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            {updateEventMutation.isPending ? 'Salvando...' : 'Salvar Inscrições'}
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </div>
     )
