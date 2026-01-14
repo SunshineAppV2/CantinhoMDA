@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsDateString, IsArray } from 'class-validator';
 
 export class CreateRegionalEventDto {
     @IsString()
@@ -31,5 +31,8 @@ export class CreateRegionalEventDto {
     @IsOptional()
     union?: string;
 
-    // No clubId here, as these are managed by hierarchy, not clubs
+    @IsArray()
+    @IsString({ each: true })
+    @IsOptional()
+    clubIds?: string[];
 }
