@@ -451,6 +451,8 @@ export function Units() {
                 title={editingUnit ? 'Editar Unidade' : 'Nova Unidade'}
                 unitName={unitName}
                 setUnitName={setUnitName}
+                unitType={unitType}
+                setUnitType={setUnitType}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
                 selectedMemberIds={selectedMemberIds}
