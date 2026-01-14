@@ -85,6 +85,14 @@ export class RankingRegionalService {
                         include: { requirement: true }
                     });
 
+                    if (club.name.toLowerCase().includes('sunshine')) {
+                        console.log(`[RankingDebug] Club: ${club.name} (ID: ${club.id})`);
+                        console.log(`[RankingDebug] EventId: ${scope.regionalEventId}`);
+                        console.log(`[RankingDebug] Req Count: ${eventRequirements.length}`);
+                        console.log(`[RankingDebug] Approved Responses: ${approvedResponses.length}`);
+                        approvedResponses.forEach(r => console.log(` - Resp: ${r.id}, Points: ${r.requirement.points}`));
+                    }
+
                     totalPoints = approvedResponses.reduce((sum, resp) => sum + (resp.requirement.points || 0), 0);
                 } else {
                     totalPoints = 0;
