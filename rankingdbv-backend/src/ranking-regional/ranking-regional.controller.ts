@@ -1,5 +1,5 @@
 
-import { Controller, Get, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Req, Param } from '@nestjs/common';
 import { RankingRegionalService } from './ranking-regional.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -83,7 +83,7 @@ export class RankingRegionalController {
         if (events.length === 0) return { message: 'No event found matching ' + term };
 
         const event = events[0];
-        const results = {
+        const results: any = {
             event: { id: event.id, title: event.title },
             requirements: [],
             responses: { total: 0, approved: 0, distinctClubs: 0 },
