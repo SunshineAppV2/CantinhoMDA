@@ -1,5 +1,5 @@
 
-import { Controller, Get, Post, Body, Query, UseGuards, Param, Request, Delete, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Param, Request, Delete, Patch, BadRequestException } from '@nestjs/common';
 import { UpdateRequirementDto } from './dto/update-requirement.dto';
 import { RequirementsService } from './requirements.service';
 import { CreateRequirementDto } from './dto/create-requirement.dto';
@@ -29,12 +29,18 @@ export class RequirementsController {
         const isDistrictCoordinator = req.user.role === 'COORDINATOR_DISTRICT';
 
         if (isRegionalCoordinator) {
+            if (!req.user.region) {
+                throw new BadRequestException('Seu perfil de Coordenador Regional não possui uma Região definida. Atualize seu perfil.');
+            }
             createDto.region = req.user.region;
             // If they sent a clubId, we keep it (Target: Specific Club in Region)
             if (!createDto.clubId) {
                 delete createDto.clubId;
             }
         } else if (isDistrictCoordinator) {
+            if (!req.user.district) {
+                throw new BadRequestException('Seu perfil de Coordenador Distrital não possui um Distrito definido. Atualize seu perfil.');
+            }
             createDto.district = req.user.district;
             // District Coordinator implicitly belongs to a Region too, usually.
             // But the requirement is specific to the DISTRICT.

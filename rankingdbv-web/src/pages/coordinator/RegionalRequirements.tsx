@@ -144,7 +144,8 @@ export function RegionalRequirements() {
         },
         onError: (err: any) => {
             console.error(err);
-            import('sonner').then(({ toast }) => toast.error('Erro ao salvar.'));
+            const msg = err.response?.data?.message || 'Erro ao salvar.';
+            import('sonner').then(({ toast }) => toast.error(msg));
         }
     });
 
