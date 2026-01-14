@@ -13,17 +13,19 @@ export class RegionalEventsController {
     create(@Body() createDto: CreateRegionalEventDto, @Request() req) {
         const user = req.user;
 
+        console.log(`[RegionalEvents] Create Event Request by: ${user.email}, Role: ${user.role}, Region: ${user.region}, District: ${user.district}`);
+
         // Auto-fill hierarchy based on Creator Role
         if (user.role === 'COORDINATOR_REGIONAL') {
             createDto.region = user.region;
-            // Optionally allow them to specify District if they want to target specific district
-            // createDto.district = body.district || null;
         } else if (user.role === 'COORDINATOR_DISTRICT') {
             createDto.district = user.district;
-            createDto.region = user.region; // Implied? Or keep region null if District-specific?
-            // Let's stamp Region too for easier filtering upwards if needed, but District logic prevails
+            createDto.region = user.region;
+        } else if (user.role === 'COORDINATOR_AREA') {
+            createDto.association = user.association;
         } else if (user.role !== 'MASTER') {
-            throw new ForbiddenException('Apenas Coordenadores e Master podem criar eventos regionais.');
+            console.error(`[RegionalEvents] Access Denied for role: ${user.role}`);
+            throw new ForbiddenException('Apenas Coordenadores e Master podem criar eventos regionais. Seu perfil atual não possui permissão.');
         }
 
         return this.regionalEventsService.create(createDto, user.userId || user.id);
