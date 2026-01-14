@@ -247,136 +247,137 @@ export function RegionalEventsManager() {
                             )}
                         </div>
 
-                        <div className="flex items-center justify-between mt-auto pt-3 border-t">
-                            <span className="text-xs text-slate-500 font-medium">
-                                {event._count?.requirements || 0} Requisitos
-                            </span>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => setEvalEvent(event)}
-                                    className="text-orange-600 text-sm font-bold hover:underline flex items-center gap-1"
-                                >
-                                    <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
-                                    Avaliar
-                                </button>
-                                <button
-                                    onClick={() => setSelectedEventId(event.id)}
-                                    className="text-blue-600 text-sm font-bold flex items-center hover:underline"
-                                >
-                                    Gerenciar <ChevronRight className="w-4 h-4 ml-1" />
-                                </button>
-                            </div>
+                    </div>
                         </div>
-                    </div>
-                ))}
-                {events.length === 0 && (
-                    <div className="col-span-full text-center py-10 text-slate-400">
-                        Nenhum evento criado. Clique em "Novo Evento" para começar.
-                    </div>
-                )}
+
+            <div className="mt-4 grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
+                <button
+                    onClick={() => setEvalEvent(event)}
+                    className="flex items-center justify-center gap-2 bg-orange-50 hover:bg-orange-100 text-orange-700 py-2 px-3 rounded-lg text-sm font-bold transition-colors border border-orange-200"
+                >
+                    <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+                    Avaliar
+                </button>
+                <button
+                    onClick={() => setSelectedEventId(event.id)}
+                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg text-sm font-bold transition-colors shadow-sm"
+                >
+                    Gerenciar <ChevronRight className="w-4 h-4" />
+                </button>
             </div>
-
-            {evalEvent && (
-                <EventEvaluationModal
-                    event={evalEvent}
-                    isOpen={!!evalEvent}
-                    onClose={() => setEvalEvent(null)}
-                />
-            )}
-
-            <Modal isOpen={isEventModalOpen} onClose={closeEventModal} title={editingEventId ? "Editar Evento" : "Novo Evento"}>
-                <form onSubmit={handleSaveEvent} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Título do Evento</label>
-                        <input required type="text" value={eventTitle} onChange={e => setEventTitle(e.target.value)} className="w-full border rounded-lg p-2" placeholder="Ex: Campori 2026" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Descrição</label>
-                        <textarea value={eventDesc} onChange={e => setEventDesc(e.target.value)} className="w-full border rounded-lg p-2" rows={3} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Início</label>
-                            <input required type="date" value={eventStart} onChange={e => setEventStart(e.target.value)} className="w-full border rounded-lg p-2" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Fim (Opcional)</label>
-                            <input type="date" value={eventEnd} onChange={e => setEventEnd(e.target.value)} className="w-full border rounded-lg p-2" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Clubes Participantes (Opcional - Restrito aos selecionados)</label>
-                        <div className="border rounded-lg p-2 h-40 overflow-y-auto bg-slate-50">
-                            {allClubs.map(club => (
-                                <label key={club.id} className="flex items-center gap-2 py-1 px-2 hover:bg-slate-100 rounded cursor-pointer text-sm">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedClubIds.includes(club.id)}
-                                        onChange={(e) => {
-                                            if (e.target.checked) setSelectedClubIds(prev => [...prev, club.id]);
-                                            else setSelectedClubIds(prev => prev.filter(id => id !== club.id));
-                                        }}
-                                        className="rounded text-blue-600 focus:ring-blue-500"
-                                    />
-                                    <span>{club.name}</span>
-                                    {(club.region || club.district) && <span className="text-xs text-slate-400">({club.region || club.district})</span>}
-                                </label>
-                            ))}
-                            {allClubs.length === 0 && <p className="text-xs text-slate-400 p-2">Carregando clubes...</p>}
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">Se nenhum clube for selecionado, o evento será visível para todos da Região/Distrito conforme regras padrão.</p>
-                    </div>
-
-                    <div className="flex justify-end pt-4">
-                        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700">Salvar Evento</button>
-                    </div>
-                </form>
-            </Modal>
-
-            {/* Participants Management Modal */}
-            <Modal isOpen={isPartModalOpen} onClose={closePartModal} title="Gerenciar Inscrições">
-                <div className="space-y-4">
-                    <p className="text-sm text-slate-500">Selecione os clubes que participarão deste evento. Clubes desmarcados perderão o acesso restrito.</p>
-
-                    {/* Add Search Input if list is long? For now keep simple scroll */}
-
-                    <div className="border rounded-lg p-2 h-64 overflow-y-auto bg-slate-50">
-                        {allClubs.map(club => (
-                            <label key={club.id} className="flex items-center gap-2 py-1 px-2 hover:bg-slate-100 rounded cursor-pointer text-sm border-b border-slate-100 last:border-0">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedClubIds.includes(club.id)}
-                                    onChange={(e) => {
-                                        if (e.target.checked) setSelectedClubIds(prev => [...prev, club.id]);
-                                        else setSelectedClubIds(prev => prev.filter(id => id !== club.id));
-                                    }}
-                                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
-                                />
-                                <div className="flex flex-col">
-                                    <span className="font-medium text-slate-700">{club.name}</span>
-                                    <span className="text-[10px] text-slate-400 uppercase">{club.district} {club.region}</span>
-                                </div>
-                            </label>
-                        ))}
-                        {allClubs.length === 0 && <p className="text-xs text-slate-400 p-2">Carregando clubes...</p>}
-                    </div>
-
-                    <div className="flex justify-between items-center pt-4 border-t">
-                        <div className="text-sm font-bold text-slate-600">
-                            {selectedClubIds.length} Clubes Selecionados
-                        </div>
-                        <button
-                            onClick={handleSaveParticipants}
-                            disabled={updateEventMutation.isPending}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50"
-                        >
-                            {updateEventMutation.isPending ? 'Salvando...' : 'Salvar Inscrições'}
-                        </button>
-                    </div>
-                </div>
-            </Modal>
         </div>
+    ))
+}
+{
+    events.length === 0 && (
+        <div className="col-span-full text-center py-10 text-slate-400">
+            Nenhum evento criado. Clique em "Novo Evento" para começar.
+        </div>
+    )
+}
+            </div >
+
+    { evalEvent && (
+        <EventEvaluationModal
+            event={evalEvent}
+            isOpen={!!evalEvent}
+            onClose={() => setEvalEvent(null)}
+        />
+    )}
+
+<Modal isOpen={isEventModalOpen} onClose={closeEventModal} title={editingEventId ? "Editar Evento" : "Novo Evento"}>
+    <form onSubmit={handleSaveEvent} className="space-y-4">
+        <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Título do Evento</label>
+            <input required type="text" value={eventTitle} onChange={e => setEventTitle(e.target.value)} className="w-full border rounded-lg p-2" placeholder="Ex: Campori 2026" />
+        </div>
+        <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Descrição</label>
+            <textarea value={eventDesc} onChange={e => setEventDesc(e.target.value)} className="w-full border rounded-lg p-2" rows={3} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+            <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Início</label>
+                <input required type="date" value={eventStart} onChange={e => setEventStart(e.target.value)} className="w-full border rounded-lg p-2" />
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Fim (Opcional)</label>
+                <input type="date" value={eventEnd} onChange={e => setEventEnd(e.target.value)} className="w-full border rounded-lg p-2" />
+            </div>
+        </div>
+
+        <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Clubes Participantes (Opcional - Restrito aos selecionados)</label>
+            <div className="border rounded-lg p-2 h-40 overflow-y-auto bg-slate-50">
+                {allClubs.map(club => (
+                    <label key={club.id} className="flex items-center gap-2 py-1 px-2 hover:bg-slate-100 rounded cursor-pointer text-sm">
+                        <input
+                            type="checkbox"
+                            checked={selectedClubIds.includes(club.id)}
+                            onChange={(e) => {
+                                if (e.target.checked) setSelectedClubIds(prev => [...prev, club.id]);
+                                else setSelectedClubIds(prev => prev.filter(id => id !== club.id));
+                            }}
+                            className="rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>{club.name}</span>
+                        {(club.region || club.district) && <span className="text-xs text-slate-400">({club.region || club.district})</span>}
+                    </label>
+                ))}
+                {allClubs.length === 0 && <p className="text-xs text-slate-400 p-2">Carregando clubes...</p>}
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Se nenhum clube for selecionado, o evento será visível para todos da Região/Distrito conforme regras padrão.</p>
+        </div>
+
+        <div className="flex justify-end pt-4">
+            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700">Salvar Evento</button>
+        </div>
+    </form>
+</Modal>
+
+{/* Participants Management Modal */ }
+<Modal isOpen={isPartModalOpen} onClose={closePartModal} title="Gerenciar Inscrições">
+    <div className="space-y-4">
+        <p className="text-sm text-slate-500">Selecione os clubes que participarão deste evento. Clubes desmarcados perderão o acesso restrito.</p>
+
+        {/* Add Search Input if list is long? For now keep simple scroll */}
+
+        <div className="border rounded-lg p-2 h-64 overflow-y-auto bg-slate-50">
+            {allClubs.map(club => (
+                <label key={club.id} className="flex items-center gap-2 py-1 px-2 hover:bg-slate-100 rounded cursor-pointer text-sm border-b border-slate-100 last:border-0">
+                    <input
+                        type="checkbox"
+                        checked={selectedClubIds.includes(club.id)}
+                        onChange={(e) => {
+                            if (e.target.checked) setSelectedClubIds(prev => [...prev, club.id]);
+                            else setSelectedClubIds(prev => prev.filter(id => id !== club.id));
+                        }}
+                        className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                    />
+                    <div className="flex flex-col">
+                        <span className="font-medium text-slate-700">{club.name}</span>
+                        <span className="text-[10px] text-slate-400 uppercase">{club.district} {club.region}</span>
+                    </div>
+                </label>
+            ))}
+            {allClubs.length === 0 && <p className="text-xs text-slate-400 p-2">Carregando clubes...</p>}
+        </div>
+
+        <div className="flex justify-between items-center pt-4 border-t">
+            <div className="text-sm font-bold text-slate-600">
+                {selectedClubIds.length} Clubes Selecionados
+            </div>
+            <button
+                onClick={handleSaveParticipants}
+                disabled={updateEventMutation.isPending}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50"
+            >
+                {updateEventMutation.isPending ? 'Salvando...' : 'Salvar Inscrições'}
+            </button>
+        </div>
+    </div>
+</Modal>
+        </div >
     )
 }
 
