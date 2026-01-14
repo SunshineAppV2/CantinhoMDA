@@ -40,6 +40,7 @@ import { AuditModule } from './audit/audit.module';
     SubscriptionsModule,
     RegionalEventsModule,
     ReportsModule,
+    RequirementsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
