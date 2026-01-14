@@ -12,11 +12,13 @@ export class ReportsController {
     ) { }
 
     @Get('regional-stats')
+    @Get('regional-stats')
     async getRegionalStats(
         @Request() req,
         @Query('association') association?: string,
         @Query('region') region?: string,
-        @Query('district') district?: string, // Add district query
+        @Query('district') district?: string,
+        @Query('clubId') clubId?: string,
         @Query('startDate') startDate?: string,
         @Query('endDate') endDate?: string,
     ) {
@@ -29,15 +31,14 @@ export class ReportsController {
         let finalAssociation = association;
         let finalRegion = region;
         let finalDistrict = district;
-
-        let finalClubId: string | undefined = undefined; // For single club scope
+        let finalClubId = clubId;
 
         // Regional Coordinator: Force Association & Region
         if (user.role === 'COORDINATOR_REGIONAL') {
             if (!user.association || !user.region) throw new ForbiddenException('Perfil incompleto para Coordenador Regional');
             finalAssociation = user.association;
             finalRegion = user.region;
-            // Can filter by district if they want, but restricted to their region implied by logic
+            // Coordinator can filter by specific club within their region
         }
         // District Coordinator: Force Association, Region, AND District
         else if (user.role === 'COORDINATOR_DISTRICT') {
@@ -50,17 +51,8 @@ export class ReportsController {
         else if (['DIRECTOR', 'OWNER', 'ADMIN'].includes(user.role)) {
             finalClubId = user.clubId || undefined;
         }
-        else if (['MASTER'].includes(user.role)) {
-            // No strict enforcement, use query params
-        }
 
-        // If filters are missing for Coordinators, it might return empty or full database?
-        // Logic in service handles "undefined" as no filter.
-        // But for Coordinators, "undefined" should mean "THEIR region/district". 
-        // My logic above ensures that if they are coordinators, we OVERWRITE the query param with their DB value.
-        // If their DB value is null, well, that's a data issue, but safe.
-
-        console.log(`[Reports] User: ${user.name} (${user.role}) -> Assoc: ${finalAssociation}, Reg: ${finalRegion}, Dist: ${finalDistrict}`);
+        console.log(`[Reports] User: ${user.name} (${user.role}) -> Assoc: ${finalAssociation}, Reg: ${finalRegion}, Dist: ${finalDistrict}, Club: ${finalClubId}`);
 
         return this.reportsService.getRegionalStats({
             association: finalAssociation,
