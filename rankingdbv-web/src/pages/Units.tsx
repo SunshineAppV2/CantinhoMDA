@@ -4,8 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Shield, Plus, Pencil, Trash2, Users, CheckSquare } from 'lucide-react';
 import { Modal } from '../components/Modal';
-import { collection, query, where, getDocs, doc, writeBatch } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { toast } from 'sonner';
 
 interface Unit {
@@ -70,8 +68,8 @@ function UnitModal({
                                     type="button"
                                     onClick={() => setUnitType(type)}
                                     className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-all ${unitType === type
-                                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700 ring-1 ring-indigo-500'
-                                            : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300'
+                                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700 ring-1 ring-indigo-500'
+                                        : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300'
                                         }`}
                                 >
                                     {type}
@@ -208,40 +206,38 @@ export function Units() {
     const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
     const [activeTab, setActiveTab] = useState<'info' | 'counselors' | 'members'>('info');
 
-    // Fetch Users FIRST (needed for counts and assignment)
+    // Fetch Users (from Backend)
     const { data: users = [] } = useQuery<User[]>({
         queryKey: ['users', user?.clubId],
         queryFn: async () => {
             if (!user?.clubId) return [];
-            const q = query(collection(db, 'users'), where('clubId', '==', user.clubId));
-            const snapshot = await getDocs(q);
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+            const res = await api.get('/users'); // Assuming this endpoint returns club users
+            return res.data;
         },
         enabled: !!user?.clubId
     });
 
-    // Fetch Units
+    // Fetch Units (from Backend)
     const { data: rawUnits = [], isLoading } = useQuery({
         queryKey: ['units', user?.clubId],
         queryFn: async () => {
             if (!user?.clubId) return [];
-            const q = query(collection(db, 'units'), where('clubId', '==', user.clubId));
-            const snapshot = await getDocs(q);
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Unit));
+            const res = await api.get(`/units/club/${user.clubId}`);
+            return res.data;
         },
         enabled: !!user?.clubId
     });
 
     // Derive Units with Counts
     const units = useMemo(() => {
-        return rawUnits.map(unit => ({
+        return rawUnits.map((unit: any) => ({
             ...unit,
             type: unit.type || 'MISTA',
             _count: {
-                members: users.filter(u => u.unitId === unit.id).length
+                members: unit._count?.members || 0
             }
         }));
-    }, [rawUnits, users]);
+    }, [rawUnits]);
 
 
     const counselors = useMemo(() => users.filter(u => ['COUNSELOR', 'CONSELHEIRO', 'INSTRUCTOR', 'INSTRUTOR'].includes(u.role)), [users]);
@@ -249,33 +245,14 @@ export function Units() {
 
     const unitMap = useMemo(() => {
         const map: Record<string, string> = {};
-        rawUnits.forEach((u: Unit) => map[u.id] = u.name);
+        rawUnits.forEach((u: any) => map[u.id] = u.name);
         return map;
     }, [rawUnits]);
 
-    // Create Unit
+    // Create Unit (Backend)
     const createUnitMutation = useMutation({
         mutationFn: async (data: { name: string, type: string, clubId: string, members?: string[] }) => {
-            const batch = writeBatch(db);
-
-            // 1. Create Unit
-            const unitRef = doc(collection(db, 'units'));
-            batch.set(unitRef, {
-                name: data.name,
-                type: data.type,
-                clubId: data.clubId,
-                createdAt: new Date().toISOString()
-            });
-
-            // 2. Assign Members
-            if (data.members && data.members.length > 0) {
-                data.members.forEach(memberId => {
-                    const userRef = doc(db, 'users', memberId);
-                    batch.update(userRef, { unitId: unitRef.id });
-                });
-            }
-
-            await batch.commit();
+            await api.post('/units', data);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['units'] });
@@ -286,34 +263,14 @@ export function Units() {
         onError: () => toast.error('Erro ao criar unidade.')
     });
 
-    // Update Unit
+    // Update Unit (Backend)
     const updateUnitMutation = useMutation({
         mutationFn: async (data: { id: string, name: string, type: string, members: string[] }) => {
-            const batch = writeBatch(db);
-            const unitRef = doc(db, 'units', data.id);
-
-            // 1. Update Name & Type
-            batch.update(unitRef, { name: data.name, type: data.type });
-
-            // 2. Update Members
-            // Find users currently in this unit but NOT in new selection -> Remove them
-            const currentMembers = users.filter(u => u.unitId === data.id).map(u => u.id);
-            const newMembers = data.members;
-
-            const toRemove = currentMembers.filter(id => !newMembers.includes(id));
-            const toAdd = newMembers.filter(id => !currentMembers.includes(id));
-
-            toRemove.forEach(id => {
-                const userRef = doc(db, 'users', id);
-                batch.update(userRef, { unitId: null });
+            await api.patch(`/units/${data.id}`, {
+                name: data.name,
+                type: data.type,
+                members: data.members // Backend expects array of IDs
             });
-
-            toAdd.forEach(id => {
-                const userRef = doc(db, 'users', id);
-                batch.update(userRef, { unitId: data.id });
-            });
-
-            await batch.commit();
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['units'] });
@@ -324,24 +281,9 @@ export function Units() {
         onError: () => toast.error('Erro ao atualizar unidade.')
     });
 
-    // Delete Unit
+    // Delete Unit (Backend)
     const deleteUnitMutation = useMutation({
-        mutationFn: async (id: string) => {
-            const batch = writeBatch(db);
-            const unitRef = doc(db, 'units', id);
-
-            // 1. Delete Unit
-            batch.delete(unitRef);
-
-            // 2. Remove Unit from Members
-            const unitMembers = users.filter(u => u.unitId === id);
-            unitMembers.forEach(u => {
-                const userRef = doc(db, 'users', u.id);
-                batch.update(userRef, { unitId: null });
-            });
-
-            await batch.commit();
-        },
+    },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['units'] });
             queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -350,174 +292,174 @@ export function Units() {
         onError: () => toast.error('Erro ao excluir unidade.')
     });
 
-    const handleDelete = async (id: string) => {
-        if (window.confirm('Tem certeza que deseja excluir esta unidade?')) {
-            await deleteUnitMutation.mutateAsync(id);
-        }
-    };
+const handleDelete = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta unidade?')) {
+        await deleteUnitMutation.mutateAsync(id);
+    }
+};
 
-    const handleEdit = (unit: Unit) => {
-        setEditingUnit(unit);
-        setUnitName(unit.name);
-        setUnitType(unit.type || 'MISTA');
-        setActiveTab('info');
-        setIsModalOpen(true);
-    };
+const handleEdit = (unit: Unit) => {
+    setEditingUnit(unit);
+    setUnitName(unit.name);
+    setUnitType(unit.type || 'MISTA');
+    setActiveTab('info');
+    setIsModalOpen(true);
+};
 
-    // Sync selection
-    useEffect(() => {
-        if (editingUnit && users.length > 0) {
-            const currentMembers = users
-                .filter(u => u.unitId === editingUnit.id)
-                .map(u => u.id);
-            setSelectedMemberIds(new Set(currentMembers));
-        } else if (!editingUnit) {
-            setSelectedMemberIds(new Set());
-        }
-    }, [editingUnit, users]);
-
-    const toggleSelection = (id: string) => {
-        const next = new Set(selectedMemberIds);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        setSelectedMemberIds(next);
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setEditingUnit(null);
-        setUnitName('');
-        setUnitType('MISTA');
+// Sync selection
+useEffect(() => {
+    if (editingUnit && users.length > 0) {
+        const currentMembers = users
+            .filter(u => u.unitId === editingUnit.id)
+            .map(u => u.id);
+        setSelectedMemberIds(new Set(currentMembers));
+    } else if (!editingUnit) {
         setSelectedMemberIds(new Set());
-        setActiveTab('info');
-    };
+    }
+}, [editingUnit, users]);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+const toggleSelection = (id: string) => {
+    const next = new Set(selectedMemberIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedMemberIds(next);
+};
 
-        if (!user?.clubId) {
-            alert('Erro: Usuário não possui vínculo com um Clube. Contacte o suporte.');
-            return;
-        }
+const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingUnit(null);
+    setUnitName('');
+    setUnitType('MISTA');
+    setSelectedMemberIds(new Set());
+    setActiveTab('info');
+};
 
-        if (editingUnit) {
-            updateUnitMutation.mutate({
-                id: editingUnit.id,
-                name: unitName,
-                type: unitType,
-                members: Array.from(selectedMemberIds)
-            });
-        } else {
-            createUnitMutation.mutate({
-                name: unitName,
-                type: unitType,
-                clubId: user.clubId,
-                members: Array.from(selectedMemberIds)
-            });
-        }
-    };
+const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
 
-    if (isLoading) return <div className="p-8 text-center text-slate-500">Carregando unidades...</div>;
+    if (!user?.clubId) {
+        alert('Erro: Usuário não possui vínculo com um Clube. Contacte o suporte.');
+        return;
+    }
 
-    return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Unidades</h1>
-                    <p className="text-slate-500">Gerencie as unidades e seus membros</p>
-                </div>
-                {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && (
-                    <button
-                        onClick={() => { setEditingUnit(null); setUnitName(''); setUnitType('MISTA'); setIsModalOpen(true); }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Nova Unidade
-                    </button>
-                )}
+    if (editingUnit) {
+        updateUnitMutation.mutate({
+            id: editingUnit.id,
+            name: unitName,
+            type: unitType,
+            members: Array.from(selectedMemberIds)
+        });
+    } else {
+        createUnitMutation.mutate({
+            name: unitName,
+            type: unitType,
+            clubId: user.clubId,
+            members: Array.from(selectedMemberIds)
+        });
+    }
+};
+
+if (isLoading) return <div className="p-8 text-center text-slate-500">Carregando unidades...</div>;
+
+return (
+    <div>
+        <div className="flex justify-between items-center mb-6">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-800">Unidades</h1>
+                <p className="text-slate-500">Gerencie as unidades e seus membros</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...units].sort((a: any, b: any) => a.name.localeCompare(b.name)).map((unit: any) => (
-                    <div key={unit.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold ${unit.type === 'MASCULINA' ? 'bg-blue-100 text-blue-600' :
-                                        unit.type === 'FEMININA' ? 'bg-pink-100 text-pink-600' :
-                                            'bg-purple-100 text-purple-600'
-                                    }`}>
-                                    {unit.type === 'MASCULINA' ? 'M' : unit.type === 'FEMININA' ? 'F' : 'Mix'}
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800">{unit.name}</h3>
-                                    <p className="text-sm text-slate-500 flex items-center gap-1">
-                                        <Users className="w-3 h-3" />
-                                        {unit._count?.members || 0} membros
-                                    </p>
-                                </div>
-                            </div>
-                            {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && (
-                                <div className="flex gap-1">
-                                    <button
-                                        onClick={() => handleEdit(unit)}
-                                        className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
-                                        title="Editar"
-                                    >
-                                        <Pencil className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(unit.id)}
-                                        className="p-1 text-slate-400 hover:text-red-600 transition-colors"
-                                        title="Excluir"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Preview Members */}
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="flex -space-x-2">
-                                {[...Array(Math.min(3, unit._count?.members || 0))].map((_, i) => (
-                                    <div key={i} className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-slate-400 text-xs shadow-sm">
-                                        <Users className="w-3 h-3" />
-                                    </div>
-                                ))}
-                            </div>
-                            {(unit._count?.members || 0) > 3 && (
-                                <span className="text-xs text-slate-500">+{(unit._count?.members || 0) - 3}</span>
-                            )}
-                        </div>
-                    </div>
-                ))}
-
-                {units.length === 0 && (
-                    <div className="col-span-full py-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                        <Shield className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-                        <p className="text-slate-500 font-medium">Nenhuma unidade cadastrada</p>
-                        <p className="text-slate-400 text-sm">Clique em "Nova Unidade" para começar</p>
-                    </div>
-                )}
-            </div>
-
-            <UnitModal
-                isOpen={isModalOpen}
-                onClose={closeModal}
-                title={editingUnit ? 'Editar Unidade' : 'Nova Unidade'}
-                unitName={unitName}
-                setUnitName={setUnitName}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                selectedMemberIds={selectedMemberIds}
-                toggleSelection={toggleSelection}
-                counselors={counselors}
-                members={members}
-                unitMap={unitMap}
-                editingUnitId={editingUnit?.id}
-                handleSubmit={handleSubmit}
-                isSaving={createUnitMutation.isPending || updateUnitMutation.isPending}
-            />
+            {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && (
+                <button
+                    onClick={() => { setEditingUnit(null); setUnitName(''); setUnitType('MISTA'); setIsModalOpen(true); }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                >
+                    <Plus className="w-5 h-5" />
+                    Nova Unidade
+                </button>
+            )}
         </div>
-    );
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...units].sort((a: any, b: any) => a.name.localeCompare(b.name)).map((unit: any) => (
+                <div key={unit.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold ${unit.type === 'MASCULINA' ? 'bg-blue-100 text-blue-600' :
+                                unit.type === 'FEMININA' ? 'bg-pink-100 text-pink-600' :
+                                    'bg-purple-100 text-purple-600'
+                                }`}>
+                                {unit.type === 'MASCULINA' ? 'M' : unit.type === 'FEMININA' ? 'F' : 'Mix'}
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800">{unit.name}</h3>
+                                <p className="text-sm text-slate-500 flex items-center gap-1">
+                                    <Users className="w-3 h-3" />
+                                    {unit._count?.members || 0} membros
+                                </p>
+                            </div>
+                        </div>
+                        {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && (
+                            <div className="flex gap-1">
+                                <button
+                                    onClick={() => handleEdit(unit)}
+                                    className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                                    title="Editar"
+                                >
+                                    <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(unit.id)}
+                                    className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                                    title="Excluir"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Preview Members */}
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="flex -space-x-2">
+                            {[...Array(Math.min(3, unit._count?.members || 0))].map((_, i) => (
+                                <div key={i} className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-slate-400 text-xs shadow-sm">
+                                    <Users className="w-3 h-3" />
+                                </div>
+                            ))}
+                        </div>
+                        {(unit._count?.members || 0) > 3 && (
+                            <span className="text-xs text-slate-500">+{(unit._count?.members || 0) - 3}</span>
+                        )}
+                    </div>
+                </div>
+            ))}
+
+            {units.length === 0 && (
+                <div className="col-span-full py-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                    <Shield className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                    <p className="text-slate-500 font-medium">Nenhuma unidade cadastrada</p>
+                    <p className="text-slate-400 text-sm">Clique em "Nova Unidade" para começar</p>
+                </div>
+            )}
+        </div>
+
+        <UnitModal
+            isOpen={isModalOpen}
+            onClose={closeModal}
+            title={editingUnit ? 'Editar Unidade' : 'Nova Unidade'}
+            unitName={unitName}
+            setUnitName={setUnitName}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            selectedMemberIds={selectedMemberIds}
+            toggleSelection={toggleSelection}
+            counselors={counselors}
+            members={members}
+            unitMap={unitMap}
+            editingUnitId={editingUnit?.id}
+            handleSubmit={handleSubmit}
+            isSaving={createUnitMutation.isPending || updateUnitMutation.isPending}
+        />
+    </div>
+);
 }
