@@ -668,7 +668,7 @@ function EventEvaluationModal({ event, isOpen, onClose }: { event: RegionalEvent
 
     // Group by Club
     const groupedByClub = (pending as any[]).reduce((acc: any, curr: any) => {
-        const clubName = curr.user.club?.name || 'Sem Clube';
+        const clubName = curr.club?.name || 'Clube Desconhecido';
         if (!acc[clubName]) acc[clubName] = [];
         acc[clubName].push(curr);
         return acc;
@@ -691,11 +691,11 @@ function EventEvaluationModal({ event, isOpen, onClose }: { event: RegionalEvent
                                 <div key={resp.id} className="p-4 flex flex-col gap-3">
                                     <div className="flex items-start gap-3">
                                         <div className="relative">
-                                            <img src={resp.user.photoUrl || `https://ui-avatars.com/api/?name=${resp.user.name}`} className="w-10 h-10 rounded-full object-cover" />
+                                            <img src={resp.submittedBy?.photoUrl || `https://ui-avatars.com/api/?name=${resp.submittedBy?.name || 'U'}`} className="w-10 h-10 rounded-full object-cover" />
                                         </div>
                                         <div className="flex-1">
-                                            <div className="font-bold text-slate-800">{resp.user.name}</div>
-                                            <div className="text-xs text-slate-500 mb-2">{resp.requirement.code} - {resp.requirement.title}</div>
+                                            <div className="font-bold text-slate-800">{resp.submittedBy?.name || 'Usuário'}</div>
+                                            <div className="text-xs text-slate-500 mb-2">{resp.requirement?.code} - {resp.requirement?.title}</div>
 
                                             {resp.answerText && (
                                                 <div className="bg-slate-50 p-2 rounded text-sm text-slate-700 border mb-2">
