@@ -72,4 +72,55 @@ export class RankingRegionalController {
         console.log(`[RankingRegional] Final Effective Scope:`, scope);
         return this.rankingService.getRegionalRanking(scope);
     }
+
+    @Get('debug/:term')
+    async debugRanking(@Param('term') term: string) {
+        // 1. Find Event
+        const events = await this.rankingService['prisma'].regionalEvent.findMany({
+            where: { title: { contains: term, mode: 'insensitive' } }
+        });
+
+        if (events.length === 0) return { message: 'No event found matching ' + term };
+
+        const event = events[0];
+        const results = {
+            event: { id: event.id, title: event.title },
+            requirements: [],
+            responses: { total: 0, approved: 0, distinctClubs: 0 },
+            sunshine_specific: null
+        };
+
+        // 2. Requirements
+        const requirements = await this.rankingService['prisma'].requirement.findMany({
+            where: { regionalEventId: event.id }
+        });
+        results.requirements = requirements.map(r => ({ id: r.id, title: r.title, points: r.points }));
+
+        // 3. Responses
+        const reqIds = requirements.map(r => r.id);
+        const responses = await this.rankingService['prisma'].eventResponse.findMany({
+            where: { requirementId: { in: reqIds } },
+            include: { club: true, requirement: true }
+        });
+
+        results.responses.total = responses.length;
+        results.responses.approved = responses.filter(r => r.status === 'APPROVED').length;
+
+        const clubs = new Set(responses.map(r => r.club.name));
+        results.responses.distinctClubs = clubs.size;
+
+        // 4. Sunshine Specific
+        const sunshineResponses = responses.filter(r => r.club.name.toLowerCase().includes('sunshine'));
+        const sunshinePoints = sunshineResponses
+            .filter(r => r.status === 'APPROVED')
+            .reduce((sum, r) => sum + (r.requirement.points || 0), 0);
+
+        results.sunshine_specific = {
+            found_responses: sunshineResponses.length,
+            statuses: sunshineResponses.map(r => ({ status: r.status, req: r.requirement.title, points: r.requirement.points })),
+            calculated_points: sunshinePoints
+        };
+
+        return results;
+    }
 }
