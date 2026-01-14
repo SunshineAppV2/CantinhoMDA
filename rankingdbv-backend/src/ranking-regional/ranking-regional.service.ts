@@ -8,32 +8,21 @@ export class RankingRegionalService {
 
     async getRegionalRanking(scope: { union?: string, region?: string, district?: string, association?: string, clubId?: string, regionalEventId?: string }) {
         const where: any = {
-            participatesInRanking: true // Only show clubs that participate
+            participatesInRanking: true
         };
 
         console.log(`[RankingService] Calculating Ranking for scope:`, scope);
 
-        // If filtering by Event, we prioritize the event's scope logic? 
-        // Actually, the event implies a scope (the clubs invited to it).
-        // But for now we just filter the Requirements associated with this event.
-
-        if (scope.union && !scope.association && !scope.region && !scope.district) {
-            where.union = scope.union;
-        }
-
+        if (scope.union && !scope.association && !scope.region && !scope.district) where.union = scope.union;
         if (scope.association) {
-            // Priority 1: Association/Mission matching
             where.OR = [
                 { association: scope.association },
                 { mission: scope.association }
             ];
         }
-
         if (scope.region) where.region = scope.region;
         if (scope.district) where.district = scope.district;
         if (scope.clubId) where.id = scope.clubId;
-
-        console.log(`[RankingService] Prisma query filter (where):`, JSON.stringify(where, null, 2));
 
         const clubs = await this.prisma.club.findMany({
             where,
@@ -44,88 +33,95 @@ export class RankingRegionalService {
             }
         });
 
-        console.log(`[RankingService] Found ${clubs.length} clubs matching criteria.`);
+        console.log(`[RankingService] Found ${clubs.length} clubs matching scope.`);
 
+        // Map to store points per club
+        const clubPointsMap = new Map<string, { total: number, percentage: number, stars: number }>();
 
-        // For each club, calculate points.
-        // For simplicity in this first version, we'll sum all points from activity logs of users in that club.
-        // But the request says "separado do ranking interno de pontos do clube".
-        // It should be based on "atividades/requisitos lançados pela Região/Distrito".
+        if (scope.regionalEventId) {
+            // 1. Get Event Requirements
+            const eventRequirements = await this.prisma.requirement.findMany({
+                where: { regionalEventId: scope.regionalEventId }
+            });
 
-        // Let's assume there's a way to mark activities as 'REGIONAL'.
-        // For now, let's calculate based on all activities done by the club members.
+            console.log(`[RankingService] Event ${scope.regionalEventId} has ${eventRequirements.length} requirements.`);
 
-        const ranking = await Promise.all(clubs.map(async (club) => {
-            // If regionalEventId is provided, we filter requirements linked to this event.
-            // But 'users' query gathers points from 'ActivityLog' usually?
-            // Wait, the previous logic was: `sum + (user.points || 0)`.
-            // User.points is a global aggregate.
-            // We need to calculate points dynamicallly suming `UserRequirement` points for this event.
+            if (eventRequirements.length > 0) {
+                const totalPossiblePoints = eventRequirements.reduce((sum, r) => sum + (r.points || 0), 0);
+                const reqIds = eventRequirements.map(r => r.id);
 
-            let totalPoints = 0;
-            let possiblePoints = 0;
-
-            if (scope.regionalEventId) {
-                // Determine requirements for this event
-                const eventRequirements = await this.prisma.requirement.findMany({
-                    where: { regionalEventId: scope.regionalEventId }
+                // 2. Get All Approved Responses for these requirements
+                // We filter by clubs found in scope to avoid calculating for out-of-scope clubs (though unlikely)
+                const responses = await this.prisma.eventResponse.findMany({
+                    where: {
+                        requirementId: { in: reqIds },
+                        status: 'APPROVED',
+                        clubId: { in: clubs.map(c => c.id) }
+                    },
+                    include: { requirement: true }
                 });
 
-                if (eventRequirements.length > 0) {
-                    possiblePoints = eventRequirements.reduce((sum, r) => sum + (r.points || 0), 0);
+                console.log(`[RankingService] Found ${responses.length} APPROVED responses for this event across relevant clubs.`);
 
-                    // Sum points from approved EVENT RESPONSES for this club
-                    // We use the new EventResponse table
-                    const approvedResponses = await this.prisma.eventResponse.findMany({
-                        where: {
-                            requirementId: { in: eventRequirements.map(r => r.id) },
-                            clubId: club.id,
-                            status: 'APPROVED'
-                        },
-                        include: { requirement: true }
-                    });
-
-                    if (club.name.toLowerCase().includes('sunshine')) {
-                        console.log(`[RankingDebug] Club: ${club.name} (ID: ${club.id})`);
-                        console.log(`[RankingDebug] EventId: ${scope.regionalEventId}`);
-                        console.log(`[RankingDebug] Req Count: ${eventRequirements.length}`);
-                        console.log(`[RankingDebug] Approved Responses: ${approvedResponses.length}`);
-                        approvedResponses.forEach(r => console.log(` - Resp: ${r.id}, Points: ${r.requirement.points}`));
-                    }
-
-                    totalPoints = approvedResponses.reduce((sum, resp) => sum + (resp.requirement.points || 0), 0);
-                } else {
-                    totalPoints = 0;
-                    possiblePoints = 1; // Avoid division by zero
+                // 3. Aggregate Points by Club
+                for (const response of responses) {
+                    const current = clubPointsMap.get(response.clubId) || { total: 0, percentage: 0, stars: 0 };
+                    current.total += (response.requirement.points || 0);
+                    clubPointsMap.set(response.clubId, current);
                 }
 
-            } else {
-                // Default Global Ranking (Global Points)
+                // 4. Calculate Percentage & Stars
+                for (const [clubId, stats] of clubPointsMap.entries()) {
+                    const percentage = totalPossiblePoints > 0
+                        ? (stats.total / totalPossiblePoints) * 100
+                        : 0;
+
+                    let stars = 0;
+                    if (stats.total > 0) {
+                        if (percentage >= 90) stars = 5;
+                        else if (percentage >= 75) stars = 4;
+                        else if (percentage >= 50) stars = 3;
+                        else if (percentage >= 25) stars = 2;
+                        else stars = 1;
+                    }
+
+                    stats.percentage = Math.round(percentage); // Round for display
+                    stats.stars = stars;
+                    clubPointsMap.set(clubId, stats);
+                }
+            }
+        } else {
+            // Legacy / Global Points Calculation
+            // Aggregate all user points for each club (?) or use cache.
+            // Keeping previous simple logic: Sum of user.points
+
+            // Optimization: Fetch all users for these clubs in one go? 
+            // Better to simple loop for now as this is "else" case.
+            for (const club of clubs) {
                 const users = await this.prisma.user.findMany({
                     where: { clubId: club.id, isActive: true },
                     select: { points: true }
                 });
-                totalPoints = users.reduce((sum, user) => sum + (user.points || 0), 0);
-                possiblePoints = 10000; // Legacy / Default Goal
+                const total = users.reduce((sum, u) => sum + (u.points || 0), 0);
+                clubPointsMap.set(club.id, { total, percentage: 0, stars: 0 });
             }
-            const percentage = Math.min((totalPoints / possiblePoints) * 100, 100);
+        }
 
-            let stars = 0;
-            if (totalPoints > 0) {
-                stars = Math.max(1, Math.min(5, Math.ceil(percentage / 20)));
-            }
-
+        // Build Final Result
+        const ranking = clubs.map(club => {
+            const stats = clubPointsMap.get(club.id) || { total: 0, percentage: 0, stars: 0 };
             return {
                 id: club.id,
                 name: club.name,
                 logoUrl: club.logoUrl,
-                points: totalPoints,
-                percentage: Math.round(percentage),
-                stars,
+                points: stats.total,
+                percentage: stats.percentage,
+                stars: stats.stars,
                 memberCount: club._count.users
             };
-        }));
+        });
 
+        // Sort by Points Descending
         return ranking.sort((a, b) => b.points - a.points);
     }
 }
