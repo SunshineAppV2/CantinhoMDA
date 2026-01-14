@@ -223,6 +223,9 @@ function ClubEventDetails({ eventId, onBack }: { eventId: string, onBack: () => 
                                             Responder
                                         </button>
                                     )}
+                                    <div className="text-[10px] text-slate-400 mt-1">
+                                        Debug: {req.userProgress?.length ? req.userProgress[0].status : 'No Prog'}
+                                    </div>
                                 </div>
                             </div>
                         </div>

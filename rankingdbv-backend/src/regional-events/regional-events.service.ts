@@ -83,6 +83,12 @@ export class RegionalEventsService {
             }
         });
         if (!event) throw new NotFoundException('Evento não encontrado');
+
+        console.log(`[RegionalEvents] findOne View. ID: ${id}, User: ${userId}`);
+        if (event.requirements?.length > 0) {
+            console.log(`[RegionalEvents] Req 1 Sample:`, JSON.stringify(event.requirements[0]));
+        }
+
         return event;
     }
 
