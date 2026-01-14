@@ -72,7 +72,7 @@ export class RegionalEventsService {
         let clubId: string | undefined;
         if (userId) {
             const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { clubId: true } });
-            clubId = user?.clubId;
+            clubId = user?.clubId || undefined;
         }
 
         const event = await this.prisma.regionalEvent.findUnique({
