@@ -221,12 +221,12 @@ export function RegionalDashboard() {
             {/* UNIT BREAKDOWN (Separation "A CIMA") */}
             {/* We place this prominently */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 col-span-1">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 col-span-1 min-w-0">
                     <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
                         <Tent className="w-5 h-5 text-slate-500" />
                         Unidades por Gênero
                     </h3>
-                    <div className="h-48">
+                    <div className="h-48 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={unitTypeData} layout="vertical">
                                 <XAxis type="number" hide />
@@ -248,9 +248,9 @@ export function RegionalDashboard() {
                 </div>
 
                 {/* Gender Distribution */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 col-span-1">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 col-span-1 min-w-0">
                     <h3 className="text-lg font-bold text-slate-700 mb-4">Gênero dos Membros</h3>
-                    <div className="h-48">
+                    <div className="h-48 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -277,9 +277,9 @@ export function RegionalDashboard() {
                 </div>
 
                 {/* Requirements Chart */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 col-span-1">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 col-span-1 min-w-0">
                     <h3 className="text-lg font-bold text-slate-700 mb-4">Categoria (Idade/Cargo)</h3>
-                    <div className="h-48">
+                    <div className="h-48 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={typeData}>
                                 <XAxis dataKey="name" hide />
