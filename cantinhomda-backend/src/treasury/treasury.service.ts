@@ -15,17 +15,20 @@ export class TreasuryService {
     async create(data: CreateTransactionDto) {
         console.log('[TREASURY] create() called with data:', {
             type: data.type,
-            status: data.isPaid ? 'COMPLETED' : 'PENDING',
+            isPaid: (data as any).isPaid,
             points: data.points,
             category: data.category
         });
 
-        let memberId = data.memberId;
+        // Extract isPaid flag (not a DB field)
+        const { isPaid, ...dbData } = data as any;
+
+        let memberId = dbData.memberId;
 
         // Smart Deduction: If payer is Parent and has 1 child, assign to child
-        if (!memberId && data.payerId) {
+        if (!memberId && dbData.payerId) {
             const payer = await this.prisma.user.findUnique({
-                where: { id: data.payerId },
+                where: { id: dbData.payerId },
                 include: { children: true }
             });
             if (payer && payer.children.length === 1) {
@@ -35,11 +38,11 @@ export class TreasuryService {
 
         const transaction = await this.prisma.transaction.create({
             data: {
-                ...data,
+                ...dbData,
                 memberId,
-                status: (data.type === 'EXPENSE' || data.isPaid) ? 'COMPLETED' : 'PENDING',
-                paymentMethod: data.isPaid ? 'DINHEIRO' : 'DINHEIRO',
-                date: data.isPaid ? new Date() : (data.date || new Date())
+                status: (dbData.type === 'EXPENSE' || isPaid) ? 'COMPLETED' : 'PENDING',
+                paymentMethod: isPaid ? 'DINHEIRO' : 'DINHEIRO',
+                date: isPaid ? new Date() : (dbData.date || new Date())
             }
         });
 
