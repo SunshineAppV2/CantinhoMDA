@@ -202,7 +202,7 @@ export function Store() {
         setIsCreateModalOpen(true);
     };
 
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleUpload = async () => {
         // TODO: Implement image upload via backend API
         toast.info('Upload de imagem temporariamente desabilitado. Use URL direta.');
         return;
