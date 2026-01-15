@@ -1,13 +1,13 @@
 ﻿
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, Settings, Server, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../lib/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { toast } from 'sonner';
-import { safeLocalStorage } from '../lib/storage';
+
 
 export function Login() {
   const navigate = useNavigate();
@@ -24,14 +24,7 @@ export function Login() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
 
-  // Server Config State
-  const [showSettings, setShowSettings] = useState(false);
-  const [serverUrl, setServerUrl] = useState(safeLocalStorage.getItem('api_url') || import.meta.env.VITE_API_URL || 'http://localhost:3000');
 
-  const handleSaveServer = () => {
-    safeLocalStorage.setItem('api_url', serverUrl);
-    window.location.reload(); // Reload to apply new axios config
-  };
 
   // Force cleanup of any stuck modals
   useEffect(() => {
@@ -131,13 +124,7 @@ export function Login() {
             <p className="text-blue-100 text-sm font-medium">Aventureiros</p>
           </div>
 
-          <button
-            onClick={() => setShowSettings(true)}
-            className="absolute top-4 right-4 p-2 text-white/50 hover:text-white transition-colors rounded-full hover:bg-white/10"
-            title="Configurar Servidor"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
+
         </div>
 
         <div className="p-8">
@@ -218,41 +205,7 @@ export function Login() {
         </div>
       </div>
 
-      <Modal isOpen={showSettings} onClose={() => setShowSettings(false)} title="Configuração do Servidor">
-        <div className="space-y-4">
-          <div className="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm flex gap-2 items-start">
-            <Server className="w-5 h-5 shrink-0 mt-0.5" />
-            <p>Aqui você pode definir o endereço do servidor (backend). Isso é útil para acessar pelo celular na mesma rede Wi-Fi.</p>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Endereço do Servidor (URL)</label>
-            <input
-              type="text"
-              value={serverUrl}
-              onChange={(e) => setServerUrl(e.target.value)}
-              placeholder="ex: http://192.168.0.10:3000"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            <p className="text-xs text-slate-500 mt-1">Deve incluir http:// e a porta (geralmente :3000)</p>
-          </div>
-
-          <div className="flex gap-2 justify-end pt-2">
-            <button
-              onClick={() => setShowSettings(false)}
-              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSaveServer}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold"
-            >
-              Salvar e Recarregar
-            </button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Suspended Access Modal */}
       <Modal isOpen={isSuspended} onClose={() => setIsSuspended(false)} title="Acesso Suspenso">
