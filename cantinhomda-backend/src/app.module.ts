@@ -29,6 +29,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 import { RegionalEventsModule } from './regional-events/regional-events.module';
 import { AuditModule } from './audit/audit.module';
+import { RankingModule } from './ranking/ranking.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { AuditModule } from './audit/audit.module';
     SubscriptionsModule,
     RegionalEventsModule,
     AuditModule,
+    RankingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
