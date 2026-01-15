@@ -7,6 +7,8 @@ export const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || safeLocalStorage.getItem('api_url') || 'http://localhost:3000',
 });
 
+console.log('[Axios] API BaseURL:', api.defaults.baseURL);
+
 import { auth } from './firebase';
 
 api.interceptors.request.use(async (config) => {

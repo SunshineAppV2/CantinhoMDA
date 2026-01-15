@@ -157,7 +157,7 @@ export function Treasury() {
                 status: data.isPaid ? 'COMPLETED' : 'PENDING'
             };
 
-            // If multiple members selected, use bulk endpoint
+            console.log(`[Treasury] Posting to ${api.defaults.baseURL || ''}/treasury/bulk with payload:`, { transactions });
             if (data.memberIds && data.memberIds.length > 0) {
                 const transactions = data.memberIds.map((memberId: string) => ({
                     ...basePayload,
@@ -167,6 +167,7 @@ export function Treasury() {
                 await api.post('/treasury/bulk', { transactions });
             } else {
                 // Single transaction
+                console.log(`[Treasury] Posting to ${api.defaults.baseURL || ''}/treasury with payload:`, basePayload);
                 await api.post('/treasury', {
                     ...basePayload,
                     payerId: data.payerId,
@@ -191,6 +192,7 @@ export function Treasury() {
     const updateMutation = useMutation({
         mutationFn: async (data: any) => {
             const { id, ...updateData } = data;
+            console.log(`[Treasury] Patching to ${api.defaults.baseURL || ''}/treasury/${id} with data:`, updateData);
             await api.patch(`/treasury/${id}`, updateData);
         },
         onSuccess: () => {
