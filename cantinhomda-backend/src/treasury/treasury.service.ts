@@ -72,11 +72,11 @@ export class TreasuryService {
             if (data.transactions && Array.isArray(data.transactions)) {
                 console.log(`[TREASURY] Creating ${data.transactions.length} transactions from array`);
                 const operations = data.transactions.map(tx => {
-                    const { id, ...cleanTx } = tx; // Remove any temporary ID
+                    const { id, isPaid, ...cleanTx } = tx; // Remove temporary ID and isPaid flag
                     return this.prisma.transaction.create({
                         data: {
                             ...cleanTx,
-                            status: tx.status || ((tx.type === 'EXPENSE' || tx.isPaid) ? 'COMPLETED' : 'PENDING'),
+                            status: tx.status || ((tx.type === 'EXPENSE' || isPaid) ? 'COMPLETED' : 'PENDING'),
                             date: tx.date ? new Date(tx.date) : new Date(),
                             dueDate: tx.dueDate ? new Date(tx.dueDate) : undefined
                         }
