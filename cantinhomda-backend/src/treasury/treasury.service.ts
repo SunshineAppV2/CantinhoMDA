@@ -13,6 +13,13 @@ export class TreasuryService {
     ) { }
 
     async create(data: CreateTransactionDto) {
+        console.log('[TREASURY] create() called with data:', {
+            type: data.type,
+            status: data.isPaid ? 'COMPLETED' : 'PENDING',
+            points: data.points,
+            category: data.category
+        });
+
         let memberId = data.memberId;
 
         // Smart Deduction: If payer is Parent and has 1 child, assign to child
@@ -31,14 +38,24 @@ export class TreasuryService {
                 ...data,
                 memberId,
                 status: (data.type === 'EXPENSE' || data.isPaid) ? 'COMPLETED' : 'PENDING',
-                paymentMethod: data.isPaid ? 'DINHEIRO' : 'DINHEIRO', // Default
+                paymentMethod: data.isPaid ? 'DINHEIRO' : 'DINHEIRO',
                 date: data.isPaid ? new Date() : (data.date || new Date())
             }
         });
 
+        console.log('[TREASURY] Transaction created:', {
+            id: transaction.id,
+            status: transaction.status,
+            type: transaction.type,
+            points: transaction.points
+        });
+
         // Award points if income and paid immediately
         if (transaction.status === 'COMPLETED' && transaction.type === 'INCOME') {
+            console.log('[TREASURY] Calling handlePointAwarding for transaction:', transaction.id);
             await this.handlePointAwarding(transaction.id);
+        } else {
+            console.log('[TREASURY] Skipping point awarding - status:', transaction.status, 'type:', transaction.type);
         }
 
         return transaction;
@@ -46,9 +63,11 @@ export class TreasuryService {
 
     async createBulk(data: any) {
         try {
+            console.log('[TREASURY] createBulk() called');
+
             // Handle direct array of transactions from frontend
             if (data.transactions && Array.isArray(data.transactions)) {
-                console.log(`[TreasuryService] Creating ${data.transactions.length} transactions from array`);
+                console.log(`[TREASURY] Creating ${data.transactions.length} transactions from array`);
                 const operations = data.transactions.map(tx => {
                     const { id, ...cleanTx } = tx; // Remove any temporary ID
                     return this.prisma.transaction.create({
@@ -62,9 +81,13 @@ export class TreasuryService {
                 });
                 const transactions = await this.prisma.$transaction(operations);
 
+                console.log(`[TREASURY] ${transactions.length} transactions created, checking for points...`);
+
                 // Award points for all completed Income transactions
                 for (const tx of transactions) {
+                    console.log(`[TREASURY] Checking transaction ${tx.id}: status=${tx.status}, type=${tx.type}, points=${tx.points}`);
                     if (tx.status === 'COMPLETED' && tx.type === 'INCOME') {
+                        console.log(`[TREASURY] Calling handlePointAwarding for bulk transaction: ${tx.id}`);
                         await this.handlePointAwarding(tx.id);
                     }
                 }
