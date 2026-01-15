@@ -128,8 +128,7 @@ export function Treasury() {
             console.log('[Treasury] Fetching members for clubId:', user.clubId);
             try {
                 const res = await api.get(`/users?clubId=${user.clubId}`);
-                console.log('[Treasury] Members received:', res.data?.length, 'members');
-                console.log('[Treasury] First 3 members:', res.data?.slice(0, 3));
+                console.log('[Treasury] Members reply:', res.data);
                 return res.data || [];
             } catch (error: any) {
                 console.error('[Treasury] Error fetching members:', error);
@@ -710,7 +709,8 @@ export function Treasury() {
                                 >
                                     <option value="">O Próprio Membro (Auto-pagamento)</option>
                                     {members
-                                        .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                                        ?.filter((m: any) => m && m.name)
+                                        .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''))
                                         .map((m: any) => (
                                             <option key={m.id} value={m.id}>{m.name}</option>
                                         ))}
@@ -720,7 +720,7 @@ export function Treasury() {
                                 <label className="block text-sm font-medium text-slate-700 mb-2">
                                     Membros (Selecione um ou mais)
                                     <span className="ml-2 text-xs text-blue-600 font-bold">
-                                        [{members.length} disponíveis]
+                                        [{members?.length || 0} disponíveis]
                                     </span>
                                 </label>
 
@@ -732,11 +732,14 @@ export function Treasury() {
                                     </div>
                                 )}
 
-                                {!membersLoading && !membersError && members.length === 0 && user?.clubId && (
+                                {!membersLoading && !membersError && (!members || members.length === 0) && user?.clubId && (
                                     <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                                        <p className="text-yellow-700">
-                                            📊 Debug: clubId = {user.clubId}<br />
-                                            API retornou 0 membros
+                                        <p className="text-yellow-700 font-bold">
+                                            Atenção: Nenhum membro encontrado.
+                                        </p>
+                                        <p className="text-yellow-600 text-[10px] mt-1">
+                                            clubId: {user.clubId}<br />
+                                            Certifique-se que o clube possui membros cadastrados e aprovados.
                                         </p>
                                     </div>
                                 )}
@@ -745,7 +748,7 @@ export function Treasury() {
                                         <div className="p-4 text-center text-slate-500">
                                             Carregando membros...
                                         </div>
-                                    ) : members.length === 0 ? (
+                                    ) : (!members || members.length === 0) ? (
                                         <div className="p-4 text-center text-slate-500">
                                             Nenhum membro encontrado no clube.
                                         </div>
@@ -754,9 +757,9 @@ export function Treasury() {
                                             <label className="flex items-center gap-2 p-2 hover:bg-slate-100 rounded cursor-pointer border-b border-slate-200 mb-2 font-bold text-blue-600">
                                                 <input
                                                     type="checkbox"
-                                                    checked={selectedMemberIds.length === members.length && members.length > 0}
+                                                    checked={selectedMemberIds.length === (members?.length || 0) && (members?.length || 0) > 0}
                                                     onChange={(e) => {
-                                                        if (e.target.checked) setSelectedMemberIds(members.map((m: any) => m.id));
+                                                        if (e.target.checked) setSelectedMemberIds(members.filter((m: any) => m && m.id).map((m: any) => m.id));
                                                         else setSelectedMemberIds([]);
                                                     }}
                                                     className="w-4 h-4 text-blue-600 rounded"
@@ -764,13 +767,14 @@ export function Treasury() {
                                                 />
                                                 <span className={editingTransaction ? 'text-slate-400' : ''}>Selecionar Todos</span>
                                             </label>
-                                            {members.map((m: any) => (
-                                                <label key={m.id} className="flex items-center gap-2 p-2 hover:bg-slate-100 rounded cursor-pointer">
+                                            {members.filter((m: any) => m != null).map((m: any) => (
+                                                <label key={m.id || Math.random().toString()} className="flex items-center gap-2 p-2 hover:bg-slate-100 rounded cursor-pointer">
                                                     <input
                                                         type="checkbox"
                                                         checked={selectedMemberIds.includes(m.id) || (!!editingTransaction && editingTransaction.payer?.id === m.id)}
                                                         onChange={() => {
                                                             if (editingTransaction) return;
+                                                            if (!m.id) return;
                                                             setSelectedMemberIds(prev =>
                                                                 prev.includes(m.id)
                                                                     ? prev.filter(id => id !== m.id)
@@ -780,7 +784,7 @@ export function Treasury() {
                                                         className="w-4 h-4 text-blue-600 rounded"
                                                         disabled={!!editingTransaction}
                                                     />
-                                                    <span className={editingTransaction ? 'text-slate-400' : ''}>{m.name}</span>
+                                                    <span className={editingTransaction ? 'text-slate-400' : ''}>{m.name || 'Membro sem nome'}</span>
                                                 </label>
                                             ))}
                                         </>
