@@ -26,7 +26,7 @@ export class TreasuryService {
             }
         }
 
-        return this.prisma.transaction.create({
+        const transaction = await this.prisma.transaction.create({
             data: {
                 ...data,
                 memberId,
@@ -35,6 +35,13 @@ export class TreasuryService {
                 date: data.isPaid ? new Date() : (data.date || new Date())
             }
         });
+
+        // Award points if income and paid immediately
+        if (transaction.status === 'COMPLETED' && transaction.type === 'INCOME') {
+            await this.handlePointAwarding(transaction.id);
+        }
+
+        return transaction;
     }
 
     async createBulk(data: any) {
@@ -53,7 +60,16 @@ export class TreasuryService {
                         }
                     });
                 });
-                return await this.prisma.$transaction(operations);
+                const transactions = await this.prisma.$transaction(operations);
+
+                // Award points for all completed Income transactions
+                for (const tx of transactions) {
+                    if (tx.status === 'COMPLETED' && tx.type === 'INCOME') {
+                        await this.handlePointAwarding(tx.id);
+                    }
+                }
+
+                return transactions;
             }
 
             const { memberIds, installments = 1, ...txData } = data;
@@ -62,8 +78,8 @@ export class TreasuryService {
             }
 
             const iterations = txData.recurrence ? (Number(installments) || 1) : 1;
-            // ... (rest of existing logic)
-            // Existing logic to fetch users and create operations
+
+            // Fetch users
             const users = await this.prisma.user.findMany({
                 where: { id: { in: memberIds } },
                 select: { id: true, name: true, parentId: true }
@@ -107,7 +123,16 @@ export class TreasuryService {
                 }
             }
 
-            return await this.prisma.$transaction(operations);
+            const transactions = await this.prisma.$transaction(operations);
+
+            // Award points for all completed Income transactions
+            for (const tx of transactions) {
+                if (tx.status === 'COMPLETED' && tx.type === 'INCOME') {
+                    await this.handlePointAwarding(tx.id);
+                }
+            }
+
+            return transactions;
         } catch (error) {
             console.error('Error in createBulk:', error);
             throw new HttpException(
@@ -136,6 +161,20 @@ export class TreasuryService {
 
     async remove(id: string) {
         try {
+            // 1. Fetch transaction before deletion to reverse points if needed
+            const transaction = await this.prisma.transaction.findUnique({
+                where: { id },
+                include: { payer: true }
+            });
+
+            if (!transaction) {
+                throw new HttpException('Transação não encontrada', HttpStatus.NOT_FOUND);
+            }
+
+            // 2. Reverse points if this was a completed income transaction
+            await this.handlePointReversal(transaction);
+
+            // 3. Delete the transaction
             return await this.prisma.transaction.delete({
                 where: { id }
             });
@@ -186,18 +225,7 @@ export class TreasuryService {
     }
 
     async settle(id: string, data: SettleTransactionDto) {
-        const tx = await this.prisma.transaction.findUnique({ where: { id } });
-        if (!tx) throw new Error('Transação não encontrada');
-
         const paymentDate = new Date(data.paymentDate);
-        let pointsToAward = tx.points || 0;
-        let isLate = false;
-
-        // Apply Penalty if late
-        if (tx.dueDate && paymentDate > tx.dueDate) {
-            pointsToAward = Math.floor(pointsToAward * 0.5);
-            isLate = true;
-        }
 
         const updated = await this.prisma.transaction.update({
             where: { id },
@@ -207,57 +235,13 @@ export class TreasuryService {
             }
         });
 
-        const beneficiaryId = tx.memberId || tx.payerId;
-        if (pointsToAward > 0 && beneficiaryId) {
-            await this.prisma.user.update({
-                where: { id: beneficiaryId },
-                data: {
-                    points: { increment: pointsToAward },
-                    pointsHistory: {
-                        create: {
-                            amount: pointsToAward,
-                            reason: `Pagamento: ${tx.category}`,
-                            source: 'PURCHASE'
-                        }
-                    }
-                }
-            });
-        }
-
-        if (tx.payerId) {
-            const message = isLate
-                ? `Pagamento de ${tx.category} confirmado com atraso. Você recebeu ${pointsToAward} pontos (50% do total).`
-                : `Seu pagamento de ${tx.category} foi registrado manualmente. Você recebeu ${pointsToAward} pontos!`;
-
-            await this.notificationsService.send(
-                tx.payerId,
-                'Pagamento Confirmado',
-                message,
-                'SUCCESS'
-            );
-        }
+        await this.handlePointAwarding(id, paymentDate);
 
         return updated;
     }
 
     async approve(id: string) {
-        const tx = await this.prisma.transaction.findUnique({
-            where: { id },
-            include: { payer: true }
-        });
-
-        if (!tx) throw new Error('Transação não encontrada');
-        if (tx.status === 'COMPLETED') return tx;
-
         const approvalDate = new Date();
-        let pointsToAward = tx.points || 0;
-        let isLate = false;
-
-        // Apply Penalty if late (compare approval/payment date vs due date)
-        if (tx.dueDate && approvalDate > tx.dueDate) {
-            pointsToAward = Math.floor(pointsToAward * 0.5);
-            isLate = true;
-        }
 
         // 1. Update Status
         const updated = await this.prisma.transaction.update({
@@ -265,37 +249,8 @@ export class TreasuryService {
             data: { status: 'COMPLETED', date: approvalDate }
         });
 
-        // 2. Award Points
-        const beneficiaryId = tx.memberId || tx.payerId;
-        if (pointsToAward > 0 && beneficiaryId) {
-            await this.prisma.user.update({
-                where: { id: beneficiaryId },
-                data: {
-                    points: { increment: pointsToAward },
-                    pointsHistory: {
-                        create: {
-                            amount: pointsToAward,
-                            reason: `Pagamento Aprovado: ${tx.category}`,
-                            source: 'PURCHASE'
-                        }
-                    }
-                }
-            });
-        }
-
-        // 3. Notify User
-        if (tx.payerId) {
-            const message = isLate
-                ? `Pagamento de ${tx.category} aprovado com atraso. Você recebeu ${pointsToAward} pontos (50% do total).`
-                : `Seu comprovante de ${tx.category} foi aprovado! Você recebeu ${pointsToAward} pontos.`;
-
-            await this.notificationsService.send(
-                tx.payerId,
-                'Pagamento Aprovado',
-                message,
-                'SUCCESS'
-            );
-        }
+        // 2. Award Points and Notify
+        await this.handlePointAwarding(id, approvalDate);
 
         return updated;
     }
@@ -342,6 +297,116 @@ export class TreasuryService {
             income,
             expense
         };
+    }
+
+    /**
+     * Centralized logic to award points and notify user when a transaction is PAID
+     */
+    private async handlePointAwarding(transactionId: string, effectiveDate: Date = new Date()) {
+        try {
+            const tx = await this.prisma.transaction.findUnique({
+                where: { id: transactionId },
+                include: { payer: true }
+            });
+
+            if (!tx || tx.status !== 'COMPLETED' || tx.type !== 'INCOME') return;
+
+            let pointsToAward = tx.points || 0;
+            let isLate = false;
+
+            // Apply Penalty if late (payment/approval after due date)
+            if (tx.dueDate && effectiveDate > tx.dueDate) {
+                pointsToAward = Math.floor(pointsToAward * 0.5);
+                isLate = true;
+            }
+
+            if (pointsToAward <= 0) return;
+
+            const beneficiaryId = tx.memberId || tx.payerId;
+            if (beneficiaryId) {
+                // 1. Award Points to User
+                await this.prisma.user.update({
+                    where: { id: beneficiaryId },
+                    data: {
+                        points: { increment: pointsToAward },
+                        pointsHistory: {
+                            create: {
+                                amount: pointsToAward,
+                                reason: `Pagamento: ${tx.category}`,
+                                source: 'PURCHASE'
+                            }
+                        }
+                    }
+                });
+
+                // 2. Notify Payer
+                if (tx.payerId) {
+                    const message = isLate
+                        ? `Pagamento de ${tx.category} confirmado com atraso. Você recebeu ${pointsToAward} pontos (50% do total).`
+                        : `Seu pagamento de ${tx.category} foi confirmado! Você recebeu ${pointsToAward} pontos.`;
+
+                    await this.notificationsService.send(
+                        tx.payerId,
+                        'Ranking Atualizado',
+                        message,
+                        'SUCCESS'
+                    );
+                }
+            }
+        } catch (error) {
+            console.error(`Error awarding points for tx ${transactionId}:`, error);
+        }
+    }
+
+    /**
+     * Reverse points when a transaction is deleted
+     */
+    private async handlePointReversal(transaction: any) {
+        try {
+            // Only reverse points for completed income transactions
+            if (transaction.status !== 'COMPLETED' || transaction.type !== 'INCOME') {
+                return;
+            }
+
+            const pointsAwarded = transaction.points || 0;
+            if (pointsAwarded <= 0) return;
+
+            const beneficiaryId = transaction.memberId || transaction.payerId;
+            if (!beneficiaryId) return;
+
+            // Calculate the actual points that were awarded (considering late penalty)
+            let actualPoints = pointsAwarded;
+            if (transaction.dueDate && transaction.date > transaction.dueDate) {
+                actualPoints = Math.floor(pointsAwarded * 0.5);
+            }
+
+            // Subtract points from user
+            await this.prisma.user.update({
+                where: { id: beneficiaryId },
+                data: {
+                    points: { decrement: actualPoints },
+                    pointsHistory: {
+                        create: {
+                            amount: -actualPoints,
+                            reason: `Estorno: ${transaction.category} (transação excluída)`,
+                            source: 'PURCHASE'
+                        }
+                    }
+                }
+            });
+
+            // Notify user about point reversal
+            if (transaction.payerId) {
+                await this.notificationsService.send(
+                    transaction.payerId,
+                    'Pontos Estornados',
+                    `A transação "${transaction.category}" foi excluída. ${actualPoints} pontos foram removidos do seu ranking.`,
+                    'INFO'
+                );
+            }
+        } catch (error) {
+            console.error(`Error reversing points for deleted transaction:`, error);
+        }
     }
 }
 // Force reload
