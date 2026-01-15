@@ -812,29 +812,23 @@ export function Treasury() {
                                 </label>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            {/* Always show points field for INCOME transactions */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    Pontos a conceder ao membro
+                                    <span className="text-xs text-slate-400 font-normal ml-2">
+                                        (Deixe 0 para não pontuar)
+                                    </span>
+                                </label>
                                 <input
-                                    type="checkbox"
-                                    id="genPoints"
-                                    checked={generatePoints}
-                                    onChange={e => setGeneratePoints(e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 rounded"
+                                    type="number"
+                                    value={points}
+                                    onChange={e => setPoints(Number(e.target.value))}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                                    min="0"
+                                    placeholder="Ex: 100"
                                 />
-                                <label htmlFor="genPoints" className="text-sm text-slate-700">Gerar pontuação ao confirmar?</label>
                             </div>
-
-                            {generatePoints && (
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Pontos a conceder</label>
-                                    <input
-                                        type="number"
-                                        value={points}
-                                        onChange={e => setPoints(Number(e.target.value))}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg"
-                                        min="0"
-                                    />
-                                </div>
-                            )}
 
                             <div className="flex items-center gap-2">
                                 <input
