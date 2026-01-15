@@ -507,6 +507,11 @@ export function Treasury() {
                                                     className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200" title="Rejeitar">
                                                     <X className="w-5 h-5" />
                                                 </button>
+                                                <button
+                                                    onClick={() => handleDelete(t.id)}
+                                                    className="p-1.5 bg-slate-100 text-slate-700 rounded hover:bg-slate-200" title="Excluir Definitivamente">
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

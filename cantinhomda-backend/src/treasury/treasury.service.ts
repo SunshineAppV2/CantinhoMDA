@@ -158,10 +158,35 @@ export class TreasuryService {
     async update(id: string, data: UpdateTransactionDto) {
         try {
             const { id: _id, clubId, ...updateData } = data as any;
-            return await this.prisma.transaction.update({
+
+            // 1. Get current state to check if we need to reverse points
+            const oldTransaction = await this.prisma.transaction.findUnique({
+                where: { id }
+            });
+
+            if (!oldTransaction) {
+                throw new HttpException('Transação não encontrada', HttpStatus.NOT_FOUND);
+            }
+
+            // 2. Reverse points if it was previously valid for points
+            if (oldTransaction.type === 'INCOME' && oldTransaction.status === 'COMPLETED' && oldTransaction.points > 0) {
+                console.log('[TREASURY] update() - Revertendo pontos antigos antes da atualização');
+                await this.reversePoints(oldTransaction);
+            }
+
+            // 3. Update transaction
+            const newTransaction = await this.prisma.transaction.update({
                 where: { id },
                 data: updateData
             });
+
+            // 4. Award points if it is now valid for points
+            if (newTransaction.type === 'INCOME' && newTransaction.status === 'COMPLETED' && newTransaction.points > 0) {
+                console.log('[TREASURY] update() - Concedendo novos pontos após atualização');
+                await this.awardPoints(newTransaction, newTransaction.date);
+            }
+
+            return newTransaction;
         } catch (error) {
             console.error('[TREASURY] update() - Erro:', error);
             throw new HttpException(
