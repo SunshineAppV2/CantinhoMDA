@@ -450,15 +450,11 @@ export function Requirements() {
                     ).map(([area, reqs]) => (
                         <div key={area} className="space-y-3">
                             {/* Area Header */}
-                            <div className="flex items-center gap-3 mt-8 first:mt-0">
-                                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent"></div>
-                                <h3 className="font-bold text-slate-700 text-lg px-4 py-2 bg-slate-50 rounded-full border border-slate-200">
-                                    {area}
-                                </h3>
-                                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent"></div>
-                            </div>
+                            <h3 className="font-bold text-slate-800 text-base border-b border-slate-200 pb-2 mb-3 mt-6 first:mt-0">
+                                {area}
+                            </h3>
 
-                            {/* Requirements Grid */}
+                            {/* Requirements Grid - 2 columns */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {reqs.map(req => {
                                     const isCompleted = req.userProgress?.some(up => up.status === 'APPROVED' || up.status === 'COMPLETED');
@@ -470,43 +466,36 @@ export function Requirements() {
                                         <div
                                             key={req.id}
                                             onClick={() => handleReqClick(req)}
-                                            className={`group relative overflow-hidden rounded-xl border-2 transition-all duration-300 cursor-pointer ${isCompleted
-                                                    ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 hover:shadow-lg hover:shadow-green-100'
+                                            className={`group relative p-4 rounded-lg border transition-all duration-200 cursor-pointer flex items-start gap-3 ${isCompleted
+                                                    ? 'bg-green-50 border-green-200 hover:shadow-md'
                                                     : isPending
                                                         ? hasAnswer
-                                                            ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-300 hover:shadow-lg hover:shadow-yellow-100'
-                                                            : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-300 hover:shadow-lg hover:shadow-blue-100'
-                                                        : 'bg-white border-slate-200 hover:border-green-300 hover:shadow-lg hover:shadow-slate-100'
+                                                            ? 'bg-yellow-50 border-yellow-200 hover:shadow-md'
+                                                            : 'bg-blue-50 border-blue-200 hover:shadow-md'
+                                                        : 'bg-white border-slate-200 hover:border-green-300 hover:shadow-md'
                                                 }`}
                                         >
-                                            {/* Decorative Corner */}
-                                            <div className={`absolute top-0 right-0 w-20 h-20 transform translate-x-8 -translate-y-8 rotate-45 ${isCompleted ? 'bg-green-200/30' : isPending ? (hasAnswer ? 'bg-yellow-200/30' : 'bg-blue-200/30') : 'bg-slate-100/50'
-                                                }`}></div>
-
-                                            <div className="relative p-5 flex items-start gap-4">
-                                                {/* Status Icon */}
-                                                <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${isCompleted
-                                                        ? 'bg-green-500 shadow-lg shadow-green-200'
+                                            {/* Checkbox/Status Icon */}
+                                            <div className="shrink-0 mt-0.5">
+                                                <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${isCompleted
+                                                        ? 'bg-green-500 border-green-500'
                                                         : isPending
                                                             ? hasAnswer
-                                                                ? 'bg-yellow-400 shadow-lg shadow-yellow-200'
-                                                                : 'bg-blue-500 shadow-lg shadow-blue-200'
-                                                            : 'bg-slate-100 group-hover:bg-green-100 group-hover:shadow-md'
+                                                                ? 'bg-yellow-100 border-yellow-400'
+                                                                : 'bg-blue-100 border-blue-400'
+                                                            : 'border-slate-300 group-hover:border-green-400'
                                                     }`}>
-                                                    {isCompleted ? (
-                                                        <ShieldCheck className="w-6 h-6 text-white" />
-                                                    ) : isPending ? (
-                                                        <Circle className={`w-5 h-5 ${hasAnswer ? 'text-white' : 'text-white'} fill-current`} />
-                                                    ) : (
-                                                        <Circle className="w-5 h-5 text-slate-400 group-hover:text-green-500" />
-                                                    )}
+                                                    {isCompleted && <Circle className="w-3.5 h-3.5 text-white fill-current" />}
+                                                    {isPending && <Circle className={`w-3 h-3 ${hasAnswer ? 'text-yellow-600' : 'text-blue-600'}`} />}
                                                 </div>
+                                            </div>
 
-                                                {/* Content */}
-                                                <div className="flex-1 min-w-0">
+                                            {/* Content */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-start gap-2 mb-1">
                                                     {/* Code Badge */}
                                                     {req.code && (
-                                                        <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full mb-2 ${isCompleted
+                                                        <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded ${isCompleted
                                                                 ? 'bg-green-200 text-green-800'
                                                                 : isPending
                                                                     ? hasAnswer ? 'bg-yellow-200 text-yellow-800' : 'bg-blue-200 text-blue-800'
@@ -516,70 +505,63 @@ export function Requirements() {
                                                         </span>
                                                     )}
 
-                                                    {/* Description */}
-                                                    <p className={`text-sm font-medium leading-relaxed mb-2 ${isCompleted ? 'text-slate-500 line-through' : 'text-slate-800'
-                                                        }`}>
-                                                        {req.description}
-                                                    </p>
-
-                                                    {/* Badges */}
-                                                    <div className="flex flex-wrap gap-2 items-center">
-                                                        {req.clubId && (
-                                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded-full uppercase tracking-tight">
-                                                                <ShieldCheck className="w-3 h-3" />
-                                                                Personalizado
-                                                            </span>
-                                                        )}
-                                                        {isPending && (
-                                                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tight ${hasAnswer
-                                                                    ? 'bg-yellow-200 text-yellow-800'
-                                                                    : 'bg-blue-200 text-blue-800'
-                                                                }`}>
-                                                                {hasAnswer ? '⏳ Aguardando' : '📝 A Fazer'}
-                                                            </span>
-                                                        )}
-                                                        {isCompleted && (
-                                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-green-200 text-green-800 px-2 py-1 rounded-full uppercase tracking-tight">
-                                                                ✓ Concluído
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                    {/* Personalizado Badge */}
+                                                    {req.clubId && (
+                                                        <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase">
+                                                            <ShieldCheck className="w-2.5 h-2.5" />
+                                                            Personalizado
+                                                        </span>
+                                                    )}
                                                 </div>
 
-                                                {/* Admin Actions */}
-                                                {isAdmin && (
-                                                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                                        {req.clubId && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (confirm('Deseja excluir esta personalização e voltar ao padrão global?')) {
-                                                                        handleDelete(req.id);
-                                                                    }
-                                                                }}
-                                                                className="p-1.5 bg-white/90 backdrop-blur-sm rounded-lg text-amber-600 hover:bg-amber-50 shadow-sm border border-amber-200"
-                                                                title="Voltar ao Padrão Global"
-                                                            >
-                                                                <RotateCcw className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); openEditModal(req); }}
-                                                            className="p-1.5 bg-white/90 backdrop-blur-sm rounded-lg text-blue-600 hover:bg-blue-50 shadow-sm border border-blue-200"
-                                                            title="Editar"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleDelete(req.id); }}
-                                                            className="p-1.5 bg-white/90 backdrop-blur-sm rounded-lg text-red-600 hover:bg-red-50 shadow-sm border border-red-200"
-                                                            title="Excluir"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
+                                                {/* Description */}
+                                                <p className={`text-sm leading-relaxed ${isCompleted ? 'text-slate-500 line-through' : 'text-slate-800'
+                                                    }`}>
+                                                    {req.description}
+                                                </p>
+
+                                                {/* Status Text */}
+                                                {isPending && (
+                                                    <p className={`text-xs mt-1.5 font-semibold ${hasAnswer ? 'text-yellow-700' : 'text-blue-700'
+                                                        }`}>
+                                                        {hasAnswer ? 'Aguardando Aprovação' : 'A Fazer (Atribuído)'}
+                                                    </p>
                                                 )}
                                             </div>
+
+                                            {/* Admin Actions */}
+                                            {isAdmin && (
+                                                <div className="shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                                    {req.clubId && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (confirm('Deseja excluir esta personalização e voltar ao padrão global?')) {
+                                                                    handleDelete(req.id);
+                                                                }
+                                                            }}
+                                                            className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded"
+                                                            title="Voltar ao Padrão Global"
+                                                        >
+                                                            <RotateCcw className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); openEditModal(req); }}
+                                                        className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                                        title="Editar"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDelete(req.id); }}
+                                                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                                        title="Excluir"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
