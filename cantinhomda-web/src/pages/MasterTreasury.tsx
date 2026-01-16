@@ -58,49 +58,10 @@ export function MasterTreasury() {
     const { data: transactions = [] } = useQuery<MasterTransaction[]>({
         queryKey: ['master-transactions', startDate, endDate, filterClubId],
         queryFn: async () => {
-            let q = query(collection(db, 'master_transactions'));
-
-            if (filterClubId) {
-                q = query(q, where('sourceClubId', '==', filterClubId));
-            }
-
-            // Note: Range filters on different fields usually require composite index.
-            // Client-side filtering for date is safer for now if dataset is small.
-            // Otherwise we need 'date' index.
-
-            const snapshot = await getDocs(q);
-            let data = await Promise.all(snapshot.docs.map(async (docSnap) => {
-                const t = docSnap.data() as any;
-                let sourceClub = undefined;
-                if (t.sourceClubId) {
-                    // Optimally we'd have a clubs map, but fetching single doc is ok if list small
-                    // Better: use the 'clubs' list we already fetched if available?
-                    // But clubs might not be loaded yet or this query runs parallel.
-                    // Let's rely on stored club data if we denormalize, but we didn't.
-                    // Fallback: Fetch club doc
-                    const cSnap = await getDoc(doc(db, 'clubs', t.sourceClubId));
-                    if (cSnap.exists()) {
-                        sourceClub = cSnap.data();
-                    }
-                }
-
-                return {
-                    id: docSnap.id,
-                    ...t,
-                    sourceClub
-                } as MasterTransaction;
-            }));
-
-            // Client-side Filter Date
-            if (startDate) {
-                data = data.filter(t => t.date >= startDate);
-            }
-            if (endDate) {
-                data = data.filter(t => t.date <= endDate);
-            }
-
-            // Sort by Date Desc
-            return data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            // TODO: Implement API endpoint /master-treasury/transactions
+            // For now, return empty array
+            console.warn('MasterTreasury transactions API not yet implemented');
+            return [];
         }
     });
 
@@ -175,7 +136,9 @@ export function MasterTreasury() {
     // Mutations
     const createMutation = useMutation({
         mutationFn: async (data: any) => {
-            await addDoc(collection(db, 'master_transactions'), data);
+            // TODO: Implement API endpoint POST /master-treasury/transactions
+            console.warn('Create master transaction API not yet implemented');
+            throw new Error('API not implemented');
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['master-transactions'] });
@@ -188,7 +151,9 @@ export function MasterTreasury() {
 
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => {
-            await deleteDoc(doc(db, 'master_transactions', id));
+            // TODO: Implement API endpoint DELETE /master-treasury/transactions/:id
+            console.warn('Delete master transaction API not yet implemented');
+            throw new Error('API not implemented');
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['master-transactions'] });
