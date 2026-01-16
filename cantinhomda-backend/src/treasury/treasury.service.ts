@@ -198,7 +198,8 @@ export class TreasuryService {
 
     async remove(id: string, user: any) {
         try {
-            console.log(`[TREASURY] remove() - User ${user.email} attempting to delete ${id}`);
+            const userEmail = user?.email || 'unknown';
+            console.log(`[TREASURY] remove() - User ${userEmail} attempting to delete ${id}`);
 
             const transaction = await this.prisma.transaction.findUnique({
                 where: { id }
@@ -216,7 +217,7 @@ export class TreasuryService {
                 throw new HttpException('Acesso negado: Apenas a diretoria pode excluir transações.', HttpStatus.FORBIDDEN);
             }
 
-            if (!isMaster && transaction.clubId !== user.clubId) {
+            if (!isMaster && transaction.clubId !== user?.clubId) {
                 throw new HttpException('Acesso negado: Você não tem permissão para excluir esta transação.', HttpStatus.FORBIDDEN);
             }
 
@@ -430,6 +431,8 @@ export class TreasuryService {
 
     private async reversePoints(transaction: any) {
         try {
+            if (!transaction || !transaction.id) return;
+
             console.log('[POINTS] Revertendo pontos:', {
                 id: transaction.id,
                 points: transaction.points
@@ -442,8 +445,12 @@ export class TreasuryService {
 
             let pointsToReverse = transaction.points;
 
-            // Calculate penalty that was applied (if it was late, we only award half, so we only reverse half)
-            if (transaction.dueDate && transaction.date && new Date(transaction.date) > new Date(transaction.dueDate)) {
+            // Calculate penalty that was applied
+            // Use safe date conversion
+            const txDate = transaction.date ? new Date(transaction.date) : null;
+            const dueDate = transaction.dueDate ? new Date(transaction.dueDate) : null;
+
+            if (txDate && dueDate && txDate > dueDate) {
                 pointsToReverse = Math.floor(pointsToReverse * 0.5);
             }
 
