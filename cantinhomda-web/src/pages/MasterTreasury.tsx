@@ -4,11 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Plus, TrendingUp, TrendingDown, DollarSign, Building2, Globe, MapPin, Trash2 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { SimpleLineChart, CashFlowChart } from '../components/Charts';
-
-// Firestore Imports
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { toast } from 'sonner';
+import { api } from '../lib/axios';
 
 interface MasterTransaction {
     id: string;
@@ -52,8 +49,8 @@ export function MasterTreasury() {
     const { data: clubs = [] } = useQuery({
         queryKey: ['clubs-dashboard'],
         queryFn: async () => {
-            const snaps = await getDocs(collection(db, 'clubs'));
-            return snaps.docs.map(d => ({ id: d.id, ...d.data() }));
+            const res = await api.get('/clubs');
+            return res.data;
         },
         staleTime: 5 * 60 * 1000
     });

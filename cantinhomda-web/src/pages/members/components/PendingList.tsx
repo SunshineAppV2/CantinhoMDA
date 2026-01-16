@@ -1,7 +1,5 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, query, where, getDocs, updateDoc, doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { api } from '../../../lib/axios';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ListChecks, User, FileText, Check, X } from 'lucide-react';
 import { forwardRef } from 'react';
@@ -14,29 +12,8 @@ export const PendingApprovalsList = forwardRef<HTMLDivElement>((_props, ref) => 
         queryKey: ['pending-approvals'],
         queryFn: async () => {
             if (!user?.clubId) return [];
-            // Fetch submissions waiting for approval
-            const q = query(collection(db, 'submissions'), where('clubId', '==', user.clubId), where('status', '==', 'WAITING_APPROVAL'));
-            const snapshot = await getDocs(q);
-
-            // Manual Join
-            const approvals = await Promise.all(snapshot.docs.map(async (d) => {
-                const data = d.data();
-                // Fetch User
-                const userSnap = await getDoc(doc(db, 'users', data.userId));
-                const userData = userSnap.exists() ? userSnap.data() : { name: 'Usuário Desconhecido' };
-
-                // Fetch Requirement
-                const reqSnap = await getDoc(doc(db, 'requirements', data.requirementId));
-                const reqData = reqSnap.exists() ? reqSnap.data() : { code: 'REQ', description: 'Requisito' };
-
-                return {
-                    id: d.id,
-                    ...data,
-                    user: userData,
-                    requirement: reqData
-                };
-            }));
-            return approvals;
+            const res = await api.get('/activities/pending-approvals');
+            return res.data;
         },
         enabled: ['COUNSELOR', 'ADMIN', 'OWNER', 'INSTRUCTOR'].includes(user?.role || ''),
         retry: false
@@ -44,7 +21,7 @@ export const PendingApprovalsList = forwardRef<HTMLDivElement>((_props, ref) => 
 
     const approveMutation = useMutation({
         mutationFn: async (id: string) => {
-            await updateDoc(doc(db, 'submissions', id), { status: 'COMPLETED', completedAt: new Date().toISOString() });
+            await api.patch(`/activities/submissions/${id}/approve`);
         },
         onSuccess: () => {
             refetch();
@@ -55,7 +32,7 @@ export const PendingApprovalsList = forwardRef<HTMLDivElement>((_props, ref) => 
 
     const rejectMutation = useMutation({
         mutationFn: async (id: string) => {
-            await updateDoc(doc(db, 'submissions', id), { status: 'PENDING' }); // Revert to PENDING so user can try again
+            await api.patch(`/activities/submissions/${id}/reject`);
         },
         onSuccess: () => {
             refetch();
@@ -125,27 +102,8 @@ export function PendingDeliveriesList() {
         queryKey: ['pending-deliveries'],
         queryFn: async () => {
             if (!user?.clubId) return [];
-            const q = query(collection(db, 'submissions'), where('clubId', '==', user.clubId), where('status', '==', 'PENDING'));
-            const snapshot = await getDocs(q);
-
-            const deliveries = await Promise.all(snapshot.docs.map(async (d) => {
-                const data = d.data();
-                // Fetch User
-                const userSnap = await getDoc(doc(db, 'users', data.userId));
-                const userData = userSnap.exists() ? userSnap.data() : { name: 'Usuário Desconhecido' };
-
-                // Fetch Requirement
-                const reqSnap = await getDoc(doc(db, 'requirements', data.requirementId));
-                const reqData = reqSnap.exists() ? reqSnap.data() : { code: 'REQ', description: 'Requisito' };
-
-                return {
-                    id: d.id,
-                    ...data,
-                    user: userData,
-                    requirement: reqData
-                };
-            }));
-            return deliveries;
+            const res = await api.get('/activities/pending-deliveries');
+            return res.data;
         },
         enabled: ['COUNSELOR', 'ADMIN', 'OWNER', 'INSTRUCTOR'].includes(user?.role || ''),
         retry: false
