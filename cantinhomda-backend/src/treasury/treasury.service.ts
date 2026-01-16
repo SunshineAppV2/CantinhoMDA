@@ -220,10 +220,15 @@ export class TreasuryService {
                 throw new HttpException('Acesso negado: Você não tem permissão para excluir esta transação.', HttpStatus.FORBIDDEN);
             }
 
-            // Reverse points if eligible
+            // Reverse points if eligible - WRAPPED IN TRY/CATCH TO PREVENT BLOCKING DELETION
             if (transaction.type === 'INCOME' && transaction.status === 'COMPLETED' && transaction.points > 0) {
-                console.log('[TREASURY] remove() - Revertendo pontos antes da exclusão');
-                await this.reversePoints(transaction);
+                try {
+                    console.log('[TREASURY] remove() - Tentando reverter pontos...');
+                    await this.reversePoints(transaction);
+                } catch (pointError) {
+                    console.error('[TREASURY] remove() - Falha não-crítica ao reverter pontos:', pointError);
+                    // We continue even if points reversal fails to ensure transaction CAN be deleted
+                }
             }
 
             const deleted = await this.prisma.transaction.delete({ where: { id } });
@@ -464,17 +469,26 @@ export class TreasuryService {
 
             console.log(`[POINTS] ✅ ${pointsToReverse} pontos revertidos de ${beneficiaryId}`);
 
-            // Notify user
+            // Notify user - WRAPPED IN TRY/CATCH
             if (transaction.payerId) {
-                await this.notificationsService.send(
-                    transaction.payerId,
-                    'Pontos Removidos',
-                    `${pointsToReverse} pontos foram removidos devido à exclusão de: ${transaction.category}`,
-                    'INFO'
-                );
+                try {
+                    // Check if user still exists before notifying
+                    const userExists = await this.prisma.user.findUnique({ where: { id: transaction.payerId }, select: { id: true } });
+                    if (userExists) {
+                        await this.notificationsService.send(
+                            transaction.payerId,
+                            'Pontos Removidos',
+                            `${pointsToReverse} pontos foram removidos devido à exclusão de: ${transaction.category}`,
+                            'INFO'
+                        );
+                    }
+                } catch (notifError) {
+                    console.warn('[POINTS] Falha ao enviar notificação de estorno:', notifError);
+                }
             }
         } catch (error) {
             console.error('[POINTS] ❌ Erro ao reverter pontos:', error);
+            // Non-blocking error
         }
     }
 }
