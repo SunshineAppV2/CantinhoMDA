@@ -315,7 +315,7 @@ export class ActivitiesService {
         const submissions = await this.prisma.userRequirement.findMany({
             where: {
                 user: { clubId },
-                status: 'WAITING_APPROVAL'
+                status: 'PENDING'  // Changed from WAITING_APPROVAL
             },
             include: {
                 user: {
@@ -363,7 +363,7 @@ export class ActivitiesService {
                     }
                 }
             },
-            orderBy: { assignedAt: 'desc' }
+            orderBy: { createdAt: 'desc' }  // Changed from assignedAt
         });
 
         return submissions;
@@ -374,7 +374,7 @@ export class ActivitiesService {
         return this.prisma.userRequirement.update({
             where: { id },
             data: {
-                status: 'COMPLETED',
+                status: 'APPROVED',  // Changed from COMPLETED
                 completedAt: new Date()
             }
         });
@@ -385,7 +385,7 @@ export class ActivitiesService {
         return this.prisma.userRequirement.update({
             where: { id },
             data: {
-                status: 'PENDING'
+                status: 'REJECTED'  // Changed from PENDING
             }
         });
     }
