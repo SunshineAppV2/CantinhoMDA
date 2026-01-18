@@ -202,7 +202,18 @@ export function Meetings() {
 
     const handleCreateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        createMeetingMutation.mutate({ title, date, type, points: Number(points), isScoring });
+        if (!user?.clubId) {
+            toast.error('Erro: ID do clube não encontrado.');
+            return;
+        }
+        createMeetingMutation.mutate({
+            title,
+            date,
+            type,
+            points: Number(points),
+            isScoring,
+            clubId: user.clubId
+        });
     };
 
     const closeCreateModal = () => {
