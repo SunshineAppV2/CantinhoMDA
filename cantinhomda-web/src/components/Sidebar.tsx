@@ -239,6 +239,10 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
                 configSubItems.push({ id: 'all-approvals', label: 'Aprovações Pendentes', icon: Shield, path: '/dashboard/approvals' });
                 configSubItems.push({ id: 'system-messages', label: 'Mensagens Sistema', icon: AlertTriangle, path: '/dashboard/system-messages' });
             }
+            // Add Requirements Master for MASTER role specifically (or Admin if desired)
+            if (isMaster) {
+                configSubItems.push({ id: 'master-requirements', label: 'Requisitos (Master)', icon: ListChecks, path: '/dashboard/master-requirements' });
+            }
 
             items.push({
                 id: 'config',
