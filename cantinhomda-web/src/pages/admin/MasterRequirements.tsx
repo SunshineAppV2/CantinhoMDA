@@ -288,7 +288,7 @@ export function MasterRequirements() {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Gerenciar Requisitos (Master) <span className="text-xs text-slate-400 font-normal">v2.1 (Gamification)</span></h1>
+                    <h1 className="text-2xl font-bold text-slate-800">Gerenciar Requisitos (Master) <span className="text-xs text-slate-400 font-normal">v2.2 (PWA Fix)</span></h1>
                     <p className="text-slate-500">Cadastre requisitos universais para todas as classes.</p>
                 </div>
                 <div className="flex gap-2">
