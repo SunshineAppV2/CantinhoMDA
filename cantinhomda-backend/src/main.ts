@@ -69,19 +69,25 @@ async function bootstrap() {
     app.enableCors({
         origin: (origin, callback) => {
             // Allow requests with no origin (mobile apps, Postman, etc)
-            if (!origin) return callback(null, true);
+            if (!origin) {
+                console.log('CORS: Allowing request with no origin');
+                return callback(null, true);
+            }
 
             // Check if origin is in allowed list or is a Vercel preview
             if (allowedOrigins.includes(origin) || isVercelPreview(origin)) {
+                console.log(`CORS: Allowing origin: ${origin}`);
                 callback(null, true);
             } else {
-                console.warn(`CORS blocked origin: ${origin}`);
+                console.warn(`CORS: BLOCKED origin: ${origin}`);
                 callback(new Error('Not allowed by CORS'));
             }
         },
         credentials: true,
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-        allowedHeaders: 'Content-Type,Authorization,Accept',
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+        exposedHeaders: ['Content-Range', 'X-Content-Range'],
+        maxAge: 3600, // Cache preflight for 1 hour
     });
 
     // Default Uploads (App Internal)
