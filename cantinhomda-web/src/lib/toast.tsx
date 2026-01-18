@@ -39,7 +39,7 @@ const success = (message: string, description?: string) => {
  */
 const error = (message: string, description?: string) => {
     return toast.error(message, {
-        duration: 4000, // Erros ficam mais tempo
+        duration: 4000,
         description,
         style: {
             ...baseStyle,
@@ -89,12 +89,10 @@ const info = (message: string, description?: string) => {
 /**
  * Toast de Loading
  * Uso: const id = showToast.loading('Carregando...')
- *      // ... após carregar
- *      toast.dismiss(id)
  */
 const loading = (message: string) => {
     return toast.loading(message, {
-        duration: Infinity, // Não desaparece automaticamente
+        duration: Infinity,
         style: {
             ...baseStyle,
             background: '#64748b',
@@ -105,14 +103,6 @@ const loading = (message: string) => {
 
 /**
  * Toast com Promise
- * Uso: showToast.promise(
- *   api.post('/data'),
- *   {
- *     loading: 'Salvando...',
- *     success: 'Salvo com sucesso!',
- *     error: 'Erro ao salvar'
- *   }
- * )
  */
 const promise = <T,>(
     promiseFn: Promise<T>,
@@ -131,7 +121,6 @@ const promise = <T,>(
 
 /**
  * Toast Customizado
- * Uso: showToast.custom('Mensagem', { duration: 5000 })
  */
 const custom = (message: string, options?: any) => {
     return toast(message, {
@@ -146,12 +135,6 @@ const custom = (message: string, options?: any) => {
 
 /**
  * Toast com Ação
- * Uso: showToast.action('Arquivo deletado', {
- *   action: {
- *     label: 'Desfazer',
- *     onClick: () => restore()
- *   }
- * })
  */
 const action = (
     message: string,
@@ -190,25 +173,23 @@ export const showToast = {
 
 /**
  * Componente Toaster Provider
- * Adicionar no App.tsx
  */
 export function ToastProvider() {
     return (
         <Toaster
-      position= "top-right"
-    expand = { true}
-    richColors = { false}
-    closeButton = { true}
-    toastOptions = {{
-        className: 'font-sans',
-            style: {
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-        },
-    }
-}
-    />
-  );
+            position="top-right"
+            expand={true}
+            richColors={false}
+            closeButton={true}
+            toastOptions={{
+                className: 'font-sans',
+                style: {
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                },
+            }}
+        />
+    );
 }
 
-// Re-exportar toast original para casos especiais
+// Re-exportar toast original
 export { toast };
