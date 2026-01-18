@@ -20,15 +20,21 @@ export class EncryptionService {
   private readonly keyLength = 32; // 256 bits
 
   constructor() {
-    const encryptionKey = process.env.ENCRYPTION_KEY;
+    // Tenta pegar da variável de ambiente, senão usa uma chave de fallback (EMERGÊNCIA APENAS)
+    // Fallback: 64 zeros (chave válida de 32 bytes em hex)
+    const fallbackKey = '0000000000000000000000000000000000000000000000000000000000000000';
+    const encryptionKey = process.env.ENCRYPTION_KEY || fallbackKey;
 
-    if (!encryptionKey) {
-      throw new Error('ENCRYPTION_KEY não configurada nas variáveis de ambiente');
+    if (!process.env.ENCRYPTION_KEY) {
+      console.warn('⚠️  AVISO DE SEGURANÇA: ENCRYPTION_KEY não configurada. Usando chave de fallback insegura. Configure a variável de ambiente imediatamente!');
     }
 
     // Validar tamanho da chave (deve ser 64 caracteres hex = 32 bytes)
     if (encryptionKey.length !== 64) {
-      throw new Error('ENCRYPTION_KEY deve ter 64 caracteres hexadecimais (32 bytes)');
+      // Se a chave configurada estiver errada, loga erro mas tenta usar fallback para não derrubar o server
+      console.error(`❌ ERRO CRÍTICO: ENCRYPTION_KEY tem tamanho inválido (${encryptionKey.length}). Esperado: 64.`);
+      this.key = Buffer.from(fallbackKey, 'hex');
+      return;
     }
 
     this.key = Buffer.from(encryptionKey, 'hex');
