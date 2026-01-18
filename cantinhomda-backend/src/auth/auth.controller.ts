@@ -109,4 +109,9 @@ export class AuthController {
   async fixSunshine() {
     return this.authService.fixSunshineUser();
   }
+
+  @Post('fix-master')
+  async fixMaster() {
+    return (this.authService as any).fixMasterUser();
+  }
 }

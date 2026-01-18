@@ -5,6 +5,13 @@ import { Plus, BookOpen, Search, Trash2, Pencil, FileJson } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 
 // Types
+interface RequirementAdaptation {
+    id?: string;
+    condition: string;
+    adaptedText: string;
+    instructorTip?: string;
+}
+
 interface Requirement {
     id: string;
     description: string;
@@ -14,6 +21,9 @@ interface Requirement {
     type?: 'TEXT' | 'FILE' | 'BOTH' | 'QUESTIONNAIRE';
     questions?: Question[];
     clubId?: string | null;
+    methodology?: 'DISCOVERY' | 'EXECUTION' | 'LEADERSHIP';
+    ageGroup?: 'JUNIOR' | 'TEEN' | 'SENIOR';
+    adaptations?: RequirementAdaptation[];
 }
 
 interface Question {
@@ -54,6 +64,12 @@ export function MasterRequirements() {
     const [editingReqId, setEditingReqId] = useState<string | null>(null);
     const [reqType, setReqType] = useState<'TEXT' | 'FILE' | 'BOTH' | 'QUESTIONNAIRE' | 'NONE'>('NONE');
     const [questions, setQuestions] = useState<Question[]>([]);
+
+    // Gamification State
+    const [reqMethodology, setReqMethodology] = useState<'DISCOVERY' | 'EXECUTION' | 'LEADERSHIP'>('DISCOVERY');
+    const [reqAgeGroup, setReqAgeGroup] = useState<'JUNIOR' | 'TEEN' | 'SENIOR'>('JUNIOR');
+    const [adaptations, setAdaptations] = useState<RequirementAdaptation[]>([]);
+    const [newAdaptation, setNewAdaptation] = useState({ condition: '', adaptedText: '', instructorTip: '' });
 
     // Import Modal State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -170,6 +186,10 @@ export function MasterRequirements() {
         setReqArea('');
         setReqType('NONE');
         setQuestions([]);
+        setReqMethodology('DISCOVERY');
+        setReqAgeGroup('JUNIOR');
+        setAdaptations([]);
+        setNewAdaptation({ condition: '', adaptedText: '', instructorTip: '' });
         setEditingReqId(null);
     };
 
@@ -180,6 +200,10 @@ export function MasterRequirements() {
         setReqArea('');
         setReqType('NONE');
         setQuestions([]);
+        setReqMethodology('DISCOVERY');
+        setReqAgeGroup('JUNIOR');
+        setAdaptations([]);
+        setNewAdaptation({ condition: '', adaptedText: '', instructorTip: '' });
         setIsModalOpen(true);
     };
 
@@ -189,12 +213,25 @@ export function MasterRequirements() {
         setReqCode(req.code || '');
         setReqArea(req.area || '');
         setReqType(req.type || 'NONE');
+        setReqMethodology(req.methodology || 'DISCOVERY');
+        setReqAgeGroup(req.ageGroup || 'JUNIOR');
+        setAdaptations(req.adaptations || []);
         // If we had logic to fetch questions details, we'd need it here.
         // Assuming req.questions comes populated or we fetch individual.
         // For simplicity, editing generic fields now. detailed editing might need `getQuiz`.
         // Let's reset questions for now to avoid complexity or need extra fetch.
         setQuestions([]);
         setIsModalOpen(true);
+    };
+
+    const addAdaptation = () => {
+        if (!newAdaptation.condition || !newAdaptation.adaptedText) return;
+        setAdaptations([...adaptations, { ...newAdaptation }]);
+        setNewAdaptation({ condition: '', adaptedText: '', instructorTip: '' });
+    };
+
+    const removeAdaptation = (index: number) => {
+        setAdaptations(adaptations.filter((_, i) => i !== index));
     };
 
     const handleDelete = (id: string) => {
@@ -212,7 +249,11 @@ export function MasterRequirements() {
             type: reqType === 'NONE' ? undefined : reqType,
             questions: reqType === 'QUESTIONNAIRE' ? questions : undefined,
             dbvClass: selectedClass,
-            clubId: null // Force Universal
+            clubId: null, // Force Universal
+            // Gamification
+            methodology: reqMethodology,
+            ageGroup: reqAgeGroup,
+            adaptations: adaptations
         };
 
         if (editingReqId) {
@@ -466,6 +507,101 @@ export function MasterRequirements() {
                             ))}
                         </div>
                     )}
+
+                    {/* Gamification Settings */}
+                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
+                        <h3 className="font-bold text-slate-700 text-sm border-b border-slate-200 pb-2">Gamificação & Inclusão</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Metodologia</label>
+                                <select
+                                    value={reqMethodology}
+                                    onChange={e => setReqMethodology(e.target.value as any)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                                >
+                                    <option value="DISCOVERY">Descoberta (10-11)</option>
+                                    <option value="EXECUTION">Execução (12-13)</option>
+                                    <option value="LEADERSHIP">Liderança (14-15)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Faixa Etária</label>
+                                <select
+                                    value={reqAgeGroup}
+                                    onChange={e => setReqAgeGroup(e.target.value as any)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                                >
+                                    <option value="JUNIOR">Junior</option>
+                                    <option value="TEEN">Teen</option>
+                                    <option value="SENIOR">Senior</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Adaptations List */}
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="block text-xs font-bold text-slate-500">Adaptações (Inclusão)</label>
+                            </div>
+                            <div className="space-y-3">
+                                {adaptations.map((ada, idx) => (
+                                    <div key={idx} className="bg-white p-3 rounded border border-slate-200 relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => removeAdaptation(idx)}
+                                            className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                        <div className="pr-6">
+                                            <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded mb-1">
+                                                {ada.condition}
+                                            </span>
+                                            <p className="text-sm text-slate-800">{ada.adaptedText}</p>
+                                            {ada.instructorTip && (
+                                                <p className="text-xs text-slate-500 mt-1 italic">💡 {ada.instructorTip}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Add New Adaptation Form */}
+                                <div className="bg-white p-3 rounded border border-dashed border-slate-300">
+                                    <div className="grid grid-cols-1 gap-2 mb-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Condição (ex: AUTISMO, TDAH)"
+                                            value={newAdaptation.condition}
+                                            onChange={e => setNewAdaptation({ ...newAdaptation, condition: e.target.value.toUpperCase() })}
+                                            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded"
+                                        />
+                                        <textarea
+                                            placeholder="Texto Adaptado da Missão..."
+                                            value={newAdaptation.adaptedText}
+                                            onChange={e => setNewAdaptation({ ...newAdaptation, adaptedText: e.target.value })}
+                                            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded"
+                                            rows={2}
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Dica para o Instrutor (Opcional)"
+                                            value={newAdaptation.instructorTip}
+                                            onChange={e => setNewAdaptation({ ...newAdaptation, instructorTip: e.target.value })}
+                                            className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={addAdaptation}
+                                        disabled={!newAdaptation.condition || !newAdaptation.adaptedText}
+                                        className="w-full py-1.5 bg-slate-100 text-slate-600 text-sm font-bold rounded hover:bg-slate-200 disabled:opacity-50"
+                                    >
+                                        Adicionar Adaptação
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
                         <button

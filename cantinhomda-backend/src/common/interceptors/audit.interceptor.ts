@@ -52,8 +52,8 @@ export class AuditInterceptor implements NestInterceptor {
                                 resourceId: this.extractResourceId(url, response),
                                 authorId: user?.userId || null,
                                 clubId: user?.clubId || null,
-                                ipAddress: ip || request.connection?.remoteAddress,
-                                userAgent: request.headers['user-agent'],
+                                ipAddress: (ip || request.connection?.remoteAddress || '').toString(),
+                                userAgent: (request.headers['user-agent'] || 'unknown').toString(),
                                 details: {
                                     method,
                                     url,
@@ -77,8 +77,8 @@ export class AuditInterceptor implements NestInterceptor {
                                 resource: this.extractResource(url),
                                 authorId: user?.userId || null,
                                 clubId: user?.clubId || null,
-                                ipAddress: ip || request.connection?.remoteAddress,
-                                userAgent: request.headers['user-agent'],
+                                ipAddress: (ip || request.connection?.remoteAddress || '').toString(),
+                                userAgent: (request.headers['user-agent'] || 'unknown').toString(),
                                 details: {
                                     method,
                                     url,

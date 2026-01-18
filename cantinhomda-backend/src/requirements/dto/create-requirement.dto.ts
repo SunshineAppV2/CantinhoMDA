@@ -3,6 +3,7 @@ import { IsString, IsNotEmpty, IsEnum, IsOptional, ValidateNested, IsArray, IsIn
 import { DBVClass, RequirementType } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { CreateQuestionDto } from './create-question.dto';
+import { CreateRequirementAdaptationDto } from './create-requirement-adaptation.dto';
 
 export class CreateRequirementDto {
     @IsString()
@@ -61,8 +62,23 @@ export class CreateRequirementDto {
     @IsOptional()
     type?: RequirementType;
 
+    @IsOptional()
+    @IsEnum(['DISCOVERY', 'EXECUTION', 'LEADERSHIP'])
+    methodology?: 'DISCOVERY' | 'EXECUTION' | 'LEADERSHIP';
+
+    @IsOptional()
+    @IsEnum(['JUNIOR', 'TEEN', 'SENIOR'])
+    ageGroup?: 'JUNIOR' | 'TEEN' | 'SENIOR';
+
     @IsArray()
     @IsOptional()
+    @ValidateNested({ each: true })
     @Type(() => CreateQuestionDto)
     questions?: CreateQuestionDto[];
+
+    @IsArray()
+    @IsOptional()
+    @ValidateNested({ each: true })
+    @Type(() => CreateRequirementAdaptationDto)
+    adaptations?: CreateRequirementAdaptationDto[];
 }

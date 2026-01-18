@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/axios';
 import { useAuth } from '../contexts/AuthContext';
-import { Calendar, Plus, Users, CheckCircle, ChevronRight, ArrowLeft, FileSpreadsheet, FileText, Save } from 'lucide-react';
+import { Calendar, Plus, Users, CheckCircle, ArrowLeft, FileSpreadsheet, FileText, Save, ClipboardList, Pencil, Trash2 } from 'lucide-react';
 import { Modal } from '../components/Modal';
 // Firestore removed - using API instead
 import { toast } from 'sonner';
@@ -54,6 +54,7 @@ export function Meetings() {
 
     // Attendance State
     const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+    // attendanceDate removed as it was unused
 
     // Import State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -90,11 +91,10 @@ export function Meetings() {
         if (!selectedMeeting) return [];
         return members.filter(member => {
             if (selectedMeeting.type === 'PARENTS') {
-                return member.role === 'PARENT'; // Only PARENTS for PARENTS meeting
+                // Parents Meeting: Show everyone (Parents, Directors, etc) EXCEPT Pathfinders
+                return member.role !== 'PATHFINDER';
             }
-            // RELAXED: Allow everyone (Pathfinders, Counselors, Directors, etc)
-            // User requested that not ONLY Pathfinders should appear.
-            // We only exclude PARENTS from regular meetings.
+            // Regular/Other Meetings: Show everyone (Pathfinders, Directors, etc) EXCEPT Parents
             return member.role !== 'PARENT';
         });
     }, [members, selectedMeeting]);
@@ -247,6 +247,20 @@ export function Meetings() {
             toast.error('Erro ao agendar reunião.');
         }
     });
+
+    const handleDelete = (id: string) => {
+        if (window.confirm('Tem certeza que deseja excluir esta reunião? Todos os registros de presença serão apagados.')) {
+            api.delete(`/meetings/${id}`)
+                .then(() => {
+                    toast.success('Reunião excluída!');
+                    queryClient.invalidateQueries({ queryKey: ['meetings'] });
+                })
+                .catch(err => {
+                    console.error(err);
+                    toast.error('Erro ao excluir reunião.');
+                });
+        }
+    };
 
     const registerAttendanceMutation = useMutation({
         mutationFn: async (data: { meetingId: string, userIds: string[] }) => {
@@ -457,73 +471,67 @@ export function Meetings() {
                 </div>
             </div>
 
-            <div className="grid gap-4">
+            <div className="space-y-4">
                 {meetings.map((meeting: Meeting) => (
-                    <div key={meeting.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-purple-100 p-3 rounded-lg text-purple-600">
-                                <Calendar className="w-6 h-6" />
+                    <div key={meeting.id} className="glass-card p-6 rounded-[2.5rem] premium-shadow flex items-center justify-between group hover:scale-[1.01] transition-all duration-300">
+                        <div className="flex items-center gap-6">
+                            <div className="bg-blue-50 p-4 rounded-2xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                                <Calendar className="w-8 h-8" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold text-slate-800">{meeting.title}</h3>
-                                <p className="text-slate-500 text-sm">
-                                    {new Date(meeting.date).toLocaleDateString()} • {meeting.type === 'PARENTS' ? 'Reunião de Pais' : meeting.type}
-                                </p>
+                                <h3 className="text-xl font-black text-slate-800 tracking-tight">{meeting.title}</h3>
+                                <div className="flex items-center gap-3 mt-1">
+                                    <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                                        {new Date(meeting.date).toLocaleDateString()}
+                                    </span>
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${meeting.type === 'PARENTS' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'}`}>
+                                        {meeting.type === 'PARENTS' ? 'Reunião de Pais' : meeting.type}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-2 text-slate-500 text-sm">
-                                <Users className="w-4 h-4" />
-                                <span>{meeting._count?.attendances || 0} presentes</span>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl">
+                                <Users className="w-4 h-4 text-slate-400" />
+                                <span className="text-sm font-bold text-slate-600">{meeting._count?.attendances || 0} presentes</span>
                             </div>
 
-                            <button
-                                onClick={() => {
-                                    setSelectedMeeting(meeting);
-                                    setSelectedMemberIds([]);
-                                }}
-                                className="flex items-center gap-2 text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm"
-                            >
-                                Fazer Chamada
-                                <ChevronRight className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-2 pl-4 border-l border-slate-100">
+                                <button
+                                    onClick={() => {
+                                        setSelectedMeeting(meeting);
+                                    }}
+                                    className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm hover:shadow-md"
+                                    title="Fazer Chamada"
+                                >
+                                    <ClipboardList className="w-5 h-5" />
+                                </button>
 
-                            <button
-                                onClick={() => handleEditClick(meeting)}
-                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Editar Reunião"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
-                            </button>
+                                <button
+                                    onClick={() => handleEditClick(meeting)}
+                                    className="p-3 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition-all shadow-sm hover:shadow-md"
+                                    title="Editar"
+                                >
+                                    <Pencil className="w-5 h-5" />
+                                </button>
 
-                            <button
-                                onClick={() => {
-                                    if (window.confirm('Tem certeza que deseja excluir esta reunião? Todos os registros de presença serão apagados.')) {
-                                        api.delete(`/meetings/${meeting.id}`)
-                                            .then(() => {
-                                                toast.success('Reunião excluída!');
-                                                queryClient.invalidateQueries({ queryKey: ['meetings'] });
-                                            })
-                                            .catch(err => {
-                                                console.error(err);
-                                                toast.error('Erro ao excluir reunião.');
-                                            });
-                                    }
-                                }}
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Excluir Reunião"
-                            >
-                                <Users className="w-0 h-0 hidden" /> {/* Hack to keep icon import if needed, but we used Trash/Pencil */}
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-                            </button>
+                                <button
+                                    onClick={() => handleDelete(meeting.id)}
+                                    className="p-3 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all shadow-sm hover:shadow-md"
+                                    title="Excluir"
+                                >
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}
 
                 {meetings.length === 0 && (
-                    <div className="p-10 text-center text-slate-500 bg-white rounded-xl border border-dashed border-slate-300">
-                        Nenhuma reunião agendada.
+                    <div className="p-10 text-center text-slate-500 glass-card rounded-[2.5rem] border border-dashed border-slate-300/50">
+                        <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                        <p className="font-bold">Nenhuma reunião agendada.</p>
                     </div>
                 )}
             </div>
@@ -655,6 +663,6 @@ export function Meetings() {
                 </div>
             </Modal>
 
-        </div>
+        </div >
     );
 }

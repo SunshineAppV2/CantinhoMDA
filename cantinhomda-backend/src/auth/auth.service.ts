@@ -113,7 +113,7 @@ export class AuthService {
 
     console.log(`[AuthService.login] Generating Token for ${user.email}. ClubID: ${user.clubId}, Role: ${user.role}`);
     if (!user.clubId && (user.role === 'DIRECTOR' || user.role === 'OWNER')) {
-        console.warn(`[AuthService.login] ⚠️ WARNING: DIRECTOR/OWNER ${user.email} has NO ClubID! Functionality will be limited.`);
+      console.warn(`[AuthService.login] ⚠️ WARNING: DIRECTOR/OWNER ${user.email} has NO ClubID! Functionality will be limited.`);
     }
 
     return {
@@ -332,7 +332,7 @@ export class AuthService {
         union: 'UNB',
         district: 'Central',
         settings: { memberLimit: 50 },
-        phoneNumber: '5591983292005'
+        phoneNumber: '5591983295005'
       });
     } else {
       console.log('Fix: Club Sunshine found:', club.id);
@@ -367,7 +367,7 @@ export class AuthService {
         clubId: club.id,
         status: 'ACTIVE',
         isActive: true,
-        mobile: '5591983292005'
+        mobile: '5591983295005'
       });
     }
 
@@ -381,5 +381,34 @@ export class AuthService {
     }
 
     return { message: 'User aseabra2005 associated to Sunshine successfully.', clubId: club.id };
+  }
+
+  async fixMasterUser() {
+    const email = 'master@cantinhodbv.com';
+    let club = await this.clubsService.search('Clube Master').then(res => res[0]);
+
+    if (!club) {
+      club = await this.clubsService.create({
+        name: 'Clube Master',
+        region: '1ª Região',
+        mission: 'MOPa',
+        union: 'UNB',
+        district: 'Central',
+        settings: { memberLimit: 100 },
+        phoneNumber: '000000000'
+      });
+    }
+
+    const user = await this.usersService.findOneByEmail(email);
+    if (user) {
+      await this.usersService.update(user.id, {
+        clubId: club.id,
+        role: 'OWNER',
+        isActive: true,
+        status: 'ACTIVE'
+      });
+      return { success: true, message: `Master user fixed and linked to club ${club.id}` };
+    }
+    return { success: false, message: 'Master user not found' };
   }
 }

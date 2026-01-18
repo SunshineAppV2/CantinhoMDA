@@ -709,7 +709,7 @@ export class ClubsService implements OnModuleInit {
             select: { id: true }
         });
 
-        const finalMessage = message || `Olá! Sua assinatura do Ranking DBV está vencendo. Para renovar, faça um PIX para a chave: 68323280282 (Alex Oliveira Seabra) e envie o comprovante.`;
+        const finalMessage = message || `Olá! Sua assinatura do Ranking DBV está vencendo. Para renovar, faça um PIX para a chave: 91983295005 (Alex Oliveira Seabra) e envie o comprovante.`;
 
         for (const admin of admins) {
             await this.notificationsService.send(

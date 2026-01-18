@@ -19,13 +19,16 @@ export class RequirementsService {
 
     async create(data: CreateRequirementDto) {
         console.log('[RequirementsService] Creating requirement:', JSON.stringify(data));
-        const { questions, ...rest } = data;
+        const { questions, adaptations, ...rest } = data;
         try {
             return await this.prisma.requirement.create({
                 data: {
                     ...rest,
                     questions: questions ? {
                         create: questions
+                    } : undefined,
+                    adaptations: adaptations ? {
+                        create: adaptations
                     } : undefined
                 }
             });
@@ -179,7 +182,8 @@ export class RequirementsService {
                 userProgress: query.userId ? {
                     where: { userId: query.userId },
                     select: { status: true, answerText: true, answerFileUrl: true }
-                } : false
+                } : false,
+                adaptations: true
             }
         });
 
@@ -302,7 +306,7 @@ export class RequirementsService {
     }
 
     async update(id: string, updateDto: UpdateRequirementDto) {
-        const { questions, ...rest } = updateDto;
+        const { questions, adaptations, ...rest } = updateDto;
 
         return this.prisma.$transaction(async (tx) => {
             const updated = await tx.requirement.update({
@@ -316,6 +320,17 @@ export class RequirementsService {
                 await tx.question.createMany({
                     data: questions.map(q => ({
                         ...q,
+                        requirementId: id
+                    }))
+                });
+            }
+
+            if (adaptations) {
+                // Remove old adaptations and add new ones
+                await tx.requirementAdaptation.deleteMany({ where: { requirementId: id } });
+                await tx.requirementAdaptation.createMany({
+                    data: adaptations.map(a => ({
+                        ...a,
                         requirementId: id
                     }))
                 });

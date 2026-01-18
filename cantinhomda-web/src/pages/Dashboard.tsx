@@ -49,6 +49,7 @@ function DirectorDashboard() {
     const [showBirthdaysModal, setShowBirthdaysModal] = useState(false);
     const [showProfileUpdate, setShowProfileUpdate] = useState(false);
     const [showReferralPopup, setShowReferralPopup] = useState(false);
+    const [showReferralRules, setShowReferralRules] = useState(false);
 
     const { data: stats } = useQuery({
         queryKey: ['dashboard-stats', user?.clubId],
@@ -142,7 +143,7 @@ function DirectorDashboard() {
             {/* Top Row: System Widgets */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                    {/* Subscription Widget (Modernized via Layout or direct) */}
+                    {/* Subscription Widget */}
                     {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && <SubscriptionWidget />}
                     <SignaturesWidget />
                 </div>
@@ -154,7 +155,7 @@ function DirectorDashboard() {
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            className="bg-slate-900 rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden group min-h-[300px] flex flex-col justify-between"
+                            className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group min-h-[300px] flex flex-col justify-between premium-shadow"
                         >
                             <div className="absolute top-[-20%] right-[-10%] opacity-20 group-hover:scale-110 transition-transform duration-700">
                                 <Stars className="w-64 h-64 text-blue-500" />
@@ -164,13 +165,19 @@ function DirectorDashboard() {
                                 <div className="p-3 bg-blue-600 w-fit rounded-2xl mb-6 shadow-lg shadow-blue-600/30">
                                     <Share2 className="w-6 h-6 text-white" />
                                 </div>
-                                <h3 className="text-2xl font-black mb-3 leading-tight">Programa de<br />Indicações</h3>
-                                <p className="text-slate-400 text-sm font-medium leading-relaxed mb-6">
-                                    Indique outros diretores e ganhe benefícios exclusivos para seu clube.
+                                <h3 className="text-2xl font-black mb-3 leading-tight">Indique e Ganhe! 🎉</h3>
+                                <p className="text-slate-400 text-sm font-medium leading-relaxed mb-2">
+                                    Compartilhe seu código e ganhe <span className="text-white font-bold">20% de desconto</span>.
                                 </p>
+                                <button
+                                    onClick={() => setShowReferralRules(true)}
+                                    className="text-blue-400 text-xs font-bold uppercase tracking-widest hover:text-blue-300 transition-colors underline decoration-blue-400/30 underline-offset-4"
+                                >
+                                    Saiba mais
+                                </button>
                             </div>
 
-                            <div className="relative z-10 space-y-4">
+                            <div className="relative z-10 space-y-4 mt-6">
                                 <div className="flex items-end justify-between mb-2">
                                     <span className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">Progresso Atual</span>
                                     <span className="text-2xl font-black">{clubStatus.referralCredits?.length || 0}/3</span>
@@ -206,14 +213,15 @@ function DirectorDashboard() {
                 <motion.div variants={item} className="group">
                     <div
                         onClick={() => navigate('/dashboard/members')}
-                        className="bg-white/70 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:-translate-y-2 transition-all duration-300"
+                        className="glass-card p-8 rounded-[2.5rem] premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:scale-[1.02] transition-all duration-300 relative overflow-hidden"
                     >
-                        <div className="p-4 bg-blue-50 w-fit rounded-2xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <div className="absolute top-[-20%] right-[-20%] w-32 h-32 bg-blue-50 rounded-full blur-3xl group-hover:bg-blue-100 transition-colors" />
+                        <div className="p-4 bg-blue-50 w-fit rounded-2xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 relative z-10">
                             <Users className="w-8 h-8" />
                         </div>
-                        <div>
-                            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-1">Membros Ativos</p>
-                            <h3 className="text-4xl font-black text-slate-900">{stats?.activeMembers || 0}</h3>
+                        <div className="relative z-10">
+                            <p className="text-slate-400 font-black uppercase tracking-widest text-[10px] mb-1">Membros Ativos</p>
+                            <h3 className="text-4xl font-black text-slate-800 tracking-tight">{stats?.activeMembers || 0}</h3>
                         </div>
                     </div>
                 </motion.div>
@@ -223,16 +231,17 @@ function DirectorDashboard() {
                     <motion.div variants={item} className="group">
                         <div
                             onClick={() => navigate('/dashboard/financial')}
-                            className="bg-white/70 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:-translate-y-2 transition-all duration-300"
+                            className="glass-card p-8 rounded-[2.5rem] premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:scale-[1.02] transition-all duration-300 relative overflow-hidden"
                         >
-                            <div className={`p-4 w-fit rounded-2xl transition-colors ${(stats?.financial?.balance || 0) >= 0 ? 'bg-green-50 text-green-600 group-hover:bg-green-600 group-hover:text-white' : 'bg-red-50 text-red-600 group-hover:bg-red-600 group-hover:text-white'}`}>
+                            <div className={`absolute top-[-20%] right-[-20%] w-32 h-32 rounded-full blur-3xl transition-colors ${(stats?.financial?.balance || 0) >= 0 ? 'bg-green-50 group-hover:bg-green-100' : 'bg-red-50 group-hover:bg-red-100'}`} />
+                            <div className={`p-4 w-fit rounded-2xl transition-all duration-300 relative z-10 ${(stats?.financial?.balance || 0) >= 0 ? 'bg-green-50 text-green-600 group-hover:bg-center group-hover:bg-green-600 group-hover:text-white' : 'bg-red-50 text-red-600 group-hover:bg-red-600 group-hover:text-white'}`}>
                                 <DollarSign className="w-8 h-8" />
                             </div>
-                            <div>
-                                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-1">Saldo do Mês</p>
-                                <h3 className={`text-4xl font-black ${(stats?.financial?.balance || 0) >= 0 ? 'text-green-600' : 'text-red-700'}`}>
-                                    <span className="text-lg mr-1 font-bold">R$</span>
-                                    {stats?.financial?.balance?.toFixed(0) || '0'}
+                            <div className="relative z-10">
+                                <p className="text-slate-400 font-black uppercase tracking-widest text-[10px] mb-1">Saldo do Mês</p>
+                                <h3 className={`text-3xl font-black tracking-tight ${(stats?.financial?.balance || 0) >= 0 ? 'text-green-600' : 'text-red-700'}`}>
+                                    <span className="text-sm mr-1 font-bold">R$</span>
+                                    {stats?.financial?.balance?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
                                 </h3>
                             </div>
                         </div>
@@ -243,18 +252,19 @@ function DirectorDashboard() {
                 <motion.div variants={item} className="group">
                     <div
                         onClick={() => navigate('/dashboard/events')}
-                        className="bg-white/70 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:-translate-y-2 transition-all duration-300"
+                        className="glass-card p-8 rounded-[2.5rem] premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:scale-[1.02] transition-all duration-300 relative overflow-hidden"
                     >
-                        <div className="p-4 bg-purple-50 w-fit rounded-2xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                        <div className="absolute top-[-20%] right-[-20%] w-32 h-32 bg-purple-50 rounded-full blur-3xl group-hover:bg-purple-100 transition-colors" />
+                        <div className="p-4 bg-purple-50 w-fit rounded-2xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 relative z-10">
                             <Calendar className="w-8 h-8" />
                         </div>
-                        <div>
-                            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-1">Próximo Evento</p>
-                            <h3 className="text-xl font-black text-slate-800 line-clamp-1 mb-1" title={stats?.nextEvent?.title || 'Nenhum'}>
+                        <div className="relative z-10">
+                            <p className="text-slate-400 font-black uppercase tracking-widest text-[10px] mb-1">Próximo Evento</p>
+                            <h3 className="text-lg font-black text-slate-800 line-clamp-2 leading-tight mb-1" title={stats?.nextEvent?.title || 'Nenhum'}>
                                 {stats?.nextEvent?.title || 'Nenhum'}
                             </h3>
                             {stats?.nextEvent && (
-                                <p className="text-xs text-slate-500 font-bold">
+                                <p className="text-xs text-purple-600 font-black uppercase tracking-wide">
                                     {new Date(stats?.nextEvent?.startDate).toLocaleDateString()}
                                 </p>
                             )}
@@ -266,16 +276,17 @@ function DirectorDashboard() {
                 <motion.div variants={item} className="group">
                     <div
                         onClick={() => setShowBirthdaysModal(true)}
-                        className="bg-white/70 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:-translate-y-2 transition-all duration-300"
+                        className="glass-card p-8 rounded-[2.5rem] premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:scale-[1.02] transition-all duration-300 relative overflow-hidden"
                     >
-                        <div className="p-4 bg-pink-50 w-fit rounded-2xl text-pink-600 group-hover:bg-pink-600 group-hover:text-white transition-colors">
+                        <div className="absolute top-[-20%] right-[-20%] w-32 h-32 bg-pink-50 rounded-full blur-3xl group-hover:bg-pink-100 transition-colors" />
+                        <div className="p-4 bg-pink-50 w-fit rounded-2xl text-pink-600 group-hover:bg-pink-600 group-hover:text-white transition-all duration-300 relative z-10">
                             <Trophy className="w-8 h-8" />
                         </div>
-                        <div>
-                            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-1">Aniversariantes</p>
-                            <h3 className="text-4xl font-black text-slate-900">
+                        <div className="relative z-10">
+                            <p className="text-slate-400 font-black uppercase tracking-widest text-[10px] mb-1">Aniversariantes</p>
+                            <h3 className="text-4xl font-black text-slate-800 tracking-tight">
                                 {stats?.birthdays?.length || 0}
-                                <span className="text-sm font-bold ml-2 text-slate-400">Este mês</span>
+                                <span className="text-sm font-bold ml-2 text-slate-400">mês</span>
                             </h3>
                         </div>
                     </div>
@@ -343,6 +354,45 @@ function DirectorDashboard() {
                     onClose={() => setShowReferralPopup(false)}
                 />
             )}
+
+            <Modal
+                isOpen={showReferralRules}
+                onClose={() => setShowReferralRules(false)}
+                title="🎁 Regras da Indicação"
+            >
+                <div className="space-y-6">
+                    <div className="bg-blue-50 p-6 rounded-3xl">
+                        <h4 className="font-black text-blue-900 text-lg mb-2">Como funciona?</h4>
+                        <p className="text-blue-700 leading-relaxed">
+                            Ao indicar um amigo diretor e ele assinar o CantinhoMDA usando seu código, você ganha créditos!
+                        </p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex gap-4 items-start">
+                            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold shrink-0">1</div>
+                            <div>
+                                <h5 className="font-bold text-slate-800">20% de Desconto</h5>
+                                <p className="text-sm text-slate-500">A cada 3 indicações confirmadas, você ganha 20% de desconto na sua próxima mensalidade.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4 items-start">
+                            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold shrink-0">2</div>
+                            <div>
+                                <h5 className="font-bold text-slate-800">Acumulativo</h5>
+                                <p className="text-sm text-slate-500">Você pode acumular descontos indicando mais clubes. O céu é o limite!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => setShowReferralRules(false)}
+                        className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors"
+                    >
+                        Entendi
+                    </button>
+                </div>
+            </Modal>
         </div >
     );
 }

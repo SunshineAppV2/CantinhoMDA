@@ -121,4 +121,8 @@ export class UpdateUserDto {
     @IsString() @IsOptional() union?: string;
 
     @IsOptional() pointsHistory?: any;
+
+    @IsArray()
+    @IsOptional()
+    childrenIds?: string[];
 }

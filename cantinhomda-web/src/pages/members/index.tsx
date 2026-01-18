@@ -218,8 +218,13 @@ function MembersContent() {
             if (payload[k] === '') payload[k] = null;
         });
 
-        // cleanup system fields
-        ['id', 'classProgress', 'requirements', 'createdAt', 'updatedAt', 'UserRequirements', 'club', 'unit', 'status', 'children'].forEach(k => delete payload[k]);
+        // cleanup system fields and relations
+        [
+            'id', 'classProgress', 'requirements', 'createdAt', 'updatedAt', 'UserRequirements',
+            'club', 'unit', 'status', 'children',
+            'UserSpecialties', 'UserActivities', 'UserPoints', 'UserMeetings', 'approvals', 'referrals',
+            'points', 'roleAttributes', 'clubRole'
+        ].forEach(k => delete payload[k]);
 
         console.log('[Members] Cleaned Payload to Backend:', payload);
 
@@ -379,7 +384,7 @@ function MembersContent() {
                         <p className="text-sm">
                             Você atingiu o limite de {clubStatus?.memberLimit} usuários ativos do seu plano atual.
                             Novos cadastros estão bloqueados. <br />
-                            <a href="https://wa.me/5568323280282" target="_blank" rel="noreferrer" className="underline font-bold hover:text-amber-900">
+                            <a href="https://wa.me/5591983295005" target="_blank" rel="noreferrer" className="underline font-bold hover:text-amber-900">
                                 Fale com o suporte para fazer upgrade.
                             </a>
                         </p>

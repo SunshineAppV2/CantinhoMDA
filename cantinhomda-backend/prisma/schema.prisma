@@ -288,6 +288,9 @@ model Requirement {
   specialty    Specialty?        @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
   regionalEventId String?
   regionalEvent RegionalEvent? @relation(fields: [regionalEventId], references: [id], onDelete: SetNull)
+  methodology RequirementMethodology @default(DISCOVERY)
+  ageGroup    AgeEmphasis?
+  adaptations RequirementAdaptation[]
   userProgress UserRequirement[]
   eventResponses EventResponse[]
 
@@ -677,4 +680,27 @@ enum UnitType {
   MASCULINA
   FEMININA
   MISTA
+}
+
+enum RequirementMethodology {
+  DISCOVERY
+  EXECUTION
+  LEADERSHIP
+}
+
+enum AgeEmphasis {
+  JUNIOR
+  TEEN
+  SENIOR
+}
+
+model RequirementAdaptation {
+  id            String      @id @default(uuid())
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  condition     String
+  adaptedText   String
+  instructorTip String?
+
+  @@map("requirement_adaptations")
 }

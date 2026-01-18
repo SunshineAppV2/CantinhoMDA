@@ -110,7 +110,7 @@ export function DashboardLayout() {
                 </AnimatePresence>
 
                 {/* Top Header */}
-                <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-700/50 h-20 flex items-center justify-between px-8 sticky top-0 z-30">{ }
+                <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-700/50 h-20 flex items-center justify-between px-8 sticky top-0 z-30">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setSidebarOpen(true)}
@@ -120,7 +120,44 @@ export function DashboardLayout() {
                         </button>
                         <div>
                             <h1 className="text-xl font-black text-slate-800 tracking-tight hidden sm:block">
-                                {location.pathname.split('/').pop()?.replace(/-/g, ' ').toUpperCase() || 'DASHBOARD'}
+                                {(() => {
+                                    const path = location.pathname.split('/').pop() || 'dashboard';
+                                    const translations: Record<string, string> = {
+                                        'dashboard': 'INÍCIO',
+                                        'profile': 'MEU PERFIL',
+                                        'family': 'MINHA FAMÍLIA',
+                                        'requirements': 'MEUS REQUISITOS',
+                                        'activities': 'MINHAS ATIVIDADES',
+                                        'alerts': 'ALERTAS',
+                                        'members': 'MEMBROS',
+                                        'classes': 'CLASSES',
+                                        'events': 'EVENTOS',
+                                        'meetings': 'REUNIÕES',
+                                        'secretary': 'SECRETARIA',
+                                        'approvals': 'APROVAÇÕES',
+                                        'units': 'UNIDADES',
+                                        'financial': 'FINANCEIRO',
+                                        'treasury': 'TESOURARIA',
+                                        'subscription': 'ASSINATURA',
+                                        'ranking': 'RANKING GERAL',
+                                        'regional-ranking': 'RANKING REGIONAL',
+                                        'store': 'LOJA',
+                                        'settings': 'CONFIGURAÇÕES',
+                                        'user-approvals': 'APROVAÇÃO DE USUÁRIOS',
+                                        'payment-management': 'GESTÃO DE PAGAMENTOS',
+                                        'clubs': 'GERENCIAR CLUBES',
+                                        'hierarchy': 'HIERARQUIA',
+                                        'master-treasury': 'TESOURARIA MASTER',
+                                        'referrals': 'INDICAÇÕES',
+                                        'system-messages': 'MENSAGENS DO SISTEMA',
+                                        'regional-dashboard': 'RELATÓRIOS & MÉTRICAS',
+                                        'regional-events-manager': 'EVENTOS REGIONAIS',
+                                        'clubs-directory': 'DIRETÓRIO DE CLUBES',
+                                        'coordinator-approvals': 'INTERVENÇÕES',
+                                        'club-regional-events': 'MEUS EVENTOS (REGIONAIS)'
+                                    };
+                                    return translations[path] || path.replace(/-/g, ' ').toUpperCase();
+                                })()}
                             </h1>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest hidden sm:block">
                                 CantinhoMDA • {clubData?.name || 'Sistema'}
@@ -159,7 +196,7 @@ export function DashboardLayout() {
                 </header>
 
                 {/* Page Content */}
-                <main ref={mainRef} className="flex-1 overflow-auto p-4 md:p-8 gradient-bg relative z-10">
+                < main ref={mainRef} className="flex-1 overflow-auto p-4 md:p-8 gradient-bg relative z-10" >
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={location.pathname}
@@ -207,9 +244,9 @@ export function DashboardLayout() {
                             )}
                         </motion.div>
                     </AnimatePresence>
-                </main>
-            </div>
+                </main >
+            </div >
             <HelpButton />
-        </div>
+        </div >
     );
 }
