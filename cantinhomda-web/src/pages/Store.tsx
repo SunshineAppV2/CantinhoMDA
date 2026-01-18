@@ -203,31 +203,6 @@ export function Store() {
         setIsCreateModalOpen(true);
     };
 
-    const handleUpload = async () => {
-        // TODO: Implement image upload via backend API
-        toast.info('Upload de imagem temporariamente desabilitado. Use URL direta.');
-        return;
-
-        /* Firebase Storage removed
-        if (!e.target.files || e.target.files.length === 0) return;
-        const file = e.target.files[0];
-
-        try {
-            toast.info('Enviando imagem...');
-            const sanitizedName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-            const storageRef = ref(storage, `products/${Date.now()}_${sanitizedName}`);
-            const snapshot = await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-
-            setImageUrl(downloadURL);
-            toast.success('Imagem enviada com sucesso!');
-        } catch (error) {
-            console.error(error);
-            toast.error('Erro ao enviar imagem.');
-        }
-        */
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingProduct) {
