@@ -223,10 +223,8 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
  */
 export function GridSkeleton({
     items = 8,
-    columns = 4
 }: {
     items?: number;
-    columns?: number;
 }) {
     return (
         <div
