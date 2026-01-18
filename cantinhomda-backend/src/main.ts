@@ -67,27 +67,18 @@ async function bootstrap() {
     };
 
     app.enableCors({
-        origin: (origin, callback) => {
-            // Allow requests with no origin (mobile apps, Postman, etc)
-            if (!origin) {
-                console.log('CORS: Allowing request with no origin');
-                return callback(null, true);
-            }
-
-            // Check if origin is in allowed list or is a Vercel preview
-            if (allowedOrigins.includes(origin) || isVercelPreview(origin)) {
-                console.log(`CORS: Allowing origin: ${origin}`);
-                callback(null, true);
-            } else {
-                console.warn(`CORS: BLOCKED origin: ${origin}`);
-                callback(new Error('Not allowed by CORS'));
-            }
-        },
+        origin: [
+            'http://localhost:5173',              // Vite dev
+            'http://localhost:3000',              // Local dev alternative
+            'https://cantinhomda.vercel.app',     // Production
+            'https://cantinhodbv.vercel.app',     // Alternative domain
+        ],
         credentials: true,
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
         exposedHeaders: ['Content-Range', 'X-Content-Range'],
-        maxAge: 3600, // Cache preflight for 1 hour
+        maxAge: 3600, // 1 hour
+        optionsSuccessStatus: 200,
     });
 
     // Default Uploads (App Internal)
