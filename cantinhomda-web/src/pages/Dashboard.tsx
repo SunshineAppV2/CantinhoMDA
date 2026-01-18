@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Trophy, Calendar, DollarSign } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Users, Trophy, Calendar, DollarSign, ArrowRight, Stars, GIFT, Share2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Skeleton } from '../components/Skeleton';
 import { Modal } from '../components/Modal';
@@ -17,30 +18,28 @@ import { FamilyDashboard } from './FamilyDashboard';
 import { api } from '../lib/axios';
 
 export function Dashboard() {
-    const { user, loading } = useAuth(); // Assuming 'loading' is available in AuthContext
+    const { user, loading } = useAuth();
 
-    // 1. Loading State (Prevents Hook Mismatch during auth init)
     if (loading) {
         return (
-            <div className="space-y-6">
-                <Skeleton className="h-8 w-48" />
+            <div className="space-y-8 p-4">
+                <div className="space-y-2">
+                    <Skeleton className="h-10 w-64 bg-slate-200/50" />
+                    <Skeleton className="h-4 w-48 bg-slate-200/30" />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
+                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-40 rounded-3xl bg-slate-200/50" />)}
                 </div>
             </div>
         );
     }
 
-    // 2. Safety Check (Should go to Login if not auth, but just in case)
     if (!user) return null;
 
-    // 3. Routing based on Role
-    // Parents get Family View
     if (user.role === 'PARENT') {
         return <FamilyDashboard />;
     }
 
-    // Everyone else gets Director View
     return <DirectorDashboard />;
 }
 
@@ -51,7 +50,6 @@ function DirectorDashboard() {
     const [showProfileUpdate, setShowProfileUpdate] = useState(false);
     const [showReferralPopup, setShowReferralPopup] = useState(false);
 
-    // 1. Stats Query from Firestore (Optimized)
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ['dashboard-stats', user?.clubId],
         queryFn: async () => {
@@ -74,19 +72,16 @@ function DirectorDashboard() {
         refetchOnWindowFocus: false
     });
 
-    // 2. Fetch API Club Status for Referral Code
     const { data: clubStatus } = useQuery({
         queryKey: ['club-status-api'],
         queryFn: async () => {
-            const { api } = await import('../lib/axios');
             const res = await api.get('/clubs/status');
             return res.data;
         },
         enabled: ['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || ''),
-        staleTime: 1000 * 60 * 30 // Cache for 30 mins
+        staleTime: 1000 * 60 * 30
     });
 
-    // 2b. Check Global System Config (Referral Toggle)
     const { data: systemConfig } = useQuery({
         queryKey: ['system-config'],
         queryFn: async () => {
@@ -100,209 +95,232 @@ function DirectorDashboard() {
         staleTime: 1000 * 60 * 5
     });
 
-    // TEMPORARILY DISABLED - Profile update check
-    // Check if profile needs updating (OWNER only)
-    // useEffect(() => {
-    //     if (user?.role === 'OWNER') {
-    //         const needsUpdate = !(user as any).mobile || !clubStatus?.union || !clubStatus?.mission || !clubStatus?.region;
-    //         if (needsUpdate) {
-    //             setShowProfileUpdate(true);
-    //         } else if (!localStorage.getItem('referralPopupDismissed')) {
-    //             // Show referral popup after profile is complete
-    //             setShowReferralPopup(true);
-    //         }
-    //     }
-    // }, [user, clubStatus]);
-
-    // 3. Early Loading Return
-    if (statsLoading && user?.clubId) {
-        return (
-            <div className="space-y-6">
-                <Skeleton className="h-8 w-48" />
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-32 flex flex-col justify-between">
-                            <Skeleton className="h-8 w-8 rounded-lg" />
-                            <div className="space-y-2">
-                                <Skeleton className="h-4 w-24" />
-                                <Skeleton className="h-8 w-16" />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    }
-
-    // Copy Link Handler
     const handleCopyReferral = () => {
         if (clubStatus?.referralCode) {
             const link = `${window.location.origin}/register?ref=${clubStatus.referralCode}`;
             navigator.clipboard.writeText(link);
-            import('sonner').then(({ toast }) => toast.success('Link de indicação copiado!'));
+            import('sonner').then(({ toast }) => toast.success('✨ Link de indicação copiado!'));
         }
     };
 
+    const container = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    };
+
+    const item = {
+        hidden: { y: 20, opacity: 0 },
+        show: { y: 0, opacity: 1 }
+    };
+
     return (
+        <div className="space-y-10 pb-10">
+            {/* Hero Section */}
+            <div className="space-y-2">
+                <motion.h1
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    className="text-4xl font-black text-slate-900 tracking-tight"
+                >
+                    Olá, {user?.name?.split(' ')[0]}! 👋
+                </motion.h1>
+                <motion.p
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="text-slate-500 font-medium"
+                >
+                    Aqui está um resumo do que está acontecendo no seu clube hoje.
+                </motion.p>
+            </div>
 
-        <div className="space-y-6">
+            {/* Top Row: System Widgets */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Subscription Widget (Modernized via Layout or direct) */}
+                    {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && <SubscriptionWidget />}
+                    <SignaturesWidget />
+                </div>
 
-            {/* Subscription Status for Admins */}
-            {['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '') && <SubscriptionWidget />}
+                {/* Secondary Info area */}
+                <div className="space-y-6">
+                    {/* Referral Widget - Premium Variant */}
+                    {systemConfig?.referralEnabled && clubStatus?.referralCode && (
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-slate-900 rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden group min-h-[300px] flex flex-col justify-between"
+                        >
+                            <div className="absolute top-[-20%] right-[-10%] opacity-20 group-hover:scale-110 transition-transform duration-700">
+                                <Stars className="w-64 h-64 text-blue-500" />
+                            </div>
 
-            {/* Referral Widget (Conditionally Rendered) */}
-            {systemConfig?.referralEnabled && clubStatus?.referralCode && (
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Users className="w-32 h-32" />
-                    </div>
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 className="text-xl font-bold mb-1">Indique e Ganhe 20% OFF</h3>
-                                <p className="text-indigo-100 text-sm max-w-md">
-                                    Indique um diretor de outro clube e ganhe 20% de desconto na sua mensalidade!
-                                    (Acumule até 3 descontos).
+                            <div className="relative z-10">
+                                <div className="p-3 bg-blue-600 w-fit rounded-2xl mb-6 shadow-lg shadow-blue-600/30">
+                                    <Share2 className="w-6 h-6 text-white" />
+                                </div>
+                                <h3 className="text-2xl font-black mb-3 leading-tight">Programa de<br />Indicações</h3>
+                                <p className="text-slate-400 text-sm font-medium leading-relaxed mb-6">
+                                    Indique outros diretores e ganhe benefícios exclusivos para seu clube.
                                 </p>
                             </div>
-                            <div className="text-right">
-                                <span className="block text-2xl font-bold">{clubStatus.referralCredits?.length || 0}/3</span>
-                                <span className="text-xs text-indigo-200">Descontos Acumulados</span>
+
+                            <div className="relative z-10 space-y-4">
+                                <div className="flex items-end justify-between mb-2">
+                                    <span className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">Progresso Atual</span>
+                                    <span className="text-2xl font-black">{clubStatus.referralCredits?.length || 0}/3</span>
+                                </div>
+                                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${((clubStatus.referralCredits?.length || 0) / 3) * 100}%` }}
+                                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleCopyReferral}
+                                    className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black transition-all shadow-xl shadow-blue-600/20 active:scale-95 flex items-center justify-center gap-3"
+                                >
+                                    Copiar Link de Convite
+                                    <ArrowRight className="w-5 h-5" />
+                                </button>
                             </div>
-                        </div>
-
-                        <div className="flex gap-2 w-full mt-4">
-                            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-sm font-mono flex-1 truncate border border-white/10 hidden md:block">
-                                {`${window.location.origin}/register?ref=${clubStatus.referralCode}`}
-                            </div>
-
-                            <button
-                                onClick={handleCopyReferral}
-                                className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-50 transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm"
-                            >
-                                <span>Copiar Link</span>
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    const link = `${window.location.origin}/register?ref=${clubStatus.referralCode}`;
-                                    const msg = encodeURIComponent(`Olá! Quero te indicar o *Ranking DBV* para a gestão do seu Clube de Desbravadores.\n\nÉ um sistema completo que estou usando e recomendo. Crie sua conta pelo meu link:\n${link}`);
-                                    window.open(`https://wa.me/?text=${msg}`, '_blank');
-                                }}
-                                className="bg-[#25D366] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#128C7E] transition-colors flex items-center gap-2 shadow-sm"
-                            >
-                                Enviar no WhatsApp
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Pending Signatures Widget */}
-            <SignaturesWidget />
-
-            <h1 className="text-2xl font-bold text-slate-800">Visão Geral</h1>
-
-            {/* Widgets Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-                {/* Widget 1: Active Members */}
-                <div
-                    onClick={() => navigate('/dashboard/members')}
-                    className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 cursor-pointer hover:shadow-md transition-all hover:scale-[1.02]"
-                >
-                    <div className="bg-blue-100 p-3 rounded-lg text-blue-600">
-                        <Users className="w-8 h-8" />
-                    </div>
-                    <div>
-                        <p className="text-slate-500 text-sm">Membros Ativos</p>
-                        <h3 className="text-2xl font-bold text-slate-800">{stats?.activeMembers || 0}</h3>
-                    </div>
-                </div>
-
-                {/* Widget 2: Financial Balance */}
-                {['OWNER', 'ADMIN', 'DIRECTOR', 'TREASURER'].includes(user?.role || '') && (
-                    <div
-                        onClick={() => navigate('/dashboard/financial')}
-                        className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 cursor-pointer hover:shadow-md transition-all hover:scale-[1.02]"
-                    >
-                        <div className={`p-3 rounded-lg ${(stats?.financial?.balance || 0) >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                            <DollarSign className="w-8 h-8" />
-                        </div>
-                        <div>
-                            <p className="text-slate-500 text-sm">Saldo do Mês</p>
-                            <h3 className={`text-2xl font-bold ${(stats?.financial?.balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                R$ {stats?.financial?.balance?.toFixed(0) || '0'}
-                            </h3>
-                        </div>
-                    </div>
-                )}
-
-                {/* Widget 3: Next Event */}
-                <div
-                    onClick={() => navigate('/dashboard/events')}
-                    className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 cursor-pointer hover:shadow-md transition-all hover:scale-[1.02]"
-                >
-                    <div className="bg-purple-100 p-3 rounded-lg text-purple-600">
-                        <Calendar className="w-8 h-8" />
-                    </div>
-                    <div>
-                        <p className="text-slate-500 text-sm">Próximo Evento</p>
-                        <h3 className="text-lg font-bold text-slate-800 truncate max-w-[150px]" title={stats?.nextEvent?.title || 'Nenhum'}>
-                            {stats?.nextEvent?.title || 'Nenhum'}
-                        </h3>
-                        {stats?.nextEvent && (
-                            <p className="text-xs text-slate-500">
-                                {new Date(stats?.nextEvent?.startDate).toLocaleDateString()}
-                            </p>
-                        )}
-                    </div>
-                </div>
-
-                {/* Widget 4: Birthdays Count */}
-                <div
-                    onClick={() => setShowBirthdaysModal(true)}
-                    className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 cursor-pointer hover:shadow-md transition-all hover:scale-[1.02]"
-                >
-                    <div className="bg-pink-100 p-3 rounded-lg text-pink-600">
-                        <Trophy className="w-8 h-8" /> {/* Using Trophy as placeholder icon for birthdays if Cake not available */}
-                    </div>
-                    <div>
-                        <p className="text-slate-500 text-sm">Aniversariantes</p>
-                        <h3 className="text-2xl font-bold text-slate-800">{stats?.birthdays?.length || 0}</h3>
-                        <p className="text-xs text-slate-500">Neste Mês</p>
-                    </div>
+                        </motion.div>
+                    )}
                 </div>
             </div>
 
-            {/* REMOVED: Charts and Side List for Performance Simplification */}
+            {/* Stats Grid */}
+            <motion.div
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            >
+                {/* Active Members Card */}
+                <motion.div variants={item} className="group">
+                    <div
+                        onClick={() => navigate('/dashboard/members')}
+                        className="bg-white/70 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:-translate-y-2 transition-all duration-300"
+                    >
+                        <div className="p-4 bg-blue-50 w-fit rounded-2xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            <Users className="w-8 h-8" />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-1">Membros Ativos</p>
+                            <h3 className="text-4xl font-black text-slate-900">{stats?.activeMembers || 0}</h3>
+                        </div>
+                    </div>
+                </motion.div>
 
-            {/* Birthdays Modal */}
+                {/* Financial Card */}
+                {['OWNER', 'ADMIN', 'DIRECTOR', 'TREASURER'].includes(user?.role || '') && (
+                    <motion.div variants={item} className="group">
+                        <div
+                            onClick={() => navigate('/dashboard/financial')}
+                            className="bg-white/70 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:-translate-y-2 transition-all duration-300"
+                        >
+                            <div className={`p-4 w-fit rounded-2xl transition-colors ${(stats?.financial?.balance || 0) >= 0 ? 'bg-green-50 text-green-600 group-hover:bg-green-600 group-hover:text-white' : 'bg-red-50 text-red-600 group-hover:bg-red-600 group-hover:text-white'}`}>
+                                <DollarSign className="w-8 h-8" />
+                            </div>
+                            <div>
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-1">Saldo do Mês</p>
+                                <h3 className={`text-4xl font-black ${(stats?.financial?.balance || 0) >= 0 ? 'text-green-600' : 'text-red-700'}`}>
+                                    <span className="text-lg mr-1 font-bold">R$</span>
+                                    {stats?.financial?.balance?.toFixed(0) || '0'}
+                                </h3>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Next Event Card */}
+                <motion.div variants={item} className="group">
+                    <div
+                        onClick={() => navigate('/dashboard/events')}
+                        className="bg-white/70 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:-translate-y-2 transition-all duration-300"
+                    >
+                        <div className="p-4 bg-purple-50 w-fit rounded-2xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                            <Calendar className="w-8 h-8" />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-1">Próximo Evento</p>
+                            <h3 className="text-xl font-black text-slate-800 line-clamp-1 mb-1" title={stats?.nextEvent?.title || 'Nenhum'}>
+                                {stats?.nextEvent?.title || 'Nenhum'}
+                            </h3>
+                            {stats?.nextEvent && (
+                                <p className="text-xs text-slate-500 font-bold">
+                                    {new Date(stats?.nextEvent?.startDate).toLocaleDateString()}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Birthdays Card */}
+                <motion.div variants={item} className="group">
+                    <div
+                        onClick={() => setShowBirthdaysModal(true)}
+                        className="bg-white/70 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/50 premium-shadow flex flex-col justify-between h-56 cursor-pointer hover:bg-white hover:-translate-y-2 transition-all duration-300"
+                    >
+                        <div className="p-4 bg-pink-50 w-fit rounded-2xl text-pink-600 group-hover:bg-pink-600 group-hover:text-white transition-colors">
+                            <Trophy className="w-8 h-8" />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-1">Aniversariantes</p>
+                            <h3 className="text-4xl font-black text-slate-900">
+                                {stats?.birthdays?.length || 0}
+                                <span className="text-sm font-bold ml-2 text-slate-400">Este mês</span>
+                            </h3>
+                        </div>
+                    </div>
+                </motion.div>
+            </motion.div>
+
+            {/* Birthdays Modal - Refined */}
             <Modal
                 isOpen={showBirthdaysModal}
                 onClose={() => setShowBirthdaysModal(false)}
-                title="🎈 Aniversariantes do Mês"
+                title="🎂 Aniversariantes do Mês"
             >
                 {stats?.birthdays?.length === 0 ? (
-                    <p className="text-slate-500 text-center py-4">Ninguém faz aniversário este mês.</p>
+                    <div className="py-12 text-center space-y-4">
+                        <div className="p-6 bg-slate-50 w-fit mx-auto rounded-3xl">
+                            <Calendar className="w-12 h-12 text-slate-200" />
+                        </div>
+                        <p className="text-slate-400 font-bold">Ninguém faz aniversário este mês.</p>
+                    </div>
                 ) : (
-                    <ul className="space-y-4">
-                        {stats?.birthdays?.map((b: any) => (
-                            <li key={b.id} className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer" onClick={() => navigate(`/dashboard/members?search=${b.name}`)}>
-                                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
+                    <div className="divide-y divide-slate-100 max-h-[60vh] overflow-y-auto pr-2 scrollbar-none">
+                        {stats?.birthdays?.map((b: any, i: number) => (
+                            <motion.div
+                                key={b.id}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                onClick={() => navigate(`/dashboard/members?search=${b.name}`)}
+                                className="flex items-center gap-4 py-4 hover:bg-slate-50 px-4 rounded-2xl transition-all cursor-pointer group"
+                            >
+                                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-black transition-colors group-hover:bg-blue-600 group-hover:text-white shrink-0">
                                     {b.day}
                                 </div>
-                                <div>
-                                    <p className="font-bold text-slate-800">{b.name}</p>
-                                    <p className="text-sm text-slate-500 capitalize">{ROLE_TRANSLATIONS[b.role] || b.role}</p>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-black text-slate-800 truncate">{b.name}</p>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-tight">{ROLE_TRANSLATIONS[b.role] || b.role}</p>
                                 </div>
-                            </li>
+                                <ArrowRight className="w-5 h-5 text-slate-200 group-hover:text-blue-500 transition-all group-hover:translate-x-1" />
+                            </motion.div>
                         ))}
-                    </ul>
+                    </div>
                 )}
             </Modal>
 
-            {/* Profile Update Modal (Blocking for incomplete OWNER profiles) */}
+            {/* Incomplete Profile Logic (kept as is) */}
             {showProfileUpdate && user?.role === 'OWNER' && (
                 <ProfileUpdateModal
                     user={user}
@@ -310,7 +328,6 @@ function DirectorDashboard() {
                     onUpdate={async () => {
                         await refreshUser();
                         setShowProfileUpdate(false);
-                        // Show referral popup after profile update
                         if (!localStorage.getItem('referralPopupDismissed')) {
                             setShowReferralPopup(true);
                         }
@@ -318,7 +335,7 @@ function DirectorDashboard() {
                 />
             )}
 
-            {/* Referral Popup (After login for OWNER) */}
+            {/* Referral Popup Logic (kept as is) */}
             {showReferralPopup && clubStatus?.referralCode && (
                 <ReferralPopup
                     referralCode={clubStatus.referralCode}
@@ -327,6 +344,5 @@ function DirectorDashboard() {
                 />
             )}
         </div >
-
     );
 }

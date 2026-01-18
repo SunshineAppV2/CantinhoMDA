@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { useAuth } from '../contexts/AuthContext';
 // Firestore removed - using API instead
 import { api } from '../lib/axios';
-import { ShoppingBag, Plus, Tag, Coins, PackageCheck, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { ShoppingBag, Plus, Tag, Coins, PackageCheck, AlertCircle, Edit, Trash2, Search, Filter, History, Trash, Check, X, CheckSquare, Clock, ArrowRight } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { toast } from 'sonner';
 import { ROLE_TRANSLATIONS } from './members/types';
@@ -22,9 +23,9 @@ interface Product {
 interface Purchase {
     id: string;
     product: Product;
-    cost: number;
+    points_at_purchase: number; // Changed from 'cost'
     status: string;
-    createdAt: string;
+    created_at: string; // Changed from 'createdAt'
     user?: { name: string; role: string }; // For Admin view
 }
 
@@ -244,33 +245,42 @@ export function Store() {
 
     return (
         <div>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <div className="flex items-center gap-4">
-                    <h1 className="text-2xl font-bold text-slate-800">Loja Virtual</h1>
-                    <div className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2">
-                        <Coins className="w-4 h-4" />
-                        {isLoadingUser ? '...' : (currentUser?.points || 0) + ' Pontos'}
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8"
+            >
+                <div className="flex flex-col md:flex-row md:items-center gap-6">
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Loja Virtual</h1>
+                    <div className="bg-amber-100/80 backdrop-blur-md text-amber-700 px-6 py-3 rounded-2xl text-sm font-black flex items-center gap-3 shadow-xl shadow-amber-600/10 border border-amber-200">
+                        <div className="p-2 bg-amber-600 text-white rounded-xl shadow-lg">
+                            <Coins className="w-4 h-4" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] uppercase font-black tracking-widest leading-none mb-1">Seu Saldo</p>
+                            <p className="text-lg leading-none">{isLoadingUser ? '...' : (currentUser?.points?.toLocaleString() || 0)} <span className="text-xs">Pontos</span></p>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex gap-2">
-                    <div className="flex bg-slate-100 p-1 rounded-lg">
+                <div className="flex gap-3">
+                    <div className="flex bg-slate-100/50 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/50">
                         <button
                             onClick={() => setActiveTab('store')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'store' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'store' ? 'bg-white shadow-lg text-blue-600 border border-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}
                         >
                             Loja
                         </button>
                         <button
                             onClick={() => setActiveTab('inventory')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'inventory' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'inventory' ? 'bg-white shadow-lg text-blue-600 border border-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}
                         >
                             Meus Itens
                         </button>
                         {isAdmin && (
                             <button
                                 onClick={() => setActiveTab('admin')}
-                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1 ${activeTab === 'admin' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'admin' ? 'bg-white shadow-lg text-blue-600 border border-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}
                             >
                                 <PackageCheck className="w-4 h-4" /> Gestão
                             </button>
@@ -280,26 +290,26 @@ export function Store() {
                     {isAdmin && activeTab === 'store' && (
                         <button
                             onClick={handleOpenCreate}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-black transition-all shadow-xl shadow-blue-600/20 flex items-center gap-2 text-xs uppercase tracking-widest"
                         >
-                            <Plus className="w-5 h-5" />
+                            <Plus className="w-4 h-4" />
                             Novo Produto
                         </button>
                     )}
                 </div>
-            </div>
+            </motion.div>
 
             {activeTab === 'store' && (
                 <>
                     {/* Category Filter */}
-                    <div className="flex gap-2 overflow-x-auto pb-4 mb-2">
+                    <div className="flex gap-2 overflow-x-auto pb-6 mb-2 custom-scrollbar">
                         {categories.map(cat => (
                             <button
                                 key={cat}
                                 onClick={() => setSelectedCategory(cat)}
-                                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${selectedCategory === cat
-                                    ? 'bg-slate-800 text-white'
-                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap ${selectedCategory === cat
+                                    ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 shadow-lg'
+                                    : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'
                                     }`}
                             >
                                 {cat}
@@ -307,65 +317,68 @@ export function Store() {
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <motion.div
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                            hidden: { opacity: 0 },
+                            visible: {
+                                opacity: 1,
+                                transition: {
+                                    staggerChildren: 0.05
+                                }
+                            }
+                        }}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+                    >
                         {filteredProducts.map(product => (
-                            <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col group hover:border-blue-300 transition-colors relative">
-                                <div className="h-40 bg-slate-100 flex items-center justify-center relative">
+                            <motion.div
+                                variants={{
+                                    hidden: { opacity: 0, y: 20 },
+                                    visible: { opacity: 1, y: 0 }
+                                }}
+                                key={product.id}
+                                className="glass-card rounded-[2.5rem] premium-shadow overflow-hidden flex flex-col group hover:scale-[1.02] transition-all relative border border-white/50"
+                            >
+                                <div className="h-56 bg-slate-50 flex items-center justify-center relative overflow-hidden">
                                     {product.imageUrl ? (
-                                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                     ) : (
-                                        <ShoppingBag className="w-12 h-12 text-slate-300" />
+                                        <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                                            <ShoppingBag className="w-16 h-16 text-slate-300" />
+                                        </div>
                                     )}
-                                    <div className="absolute top-2 right-2 flex gap-1">
-                                        <span className="bg-white/90 px-2 py-1 rounded text-xs font-bold text-slate-600 flex items-center gap-1">
+
+                                    <div className="absolute top-4 left-4 flex flex-col gap-2">
+                                        <div className="bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm border border-white/50 flex items-center gap-2">
                                             <Tag className="w-3 h-3" />
                                             {product.category}
-                                        </span>
+                                        </div>
                                         {product.stock >= 0 && product.stock < 5 && (
-                                            <span className="bg-red-100 px-2 py-1 rounded text-xs font-bold text-red-600 flex items-center gap-1 animate-pulse" title="Estoque Baixo">
+                                            <div className="bg-rose-500 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-lg animate-pulse flex items-center gap-2">
                                                 <AlertCircle className="w-3 h-3" />
-                                                {product.stock}
-                                            </span>
+                                                Quase Esgotado ({product.stock})
+                                            </div>
                                         )}
                                     </div>
 
-
-
+                                    {/* Overlay for price/buy on hover? No, let's keep it visible but interactive */}
                                 </div>
-                                <div className="p-4 flex-1 flex flex-col">
-                                    <h3 className="font-bold text-slate-800 mb-1">{product.name}</h3>
-                                    <p className="text-sm text-slate-500 mb-4 line-clamp-2">{product.description}</p>
 
-                                    <div className="mt-auto">
-                                        {/* Admin Actions Row */}
-                                        {isAdmin && (
-                                            <div className="flex justify-end gap-2 mb-3 pt-2 border-t border-slate-100">
-                                                <button
-                                                    onClick={() => handleOpenEdit(product)}
-                                                    className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
-                                                    title="Editar"
-                                                >
-                                                    <Edit className="w-3 h-3" /> Editar
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        if (confirm(`Excluir "${product.name}"?`)) {
-                                                            deleteMutation.mutate(product.id);
-                                                        }
-                                                    }}
-                                                    className="flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
-                                                    title="Excluir"
-                                                >
-                                                    <Trash2 className="w-3 h-3" /> Excluir
-                                                </button>
+                                <div className="p-8 flex-1 flex flex-col">
+                                    <h3 className="font-black text-slate-900 text-lg mb-2 tracking-tight line-clamp-1">{product.name}</h3>
+                                    <p className="text-sm text-slate-500 mb-6 font-bold leading-relaxed line-clamp-2">{product.description}</p>
+
+                                    <div className="mt-auto space-y-6">
+                                        <div className="flex items-center justify-between pt-6 border-t border-slate-100/50">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Preço</span>
+                                                <span className="text-2xl font-black text-amber-600 flex items-center gap-1.5">
+                                                    <Coins className="w-5 h-5" />
+                                                    {product.price}
+                                                </span>
                                             </div>
-                                        )}
 
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-lg font-bold text-yellow-600 flex items-center gap-1">
-                                                <Coins className="w-5 h-5" />
-                                                {product.price}
-                                            </span>
                                             <button
                                                 onClick={() => {
                                                     if (confirm(`Comprar "${product.name}" por ${product.price} pontos?`)) {
@@ -377,157 +390,217 @@ export function Store() {
                                                     buyMutation.isPending ||
                                                     (product.stock !== -1 && product.stock <= 0)
                                                 }
-                                                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-600/20 transition-all disabled:opacity-50 disabled:grayscale disabled:shadow-none"
                                             >
-                                                {product.stock !== -1 && product.stock <= 0 ? 'Esgotado' : 'Comprar'}
+                                                {product.stock !== -1 && product.stock <= 0 ? 'Esgotado' : 'Resgatar'}
                                             </button>
                                         </div>
+
+                                        {/* Admin Actions Row */}
+                                        {isAdmin && (
+                                            <div className="flex gap-2 p-2 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
+                                                <button
+                                                    onClick={() => handleOpenEdit(product)}
+                                                    className="flex-1 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 py-3 rounded-xl transition-all"
+                                                >
+                                                    <Edit className="w-3 h-3" /> Editar
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        if (confirm(`Excluir "${product.name}"?`)) {
+                                                            deleteMutation.mutate(product.id);
+                                                        }
+                                                    }}
+                                                    className="flex-1 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-rose-600 hover:bg-rose-50 py-3 rounded-xl transition-all"
+                                                >
+                                                    <Trash2 className="w-3 h-3" /> Excluir
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
                         {filteredProducts.length === 0 && (
-                            <div className="col-span-full py-12 text-center text-slate-500">
-                                Nenhum produto encontrado nesta categoria.
-                            </div>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="col-span-full py-20 text-center"
+                            >
+                                <ShoppingBag className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Nenhum produto nesta categoria</p>
+                            </motion.div>
                         )}
-                    </div>
+                    </motion.div>
                 </>
             )}
 
             {activeTab === 'inventory' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                                <th className="px-6 py-4 font-semibold text-slate-700">Item</th>
-                                <th className="px-6 py-4 font-semibold text-slate-700">Custo</th>
-                                <th className="px-6 py-4 font-semibold text-slate-700">Data</th>
-                                <th className="px-6 py-4 font-semibold text-slate-700">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {myPurchases.map(purchase => (
-                                <tr key={purchase.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="font-medium text-slate-800">{purchase.product?.name || 'Item Removido'}</div>
-                                        <div className="text-xs text-slate-500">{purchase.product?.category || '-'}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-yellow-600 font-bold">{purchase.cost} pts</td>
-                                    <td className="px-6 py-4 text-slate-600">{new Date(purchase.createdAt).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${purchase.status === 'DELIVERED' || purchase.status === 'APPLIED' ? 'bg-green-100 text-green-700' :
-                                            purchase.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                                                purchase.status === 'REFUNDED' ? 'bg-red-100 text-red-700' :
-                                                    'bg-slate-100 text-slate-700'
-                                            }`}>
-                                            {purchase.status === 'PENDING' ? 'Entregar' :
-                                                purchase.status === 'DELIVERED' ? 'Entregue' :
-                                                    purchase.status === 'APPLIED' ? 'Ativado' :
-                                                        purchase.status === 'REFUNDED' ? 'Estornado' :
-                                                            purchase.status}
-                                        </span>
-                                        {purchase.status === 'PENDING' && (
-                                            <div className="text-[10px] text-slate-400 mt-1">
-                                                Procure a diretoria.
-                                            </div>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                            {myPurchases.length === 0 && (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
-                                        Você ainda não comprou nada. Visite a loja!
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="glass-card rounded-[2.5rem] premium-shadow overflow-hidden"
+                >
+                    <div className="p-8 border-b border-slate-100/50 font-black text-slate-800 flex items-center gap-3">
+                        <History className="w-5 h-5 text-blue-600" />
+                        Meus Itens Resgatados
+                    </div>
+                    {myPurchases.length === 0 ? (
+                        <div className="p-20 text-center">
+                            <ShoppingBag className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Você ainda não resgatou nenhum item</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50/50 text-slate-400">
+                                    <tr>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Item</th>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Custo</th>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Data</th>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100/50">
+                                    {myPurchases.map((purchase, idx) => (
+                                        <motion.tr
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                            key={purchase.id}
+                                            className="hover:bg-blue-50/30 transition-colors"
+                                        >
+                                            <td className="px-8 py-5">
+                                                <div className="font-black text-slate-800">{purchase.product?.name || 'Produto Removido'}</div>
+                                                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{purchase.product?.category}</div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center gap-1.5 font-black text-amber-600">
+                                                    <Coins className="w-4 h-4" />
+                                                    {purchase.points_at_purchase || purchase.product?.price}
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5 text-slate-500 font-bold">
+                                                {new Date(purchase.created_at).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-8 py-5 text-right">
+                                                <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border ${purchase.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                                    purchase.status === 'PENDING' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                                        'bg-rose-100 text-rose-700 border-rose-200'
+                                                    }`}>
+                                                    {purchase.status === 'DELIVERED' ? 'Entregue' :
+                                                        purchase.status === 'PENDING' ? 'Pendente' : 'Cancelado'}
+                                                </span>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </motion.div>
             )}
 
-            {activeTab === 'admin' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                        <h3 className="font-bold text-slate-700">Pedidos do Clube</h3>
-                        <span className="text-xs text-slate-500">Mostrando últimos 50 pedidos</span>
+            {activeTab === 'admin' && isAdmin && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="glass-card rounded-[2.5rem] premium-shadow overflow-hidden"
+                >
+                    <div className="p-8 border-b border-slate-100/50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/30">
+                        <div className="flex items-center gap-3">
+                            <PackageCheck className="w-5 h-5 text-blue-600" />
+                            <div>
+                                <h3 className="font-black text-slate-800">Gestão de Pedidos</h3>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total de {clubPurchases.length} resgates</p>
+                            </div>
+                        </div>
                     </div>
-                    <table className="w-full text-left">
-                        <thead className="bg-white border-b border-slate-200">
-                            <tr>
-                                <th className="px-6 py-4 font-semibold text-slate-700">Solicitante</th>
-                                <th className="px-6 py-4 font-semibold text-slate-700">Item</th>
-                                <th className="px-6 py-4 font-semibold text-slate-700">Custo</th>
-                                <th className="px-6 py-4 font-semibold text-slate-700">Status</th>
-                                <th className="px-6 py-4 font-semibold text-slate-700 text-right">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {clubPurchases.map(purchase => (
-                                <tr key={purchase.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="font-medium text-slate-800">{purchase.user?.name || 'Unknown'}</div>
-                                        <div className="text-xs text-slate-500 capitalize">{ROLE_TRANSLATIONS[purchase.user?.role || ''] || purchase.user?.role || '-'}</div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="font-medium text-slate-800">{purchase.product?.name || 'Item Removido'}</div>
-                                        <div className="text-xs text-slate-500">{purchase.product?.category || '-'}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-yellow-600 font-bold">{purchase.cost} pts</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${purchase.status === 'DELIVERED' || purchase.status === 'APPLIED' ? 'bg-green-100 text-green-700' :
-                                            purchase.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                                                purchase.status === 'REFUNDED' ? 'bg-red-100 text-red-700' :
-                                                    'bg-slate-100 text-slate-700'
-                                            }`}>
-                                            {purchase.status === 'PENDING' ? 'Pendente' :
-                                                purchase.status === 'DELIVERED' ? 'Entregue' :
-                                                    purchase.status === 'REFUNDED' ? 'Estornado' :
-                                                        purchase.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        {purchase.status === 'PENDING' && (
-                                            <button
-                                                onClick={() => {
-                                                    if (confirm('Marcar como ENTREGUE?')) {
-                                                        deliverMutation.mutate(purchase.id);
-                                                    }
-                                                }}
-                                                disabled={deliverMutation.isPending}
-                                                className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-bold transition-colors"
-                                            >
-                                                Marcar Entregue
-                                            </button>
-                                        )}
-                                        {(purchase.status === 'PENDING' || purchase.status === 'DELIVERED' || purchase.status === 'APPLIED') && (
-                                            <button
-                                                onClick={() => {
-                                                    if (confirm('ESTORNAR compra? O valor será devolvido e o estoque reposto.')) {
-                                                        refundMutation.mutate(purchase.id);
-                                                    }
-                                                }}
-                                                disabled={refundMutation.isPending}
-                                                className="ml-2 text-xs bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-lg font-bold transition-colors"
-                                                title="Estornar Valor e Estoque"
-                                            >
-                                                Estornar
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                            {clubPurchases.length === 0 && (
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-50/50 text-slate-400">
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                                        Nenhum pedido registrado.
-                                    </td>
+                                    <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Membro</th>
+                                    <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Produto</th>
+                                    <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Data</th>
+                                    <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest text-center">Status</th>
+                                    <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest text-right">Ações</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100/50">
+                                {clubPurchases.map((purchase, idx) => (
+                                    <motion.tr
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: idx * 0.03 }}
+                                        key={purchase.id}
+                                        className="hover:bg-blue-50/30 transition-colors"
+                                    >
+                                        <td className="px-8 py-5">
+                                            <div className="font-black text-slate-800">{purchase.user?.name}</div>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">
+                                                {ROLE_TRANSLATIONS[purchase.user?.role as keyof typeof ROLE_TRANSLATIONS] || purchase.user?.role}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5 font-bold text-slate-700">
+                                            {purchase.product?.name}
+                                        </td>
+                                        <td className="px-8 py-5 text-slate-500 font-bold">
+                                            {new Date(purchase.created_at).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-8 py-5 text-center">
+                                            <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-dashed ${purchase.status === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                    purchase.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
+                                                        'bg-rose-50 text-rose-700 border-rose-200'
+                                                }`}>
+                                                {purchase.status === 'DELIVERED' ? 'Entregue' :
+                                                    purchase.status === 'PENDING' ? 'Pendente' : 'Cancelado'}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-5 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                {purchase.status === 'PENDING' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => deliverMutation.mutate(purchase.id)}
+                                                            className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                                                            title="Marcar como Entregue"
+                                                        >
+                                                            <Check className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (confirm('Estornar esta compra? Os pontos serão devolvidos ao membro.')) {
+                                                                    refundMutation.mutate(purchase.id);
+                                                                }
+                                                            }}
+                                                            className="p-3 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                                                            title="Estornar / Cancelar"
+                                                        >
+                                                            <Trash className="w-5 h-5" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {purchase.status !== 'PENDING' && (
+                                                    <span className="text-[10px] font-black uppercase text-slate-300 px-4">Finalizado</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </motion.tr>
+                                ))}
+                                {clubPurchases.length === 0 && (
+                                    <tr>
+                                        <td colSpan={5} className="py-20 text-center">
+                                            <PackageCheck className="w-12 h-12 text-slate-100 mx-auto mb-4" />
+                                            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Nenhum pedido realizado ainda</p>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </motion.div>
             )}
 
             {/* Create/Edit Product Modal */}
@@ -536,90 +609,97 @@ export function Store() {
                 onClose={() => setIsCreateModalOpen(false)}
                 title={editingProduct ? "Editar Produto" : "Novo Produto"}
             >
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Nome do Produto</label>
-                        <input
-                            type="text"
-                            required
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg"
-                        />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Preço (Pontos)</label>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Nome do Produto</label>
                             <input
-                                type="number"
+                                type="text"
                                 required
-                                min="0"
-                                value={price}
-                                onChange={e => setPrice(e.target.value)}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800"
+                                placeholder="Ex: Camiseta do Clube"
                             />
                         </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Preço (Pontos)</label>
+                                <div className="relative">
+                                    <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500" />
+                                    <input
+                                        type="number"
+                                        required
+                                        min="0"
+                                        value={price}
+                                        onChange={e => setPrice(e.target.value)}
+                                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Estoque (-1 = ∞)</label>
+                                <input
+                                    type="number"
+                                    required
+                                    value={stock}
+                                    onChange={e => setStock(e.target.value)}
+                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800"
+                                />
+                            </div>
+                        </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Estoque (-1 = Infinito)</label>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Categoria</label>
+                            <select
+                                value={category}
+                                onChange={e => setCategory(e.target.value)}
+                                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 appearance-none"
+                            >
+                                <option value="REAL">Item Físico (Real)</option>
+                                <option value="VIRTUAL">Item Virtual</option>
+                                <option value="UNIFORME">Uniforme</option>
+                                <option value="ACAMPAMENTO">Acampamento</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Descrição</label>
+                            <textarea
+                                value={description}
+                                onChange={e => setDescription(e.target.value)}
+                                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800 resize-none h-32"
+                                placeholder="Dê detalhes sobre o produto..."
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">URL da Imagem</label>
                             <input
-                                type="number"
-                                required
-                                value={stock}
-                                onChange={e => setStock(e.target.value)}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg"
+                                type="text"
+                                value={imageUrl}
+                                onChange={e => setImageUrl(e.target.value)}
+                                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-slate-800"
+                                placeholder="https://exemplo.com/imagem.jpg"
                             />
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Categoria</label>
-                        <select
-                            value={category}
-                            onChange={e => setCategory(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg"
+
+                    <div className="flex gap-3 pt-6">
+                        <button
+                            type="button"
+                            onClick={() => setIsCreateModalOpen(false)}
+                            className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all"
                         >
-                            <option value="REAL">Item Físico (Real)</option>
-                            <option value="VIRTUAL">Item Virtual</option>
-                            <option value="UNIFORME">Uniforme</option>
-                            <option value="ACAMPAMENTO">Acampamento</option>
-                            <option value="ESPECIALIDADES">Especialidades</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Imagem do Produto</label>
-                        <div className="flex items-center gap-4">
-                            {imageUrl && (
-                                <a href={imageUrl} target="_blank" rel="noopener noreferrer" className="block relative group" title="Clique para abrir em nova aba">
-                                    <img src={imageUrl} alt="Preview" className="w-16 h-16 object-cover rounded-lg border border-slate-200" />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 flex items-center justify-center rounded-lg transition-colors">
-                                        {/* Hover effect */}
-                                    </div>
-                                </a>
-                            )}
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleUpload}
-                                className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                            />
-                        </div>
-                        {imageUrl && <p className="text-xs text-green-600 mt-1">Imagem carregada com sucesso!</p>}
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Descrição</label>
-                        <textarea
-                            value={description}
-                            onChange={e => setDescription(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg resize-none h-20"
-                        />
-                    </div>
-                    <div className="flex justify-end gap-2 pt-4">
-                        <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-slate-600">Cancelar</button>
+                            Cancelar
+                        </button>
                         <button
                             type="submit"
                             disabled={createMutation.isPending || updateMutation.isPending}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                            className="flex-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-600/20 transition-all disabled:opacity-50"
                         >
-                            {createMutation.isPending || updateMutation.isPending ? 'Salvando...' : (editingProduct ? 'Salvar Alterações' : 'Criar')}
+                            {createMutation.isPending || updateMutation.isPending ? 'Salvando...' : (editingProduct ? 'Salvar Alterações' : 'Criar Produto')}
                         </button>
                     </div>
                 </form>

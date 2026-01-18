@@ -501,12 +501,19 @@ model AuditLog {
   resourceId String?
   details    Json?
   ipAddress  String?
+  userAgent  String?
   authorId   String?
   clubId     String?
+  status     String   @default("SUCCESS") // SUCCESS, ERROR, WARNING
   createdAt  DateTime @default(now())
   author     User?    @relation(fields: [authorId], references: [id])
   club       Club?    @relation(fields: [clubId], references: [id])
 
+  @@index([authorId])
+  @@index([clubId])
+  @@index([resource])
+  @@index([createdAt])
+  @@index([status])
   @@map("audit_logs")
 }
 

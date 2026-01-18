@@ -31,9 +31,11 @@ import { RegionalEventsModule } from './regional-events/regional-events.module';
 import { AuditModule } from './audit/audit.module';
 import { RankingModule } from './ranking/ranking.module';
 import { SystemModule } from './system/system.module';
+import { EncryptionModule } from './common/encryption/encryption.module';
 
 @Module({
   imports: [
+    EncryptionModule, // Criptografia global para dados sensíveis (LGPD)
     PrismaModule,
     UsersModule,
     AuthModule,

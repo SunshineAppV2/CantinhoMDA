@@ -2,6 +2,7 @@
 import { AuthService } from './auth.service';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RateLimit } from '../common/guards/rate-limit.guard';
 import * as admin from 'firebase-admin';
 
 class LoginDto {
@@ -20,6 +21,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
+  @RateLimit('login') // Proteção contra força bruta: 5 tentativas/15min
   async signIn(@Body() signInDto: LoginDto) {
     const user = await this.authService.validateUser(signInDto.email, signInDto.password);
 
@@ -33,6 +35,7 @@ export class AuthController {
   // IMPORTANT: This route does NOT use JwtAuthGuard
   // We manually validate the Firebase token instead (if available)
   @Post('register')
+  @RateLimit('register') // Proteção contra spam: 3 registros/hora
   async register(
     @Headers('authorization') authorization: string,
     @Body() createUserDto: any

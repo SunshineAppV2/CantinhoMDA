@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ModalProps {
     isOpen: boolean;
@@ -26,32 +27,43 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' 
         };
     }, [isOpen, onClose]);
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-2 sm:p-4">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
-                onClick={onClose}
-            ></div>
-
-            {/* Modal Content */}
-            <div className={`relative bg-white rounded-xl shadow-xl w-[95%] sm:w-full ${maxWidth} overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]`}>
-                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-100">
-                    <h2 className="text-lg sm:text-xl font-bold text-slate-800 line-clamp-1">{title}</h2>
-                    <button
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+                    {/* Backdrop */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity"
                         onClick={onClose}
-                        className="text-slate-400 hover:text-slate-600 transition-colors p-2 -mr-2"
-                    >
-                        <X className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </button>
-                </div>
+                    />
 
-                <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar">
-                    {children}
+                    {/* Modal Content */}
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                        className={`relative bg-white/90 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] w-full ${maxWidth} overflow-hidden flex flex-col max-h-[90vh] border border-white/50`}
+                    >
+                        <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100/50">
+                            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight line-clamp-1">{title}</h2>
+                            <button
+                                onClick={onClose}
+                                className="text-slate-400 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 transition-all p-3 rounded-2xl"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+                            {children}
+                        </div>
+                    </motion.div>
                 </div>
-            </div>
-        </div>
+            )}
+        </AnimatePresence>
     );
 }

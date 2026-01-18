@@ -358,34 +358,45 @@ export function Treasury() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-slate-800">Tesouraria</h1>
-                <div className="flex gap-2">
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8"
+            >
+                <div>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Tesouraria</h1>
+                    <p className="text-slate-500 font-bold mt-1 uppercase text-xs tracking-widest flex items-center gap-2">
+                        <DollarSign className="w-3.5 h-3.5 text-blue-600" />
+                        Gestão Financeira do Clube
+                    </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
                     <button
                         onClick={() => generateFinancialReport(transactions, balanceData, 'Clube')}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                        className="bg-white hover:bg-slate-50 text-slate-700 px-6 py-3 rounded-2xl font-black transition-all border border-slate-200 shadow-sm flex items-center gap-2 text-xs uppercase tracking-widest"
                     >
-                        <Printer className="w-5 h-5" />
+                        <Printer className="w-4 h-4" />
                         Relatório
                     </button>
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-black transition-all shadow-xl shadow-blue-600/20 flex items-center gap-2 text-xs uppercase tracking-widest"
                     >
-                        <Plus className="w-5 h-5" />
+                        <Plus className="w-4 h-4" />
                         Nova Transação
                     </button>
                     {user?.role === 'MASTER' && (
                         <button
                             onClick={() => setIsPixModalOpen(true)}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                            className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-black transition-all shadow-xl shadow-slate-900/20 flex items-center gap-2 text-xs uppercase tracking-widest"
                         >
-                            <QrCode className="w-5 h-5" />
+                            <QrCode className="w-4 h-4 text-emerald-400" />
                             Cobrar Pix
                         </button>
                     )}
                 </div>
-            </div>
+            </motion.div>
 
             <PaymentModal
                 isOpen={isPixModalOpen}
@@ -394,213 +405,276 @@ export function Treasury() {
             />
 
             {/* Navigation Tabs */}
-            <div className="flex gap-4 border-b border-slate-200">
+            <div className="flex gap-8 border-b border-slate-200/50 mb-4 px-2">
                 <button
                     onClick={() => setActiveTab('HISTORY')}
-                    className={`pb-2 px-1 font-medium text-sm transition-colors border-b-2 ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    className={`pb-4 px-2 font-black text-xs uppercase tracking-[0.2em] transition-all relative ${activeTab === 'HISTORY' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                     Histórico
+                    {activeTab === 'HISTORY' && (
+                        <motion.div layoutId="activeTabRef" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full" />
+                    )}
                 </button>
                 <button
                     onClick={() => setActiveTab('VALIDATION')}
-                    className={`pb-2 px-1 font-medium text-sm transition-colors border-b-2 ${activeTab === 'VALIDATION' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                    className={`pb-4 px-2 font-black text-xs uppercase tracking-[0.2em] transition-all relative ${activeTab === 'VALIDATION' ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                     Validações Pendentes ({pendingValidations.length})
+                    {activeTab === 'VALIDATION' && (
+                        <motion.div layoutId="activeTabRef" className="absolute bottom-0 left-0 right-0 h-1 bg-orange-600 rounded-t-full" />
+                    )}
                 </button>
             </div>
 
             {/* Stats Cards (Only in History?) OK to keep always */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="glass-card p-8 rounded-[2.5rem] premium-shadow"
+                >
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-slate-500 text-sm font-medium mb-1">Saldo Total</p>
-                            <h3 className={`text-2xl font-bold ${(balanceData?.balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                R$ {balanceData?.balance?.toFixed(2) || '0.00'}
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-3">Saldo Total</p>
+                            <h3 className={`text-3xl font-black ${(balanceData?.balance || 0) >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
+                                R$ {balanceData?.balance?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </h3>
                         </div>
-                        <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
+                        <div className="p-4 bg-slate-100/50 rounded-2xl text-slate-600">
                             <DollarSign className="w-6 h-6" />
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="glass-card p-8 rounded-[2.5rem] premium-shadow"
+                >
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-slate-500 text-sm font-medium mb-1">Receitas</p>
-                            <h3 className="text-2xl font-bold text-green-600">
-                                + R$ {balanceData?.income?.toFixed(2) || '0.00'}
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-3">Entradas</p>
+                            <h3 className="text-3xl font-black text-emerald-600">
+                                + R$ {balanceData?.income?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </h3>
                         </div>
-                        <div className="p-2 bg-green-50 rounded-lg text-green-600">
+                        <div className="p-4 bg-emerald-50 rounded-2xl text-emerald-600">
                             <TrendingUp className="w-6 h-6" />
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="glass-card p-8 rounded-[2.5rem] premium-shadow"
+                >
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-slate-500 text-sm font-medium mb-1">Despesas</p>
-                            <h3 className="text-2xl font-bold text-red-600">
-                                - R$ {balanceData?.expense?.toFixed(2) || '0.00'}
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-3">Saídas</p>
+                            <h3 className="text-3xl font-black text-rose-600">
+                                - R$ {balanceData?.expense?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </h3>
                         </div>
-                        <div className="p-2 bg-red-50 rounded-lg text-red-600">
+                        <div className="p-4 bg-rose-50 rounded-2xl text-rose-600">
                             <TrendingDown className="w-6 h-6" />
                         </div>
                     </div>
-                </div>
+                </motion.div>
             </div>
 
             {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <CashFlowChart
-                    title="Fluxo de Caixa"
-                    data={summary.monthlyData}
-                    dataKeyName="name"
-                    dataKeyIncome="income"
-                    dataKeyExpense="expense"
-                />
-                <SimplePieChart
-                    title="Despesas por Categoria"
-                    data={summary.categoryData}
-                    dataKeyName="name"
-                    dataKeyValue="value"
-                />
-            </div>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4 }}
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"
+            >
+                <div className="glass-card p-6 rounded-[2.5rem] premium-shadow">
+                    <CashFlowChart
+                        title="Fluxo de Caixa"
+                        data={summary.monthlyData}
+                        dataKeyName="name"
+                        dataKeyIncome="income"
+                        dataKeyExpense="expense"
+                    />
+                </div>
+                <div className="glass-card p-6 rounded-[2.5rem] premium-shadow">
+                    <SimplePieChart
+                        title="Despesas por Categoria"
+                        data={summary.categoryData}
+                        dataKeyName="name"
+                        dataKeyValue="value"
+                    />
+                </div>
+            </motion.div>
 
             {/* VALIDATION View */}
-            {
-                activeTab === 'VALIDATION' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-4 border-b border-slate-200 font-bold text-slate-700 bg-orange-50">
+            <AnimatePresence mode="wait">
+                {activeTab === 'VALIDATION' && (
+                    <motion.div
+                        key="validation"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="glass-card rounded-[2.5rem] premium-shadow overflow-hidden"
+                    >
+                        <div className="p-8 border-b border-slate-100/50 font-black text-slate-800 bg-orange-50/30 flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
                             Pagamentos Aguardando Aprovação
                         </div>
                         {pendingValidations.length === 0 ? (
-                            <div className="p-8 text-center text-slate-500">Nenhuma validação pendente.</div>
+                            <div className="p-20 text-center">
+                                <FileText className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest text-center">Nenhuma validação pendente</p>
+                            </div>
                         ) : (
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-slate-500 uppercase">
-                                    <tr>
-                                        <th className="px-6 py-3">Data</th>
-                                        <th className="px-6 py-3">Membro</th>
-                                        <th className="px-6 py-3">Descrição (Categoria)</th>
-                                        <th className="px-6 py-3 text-right">Valor</th>
-                                        <th className="px-6 py-3 text-center">Comprovante</th>
-                                        <th className="px-6 py-3 text-right">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200">
-                                    {pendingValidations.map(t => (
-                                        <tr key={t.id} className="hover:bg-slate-50">
-                                            <td className="px-6 py-3">{new Date(t.date).toLocaleDateString()}</td>
-                                            <td className="px-6 py-3 font-semibold">{t.payer?.name || '-'}</td>
-                                            <td className="px-6 py-3">{t.description} <span className="text-xs text-slate-400">({t.category})</span></td>
-                                            <td className="px-6 py-3 text-right font-bold text-green-600">R$ {t.amount.toFixed(2)}</td>
-                                            <td className="px-6 py-3 text-center">
-                                                {t.proofUrl ? (
-                                                    <a href={t.proofUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center justify-center gap-1">
-                                                        <FileText className="w-4 h-4" /> Ver
-                                                    </a>
-                                                ) : <span className="text-slate-400">-</span>}
-                                            </td>
-                                            <td className="px-6 py-3 text-right flex justify-end gap-1">
-                                                <button
-                                                    onClick={() => approveMutation.mutate(t.id)}
-                                                    disabled={approveMutation.isPending}
-                                                    className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50" title="Aprovar">
-                                                    <Check className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => rejectMutation.mutate(t.id)}
-                                                    disabled={rejectMutation.isPending}
-                                                    className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50" title="Rejeitar">
-                                                    <X className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(t.id)}
-                                                    disabled={deleteMutation.isPending}
-                                                    className="p-1.5 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 disabled:opacity-50" title="Excluir Definitivamente">
-                                                    <Trash2 className="w-5 h-5" />
-                                                </button>
-                                            </td>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50/50 text-slate-400">
+                                        <tr>
+                                            <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Data</th>
+                                            <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Membro</th>
+                                            <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Descrição</th>
+                                            <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest text-right">Valor</th>
+                                            <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest text-center">Anexo</th>
+                                            <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest text-right">Ações</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100/50">
+                                        {pendingValidations.map((t, idx) => (
+                                            <motion.tr
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: idx * 0.05 }}
+                                                key={t.id}
+                                                className="hover:bg-blue-50/30 transition-colors"
+                                            >
+                                                <td className="px-8 py-5 text-slate-500 font-bold">{new Date(t.date).toLocaleDateString()}</td>
+                                                <td className="px-8 py-5 font-black text-slate-800">{t.payer?.name || '-'}</td>
+                                                <td className="px-8 py-5">
+                                                    <div className="font-bold text-slate-800">{t.description}</div>
+                                                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{t.category}</div>
+                                                </td>
+                                                <td className="px-8 py-5 text-right font-black text-emerald-600 text-base">R$ {t.amount.toFixed(2)}</td>
+                                                <td className="px-8 py-5 text-center">
+                                                    {t.proofUrl ? (
+                                                        <a href={t.proofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
+                                                            <FileText className="w-4 h-4" />
+                                                        </a>
+                                                    ) : <span className="text-slate-300">-</span>}
+                                                </td>
+                                                <td className="px-8 py-5 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => approveMutation.mutate(t.id)}
+                                                            disabled={approveMutation.isPending}
+                                                            className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-50" title="Aprovar">
+                                                            <Check className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => rejectMutation.mutate(t.id)}
+                                                            disabled={rejectMutation.isPending}
+                                                            className="p-3 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all disabled:opacity-50" title="Rejeitar">
+                                                            <X className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(t.id)}
+                                                            disabled={deleteMutation.isPending}
+                                                            className="p-3 bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-900 hover:text-white transition-all disabled:opacity-50" title="Excluir Definitivamente">
+                                                            <Trash2 className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </motion.tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
-                    </div>
-                )
-            }
+                    </motion.div>
+                )}
 
-            {/* HISTORY View */}
-            {
-                activeTab === 'HISTORY' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-4 border-b border-slate-200 font-bold text-slate-700">
+                {/* HISTORY View */}
+                {activeTab === 'HISTORY' && (
+                    <motion.div
+                        key="history"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        className="glass-card rounded-[2.5rem] premium-shadow overflow-hidden"
+                    >
+                        <div className="p-8 border-b border-slate-100/50 font-black text-slate-800">
                             Histórico de Transações
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-slate-500 uppercase">
+                                <thead className="bg-slate-50/50 text-slate-400">
                                     <tr>
-                                        <th className="px-6 py-3">Vencimento</th>
-                                        <th className="px-6 py-3">Descrição</th>
-                                        <th className="px-6 py-3">Categoria</th>
-                                        <th className="px-6 py-3">Membro</th>
-                                        <th className="px-6 py-3">Status</th>
-                                        <th className="px-6 py-3 text-right">Valor</th>
-                                        <th className="px-6 py-3 text-center">Ações</th>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Vencimento</th>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Descrição</th>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Categoria</th>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Membro</th>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">Status</th>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest text-right">Valor</th>
+                                        <th className="px-8 py-5 font-black uppercase text-[10px] tracking-widest text-center">Ações</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-200">
-                                    {transactions.map(t => {
+                                <tbody className="divide-y divide-slate-100/50">
+                                    {transactions.map((t, idx) => {
                                         const isOverdue = t.status === 'PENDING' && t.dueDate && new Date() > new Date(t.dueDate);
-                                        let rowClass = 'hover:bg-slate-50'; // Default
-                                        if (t.status === 'COMPLETED') rowClass = 'bg-green-50 hover:bg-green-100';
-                                        else if (isOverdue) rowClass = 'bg-red-50 hover:bg-red-100';
-                                        else if (t.status === 'PENDING') rowClass = 'bg-orange-50 hover:bg-orange-100';
+                                        let rowClass = 'hover:bg-blue-50/20'; // Default
+                                        if (t.status === 'COMPLETED') rowClass = 'bg-emerald-50/10 hover:bg-emerald-50/30';
+                                        else if (isOverdue) rowClass = 'bg-rose-50/10 hover:bg-rose-50/30';
+                                        else if (t.status === 'PENDING') rowClass = 'bg-amber-50/10 hover:bg-amber-50/30';
 
                                         return (
-                                            <tr key={t.id} className={`transition-colors border-b border-slate-200 ${rowClass}`}>
-                                                <td className="px-6 py-3 text-slate-600">
+                                            <motion.tr
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: idx * 0.03 }}
+                                                key={t.id}
+                                                className={`transition-colors border-b border-slate-100/50 ${rowClass}`}
+                                            >
+                                                <td className="px-8 py-5 text-slate-500 font-bold">
                                                     {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : new Date(t.date).toLocaleDateString()}
                                                     {t.status === 'PENDING' && getDaysLabel(t.dueDate)}
                                                 </td>
-                                                <td className="px-6 py-3 font-medium text-slate-800">
+                                                <td className="px-8 py-5 font-black text-slate-800 text-base">
                                                     {t.description}
                                                 </td>
-                                                <td className="px-6 py-3">
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium border ${t.type === 'INCOME'
-                                                        ? 'bg-green-50 text-green-700 border-green-100'
-                                                        : 'bg-red-50 text-red-700 border-red-100'
+                                                <td className="px-8 py-5">
+                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${t.type === 'INCOME'
+                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                                        : 'bg-rose-50 text-rose-700 border-rose-100'
                                                         }`}>
                                                         {t.category}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-3 text-slate-600">
+                                                <td className="px-8 py-5 font-bold text-slate-600">
                                                     {t.payer?.name || '-'}
                                                 </td>
-                                                <td className="px-6 py-3">
-                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${t.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                                                        t.status === 'WAITING_APPROVAL' ? 'bg-yellow-100 text-yellow-700' :
-                                                            t.status === 'PENDING' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                                                <td className="px-8 py-5 text-right">
+                                                    <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border ${t.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                                        t.status === 'WAITING_APPROVAL' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                                            t.status === 'PENDING' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-rose-100 text-rose-700 border-rose-200'
                                                         }`}>
                                                         {t.status === 'COMPLETED' ? 'Concluído' :
                                                             t.status === 'WAITING_APPROVAL' ? 'Aguardando' :
                                                                 t.status === 'PENDING' ? 'Pendente' : 'Cancelado'}
                                                     </span>
                                                 </td>
-                                                <td className={`px-6 py-3 text-right font-bold ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>
+                                                <td className={`px-8 py-5 text-right font-black text-base ${t.type === 'INCOME' ? 'text-emerald-600' : 'text-rose-600'}`}>
                                                     {t.type === 'INCOME' ? '+' : '-'} R$ {t.amount.toFixed(2)}
                                                 </td>
-                                                <td className="px-6 py-3 text-center">
+                                                <td className="px-8 py-5">
                                                     <div className="flex justify-center gap-1">
                                                         <button
                                                             onClick={() => handleEdit(t)}
-                                                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors"
+                                                            className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                                                             title="Editar"
                                                         >
                                                             <Pencil className="w-4 h-4" />
@@ -608,7 +682,7 @@ export function Treasury() {
                                                         <button
                                                             onClick={() => handleDelete(t.id)}
                                                             disabled={deleteMutation.isPending}
-                                                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded transition-colors disabled:opacity-50"
+                                                            className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50"
                                                             title="Excluir"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -616,7 +690,7 @@ export function Treasury() {
                                                         {(t.status === 'WAITING_APPROVAL' || t.status === 'PENDING') && (
                                                             <button
                                                                 onClick={() => setValidatingTx(t)}
-                                                                className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors"
+                                                                className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                                                                 title="Validar / Ver Detalhes"
                                                             >
                                                                 <Eye className="w-4 h-4" />
@@ -625,7 +699,7 @@ export function Treasury() {
                                                         {t.status === 'PENDING' && (
                                                             <button
                                                                 onClick={() => handleSettle(t)}
-                                                                className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-slate-100 rounded transition-colors"
+                                                                className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
                                                                 title="Baixar (Quitar)"
                                                             >
                                                                 <CheckCircle className="w-4 h-4" />
@@ -633,22 +707,15 @@ export function Treasury() {
                                                         )}
                                                     </div>
                                                 </td>
-                                            </tr>
+                                            </motion.tr>
                                         );
                                     })}
-                                    {transactions.length === 0 && (
-                                        <tr>
-                                            <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
-                                                Nenhuma transação encontrada.
-                                            </td>
-                                        </tr>
-                                    )}
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                )
-            }
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Create/Edit Modal */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingTransaction ? "Editar Transação" : "Nova Transação"}>
@@ -915,38 +982,40 @@ export function Treasury() {
                 </form>
             </Modal>
 
-            {/* Settlement Modal */}
-            <Modal isOpen={!!settlingTransaction} onClose={() => setSettlingTransaction(null)} title="Baixar Transação (Quitação)">
+            {/* Settlement Modal Content Modernization */}
+            <Modal isOpen={!!settlingTransaction} onClose={() => setSettlingTransaction(null)} title="Baixar Transação">
                 <form onSubmit={(e) => {
                     e.preventDefault();
                     if (settlingTransaction && paymentDate) {
                         settleMutation.mutate({ id: settlingTransaction.id, paymentDate });
                     }
-                }} className="space-y-4">
-                    <div className="p-4 bg-green-50 rounded-lg mb-4">
-                        <p className="text-sm text-green-800 font-medium">Confirmar recebimento de:</p>
-                        <p className="text-xl font-bold text-green-700">R$ {settlingTransaction?.amount.toFixed(2)}</p>
-                        <p className="text-sm text-green-600">{settlingTransaction?.description}</p>
+                }} className="space-y-6">
+                    <div className="p-8 bg-emerald-50 rounded-[2rem] border border-emerald-100 flex flex-col items-center text-center">
+                        <div className="w-16 h-16 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/20 mb-4">
+                            <CheckCircle className="w-8 h-8" />
+                        </div>
+                        <p className="text-emerald-900 font-black uppercase text-[10px] tracking-widest mb-1">Confirmar Recebimento</p>
+                        <p className="text-3xl font-black text-emerald-600 mb-2">R$ {settlingTransaction?.amount.toFixed(2)}</p>
+                        <p className="text-slate-600 font-bold">{settlingTransaction?.description}</p>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Data do Pagamento</label>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Data do Pagamento</label>
                         <input
                             type="date"
                             required
                             value={paymentDate}
                             onChange={e => setPaymentDate(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-bold text-slate-800"
                         />
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-4">
-                        <button type="button" onClick={() => setSettlingTransaction(null)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                    <div className="flex gap-3 pt-4">
+                        <button type="button" onClick={() => setSettlingTransaction(null)} className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">Cancelar</button>
                         <button
                             type="submit"
                             disabled={settleMutation.isPending}
-                            className={`px-4 py-2 rounded-lg text-white font-medium transition-opacity bg-green-600 hover:bg-green-700
-                                ${settleMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className="flex-2 px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-700 shadow-xl shadow-emerald-600/20 transition-all disabled:opacity-50"
                         >
                             {settleMutation.isPending ? 'Processando...' : 'Confirmar Baixa'}
                         </button>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard,
     UserCircle,
@@ -18,7 +19,8 @@ import {
     Globe,
     BarChart,
     BookOpen,
-    CreditCard
+    CreditCard,
+    ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/axios';
@@ -40,10 +42,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
     const { user, logout } = useAuth();
     const location = useLocation();
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
-
-    // Close secondary menu when clicking outside (handled by layout overlay usually, but simple state here)
-    // Auto-select menu based on current path - REMOVED EFFECT to prevent auto-reopening. 
-    // Now derived active state is used for highlighting, but state is used for drawer.
 
     const getActiveIdFromPath = (path: string) => {
         if (path === '/dashboard') return 'dashboard';
@@ -71,12 +69,8 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
 
     const hasAccess = (moduleKey: string) => {
         if (!user) return false;
-
-        // 1. Force FULL Access for High-Level Roles regardless of subscription status
-        // This ensures they can access menus even if clubData is restricted/overdue
         if (['OWNER', 'ADMIN', 'MASTER', 'DIRECTOR'].includes(user.role)) return true;
 
-        // 2. Fallback Defaults if clubData is missing or permissions object is empty
         const defaultPermissions = {
             SECRETARY: ['SECRETARY', 'MEMBERS', 'ATTENDANCE', 'EVENTS'],
             TREASURER: ['TREASURY'],
@@ -84,7 +78,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             INSTRUCTOR: ['CLASSES', 'MEMBERS', 'EVENTS'],
         };
 
-        // Use club defined permissions OR fallback to defaults
         const perms = (clubData?.settings?.permissions && Object.keys(clubData.settings.permissions).length > 0)
             ? clubData.settings.permissions
             : defaultPermissions;
@@ -94,19 +87,12 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
 
     const getMenuItems = (): MenuItem[] => {
         const items: MenuItem[] = [];
+        if (clubLoading) return [];
 
-        // 0. Safety Check: If loading, show NOTHING to prevent flash of authorized content
-        if (clubLoading) {
-            return [];
-        }
-
-        // Check subscription status FIRST
         const subscriptionStatus = clubData?.subscriptionStatus;
         const clubStatus = clubData?.status;
         const isCritical = subscriptionStatus === 'OVERDUE' || clubStatus === 'SUSPENDED' || clubStatus === 'INACTIVE';
 
-        // LOCKDOWN MODE: If overdue, show ONLY subscription page
-        // (Admins/Owners are NOT exempt here per user request "ocultar os menus" for overdue clubs)
         if (isCritical) {
             items.push({
                 id: 'subscription',
@@ -117,12 +103,10 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             return items;
         }
 
-        // Detect roles
         const isMaster = user?.role === 'MASTER' || user?.email === 'master@cantinhomda.com';
         const isPureCoordinator = ['COORDINATOR_REGIONAL', 'COORDINATOR_DISTRICT', 'COORDINATOR_AREA'].includes(user?.role || '');
         const isCoordinator = isMaster || isPureCoordinator;
 
-        // 1. INÍCIO
         items.push({
             id: 'dashboard',
             label: 'INÍCIO',
@@ -130,7 +114,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             path: '/dashboard'
         });
 
-        // 2. MEU ACESSO (Personal)
         const accessSubItems: MenuItem[] = [
             { id: 'profile', label: 'Meu Perfil', icon: UserCircle, path: '/dashboard/profile' },
         ];
@@ -160,7 +143,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             })
         }
 
-        // 3. GESTÃO (Management) - Hide for Pure Coordinators
         if (!isPureCoordinator) {
             const managementSubItems: MenuItem[] = [];
             if (hasAccess('MEMBERS')) managementSubItems.push({ id: 'members', label: user?.role === 'COUNSELOR' ? 'Minha Unidade' : 'Membros', icon: Users, path: '/dashboard/members' });
@@ -172,7 +154,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             if (['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '')) {
                 managementSubItems.push({ id: 'units', label: 'Unidades', icon: Shield, path: '/dashboard/units' });
                 managementSubItems.push({ id: 'club-regional-events', label: 'Meus Eventos (Regionais)', icon: Calendar, path: '/dashboard/club/regional-events' });
-                // managementSubItems.push({ id: 'regional-req-view', label: 'Requisitos Regionais', icon: Award, path: '/dashboard/regional-requirements' }); // Deprecated/Legacy view?
             }
 
             if (managementSubItems.length > 0) {
@@ -185,7 +166,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             }
         }
 
-        // 3.5 COORDENAÇÃO (Coordinator Section)
         if (isCoordinator) {
             const coordinatorSubItems: MenuItem[] = [
                 { id: 'regional-ranking', label: 'Ranking Regional', icon: Award, path: '/dashboard/regional-ranking' },
@@ -206,12 +186,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             });
         }
 
-        // Ensure it appears for Club Management too if not already covered (though logic splits them)
-        // Note: isCoordinator includes OWNER. Pure Coordinators don't see GESTÃO.
-        // So this covers checks for OWNER/ADMIN/DIRECTOR in the GESTÃO block above.
-
-
-        // 4. FINANCEIRO - Hide for Pure Coordinators
         if (!isPureCoordinator) {
             const financialSubItems: MenuItem[] = [];
             financialSubItems.push({ id: 'my-finance', label: 'Minhas Finanças', icon: DollarSign, path: '/dashboard/financial' });
@@ -226,7 +200,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             });
         }
 
-        // 5. RELATÓRIOS / RANKING
         const reportsSubItems: MenuItem[] = [
             { id: 'ranking', label: 'Ranking Geral', icon: Award, path: '/dashboard/ranking' }
         ];
@@ -234,7 +207,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             reportsSubItems.push({ id: 'regional-ranking-alt', label: 'Ranking Regional', icon: Award, path: '/dashboard/regional-ranking' });
         }
         if (isCoordinator || hasAccess('TREASURY') || ['OWNER', 'ADMIN'].includes(user?.role || '')) {
-            reportsSubItems.push({ id: 'reports', label: 'Relatórios & Métricas', icon: BarChart, path: '/dashboard/regional-dashboard' }); // Redirect to new dash
+            reportsSubItems.push({ id: 'reports', label: 'Relatórios & Métricas', icon: BarChart, path: '/dashboard/regional-dashboard' });
         }
         items.push({
             id: 'reports',
@@ -243,7 +216,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             subItems: reportsSubItems
         });
 
-        // 6. LOJA - Hide for Pure Coordinators
         if (!isPureCoordinator) {
             items.push({
                 id: 'store',
@@ -253,7 +225,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             });
         }
 
-        // 7. CONFIGURAÇÕES (Admin/Master)
         if (['OWNER', 'ADMIN', 'MASTER'].includes(user?.role || '')) {
             const configSubItems: MenuItem[] = [];
             configSubItems.push({ id: 'settings', label: 'Configurações', icon: Settings, path: '/dashboard/settings' });
@@ -286,27 +257,32 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
     return (
         <>
             {/* Mobile Overlay */}
-            {mobileOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                    onClick={() => setMobileOpen(false)}
-                />
-            )}
+            <AnimatePresence>
+                {mobileOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+                        onClick={() => setMobileOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
 
             <aside className={`fixed inset-y-0 left-0 z-50 flex transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
 
                 {/* Level 1: Main Sidebar */}
-                <div className="w-24 flex flex-col items-center py-4 h-full shadow-xl relative z-20 bg-slate-900 border-r border-slate-800">
-                    <div className="mb-6 px-2">
-                        {/* Compact Logo */}
-                        <img src="/logo.png" alt="DBV" className="w-12 h-12 object-contain" />
-                    </div>
+                <div className="w-24 flex flex-col items-center py-6 h-full shadow-2xl relative z-20 bg-slate-950 border-r border-white/5">
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="mb-8 px-2"
+                    >
+                        <img src="/logo.png" alt="DBV" className="w-12 h-12 object-contain filter drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                    </motion.div>
 
-                    <nav className="flex-1 w-full space-y-1 overflow-y-auto scrollbar-none">
+                    <nav className="flex-1 w-full space-y-2 overflow-y-auto scrollbar-none px-2">
                         {menuItems.map(item => {
-                            // If activeMenu is set, use it. If not, fallback to URL match.
-                            // BUT for the purposes of style, if drawer is open (activeMenu set), only that one is highlighted.
-                            // If drawer closed (activeMenu null), we show current section's highlight.
                             const isActive = activeMenu === item.id || (!activeMenu && getActiveIdFromPath(location.pathname) === item.id);
                             const Icon = item.icon;
 
@@ -314,96 +290,122 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
                                 <div
                                     key={item.id}
                                     onClick={() => {
-                                        // Toggle logic: if already active (drawer open), close it.
                                         if (activeMenu === item.id) setActiveMenu(null);
                                         else setActiveMenu(item.id);
                                     }}
                                     className={`
-                                        group flex flex-col items-center justify-center py-3 cursor-pointer w-full transition-all relative
-                                        ${isActive ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'}
+                                        group flex flex-col items-center justify-center py-3.5 cursor-pointer w-full transition-all duration-300 rounded-2xl relative
+                                        ${isActive ? 'bg-blue-600/10 text-white' : 'text-slate-500 hover:text-slate-100 hover:bg-white/5'}
                                     `}
                                 >
                                     {item.path ? (
                                         <Link
                                             to={item.path}
                                             className="flex flex-col items-center w-full"
-                                            onClick={() => setActiveMenu(null)} // If it's a direct link (like Dashboard), close any open drawer? Or just set active?
-                                        // Actually, layout usually keeps dashboard active. 
-                                        // But if I click 'Dashboard', I expect to go there.
-                                        // Let's rely on the parent onClick for toggle IF it has subItems. 
-                                        // If it has NO subItems (like Dashboard), parent onClick sets it active.
+                                            onClick={() => setActiveMenu(null)}
                                         >
-                                            <Icon className={`w-8 h-8 mb-1 stroke-[1.5] ${isActive ? 'text-blue-500' : 'text-slate-400 group-hover:text-white'}`} />
-                                            <span className="text-[10px] font-medium tracking-wide text-center leading-tight px-1">{item.label}</span>
+                                            <Icon className={`w-7 h-7 mb-1.5 transition-all duration-300 ${isActive ? 'text-blue-500 scale-110' : 'text-slate-500 group-hover:text-white group-hover:scale-110'}`} />
+                                            <span className={`text-[10px] font-bold tracking-wider text-center leading-tight px-1 uppercase transition-colors ${isActive ? 'text-blue-400' : 'text-slate-500'}`}>
+                                                {item.label}
+                                            </span>
                                         </Link>
                                     ) : (
                                         <div className="flex flex-col items-center w-full">
-                                            <Icon className={`w-8 h-8 mb-1 stroke-[1.5] ${isActive ? 'text-blue-500' : 'text-slate-400 group-hover:text-white'}`} />
-                                            <span className="text-[10px] font-medium tracking-wide text-center leading-tight px-1">{item.label}</span>
+                                            <Icon className={`w-7 h-7 mb-1.5 transition-all duration-300 ${isActive ? 'text-blue-500 scale-110' : 'text-slate-400 group-hover:text-white group-hover:scale-110'}`} />
+                                            <span className={`text-[10px] font-bold tracking-wider text-center leading-tight px-1 uppercase transition-colors ${isActive ? 'text-blue-400' : 'text-slate-500'}`}>
+                                                {item.label}
+                                            </span>
                                         </div>
                                     )}
 
-                                    {/* Active Indicator Bar on Left */}
+                                    {/* Active Indicator Bar */}
                                     {isActive && (
-                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r" />
+                                        <motion.div
+                                            layoutId="activeIndicator"
+                                            className="absolute left-[-8px] top-2 bottom-2 w-1.5 bg-blue-500 rounded-r-full shadow-[0_0_10px_rgba(59,130,246,0.8)]"
+                                        />
                                     )}
                                 </div>
                             );
                         })}
                     </nav>
 
-                    <div className="pt-4 border-t border-slate-800 w-full flex flex-col items-center">
-                        <button onClick={logout} className="p-2 hover:bg-slate-800 rounded-lg transition-colors group">
+                    <div className="pt-6 border-t border-white/5 w-full flex flex-col items-center px-2">
+                        <button onClick={logout} className="p-3 bg-white/5 hover:bg-red-500/10 rounded-2xl transition-all duration-300 group">
                             <LogOut className="w-6 h-6 text-slate-500 group-hover:text-red-400" />
                         </button>
                     </div>
                 </div>
 
                 {/* Level 2: Submenu Drawer */}
-                {/* Dark Theme for Drawer */}
-                <div
-                    className={`
-                        w-64 bg-slate-900 border-r border-slate-800 shadow-2xl h-full transition-all duration-300 ease-in-out
-                        flex flex-col
-                        ${activeItem?.subItems ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 w-0 overflow-hidden'}
-                    `}
-                >
+                <AnimatePresence>
                     {activeItem?.subItems && (
-                        <>
-                            <div className="p-5 border-b border-slate-800 bg-slate-900">
-                                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                                    <activeItem.icon className="w-5 h-5 text-blue-500" />
+                        <motion.div
+                            initial={{ x: -20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: -20, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="w-72 bg-slate-950/95 backdrop-blur-2xl border-r border-white/5 shadow-[20px_0_50px_rgba(0,0,0,0.3)] h-full flex flex-col"
+                        >
+                            <div className="p-7 mb-2">
+                                <span className="text-blue-500 text-[10px] font-black tracking-[0.2em] mb-2 block uppercase">Menu de Opções</span>
+                                <h2 className="text-xl font-black text-white flex items-center gap-3">
+                                    <div className="p-2 bg-blue-600/10 rounded-xl">
+                                        <activeItem.icon className="w-5 h-5 text-blue-500" />
+                                    </div>
                                     {activeItem.label}
                                 </h2>
                             </div>
-                            <div className="p-4 space-y-1 overflow-y-auto flex-1 bg-slate-900">
-                                {activeItem.subItems.map(sub => {
+
+                            <div className="p-4 space-y-1.5 overflow-y-auto flex-1 scrollbar-none">
+                                {activeItem.subItems.map((sub, index) => {
                                     const SubIcon = sub.icon;
                                     const isSubActive = location.pathname === sub.path;
                                     return (
-                                        <Link
+                                        <motion.div
                                             key={sub.id}
-                                            to={sub.path || '#'}
-                                            onClick={() => {
-                                                setMobileOpen(false); // Close mobile
-                                                setActiveMenu(null); // Retract drawer (User request)
-                                            }}
-                                            className={`
-                                                flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
-                                                ${isSubActive
-                                                    ? 'bg-blue-600/20 text-blue-400 shadow-sm border border-blue-600/20'
-                                                    : 'text-slate-400 hover:text-white hover:bg-slate-800'}
-                                            `}
+                                            initial={{ x: -10, opacity: 0 }}
+                                            animate={{ x: 0, opacity: 1 }}
+                                            transition={{ delay: index * 0.05 }}
                                         >
-                                            <SubIcon className={`w-4 h-4 ${isSubActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-white'}`} />
-                                            {sub.label}
-                                        </Link>
+                                            <Link
+                                                to={sub.path || '#'}
+                                                onClick={() => {
+                                                    setMobileOpen(false);
+                                                    setActiveMenu(null);
+                                                }}
+                                                className={`
+                                                    flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all duration-300 group
+                                                    ${isSubActive
+                                                        ? 'bg-blue-600 text-white shadow-[0_10px_20px_rgba(37,99,235,0.3)] ring-1 ring-blue-400/50'
+                                                        : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                                                `}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <SubIcon className={`w-4.5 h-4.5 transition-transform group-hover:scale-110 ${isSubActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`} />
+                                                    {sub.label}
+                                                </div>
+                                                <ChevronRight className={`w-4 h-4 transition-transform ${isSubActive ? 'opacity-100 rotate-90' : 'opacity-0 group-hover:opacity-100'}`} />
+                                            </Link>
+                                        </motion.div>
                                     );
                                 })}
                             </div>
-                        </>
+
+                            <div className="p-6 bg-white/5 border-t border-white/5">
+                                <div className="flex items-center gap-3 p-3 bg-slate-900/50 rounded-2xl">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-400 font-black text-sm">
+                                        {user?.name?.[0].toUpperCase() || 'U'}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-white truncate">{user?.name}</p>
+                                        <p className="text-[10px] text-slate-500 font-medium">Sessão Ativa</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
                     )}
-                </div>
+                </AnimatePresence>
             </aside>
         </>
     );
