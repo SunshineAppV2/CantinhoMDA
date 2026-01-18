@@ -6,67 +6,81 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { PrismaService } from './prisma/prisma.service';
-import { Reflector } from '@nestjs/core'; // Ensure this is imported properly
+import { Reflector } from '@nestjs/core';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
-// Force HTTPS in production
-if (process.env.NODE_ENV === 'production') {
-    app.use((req, res, next) => {
-        if (req.header('x-forwarded-proto') !== 'https') {
-            res.redirect(`https://${req.header('host')}${req.url}`);
-        } else {
-            next();
-        }
-    });
-}
+async function bootstrap() {
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-// MANUAL CORS MIDDLEWARE (Nuclear Option)
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
-    res.header('Access-Control-Allow-Credentials', 'true');
+    // Security Headers (Helmet.js) WITH宽松 CORS policy
+    app.use(helmet({
+        crossOriginResourcePolicy: false,
+        crossOriginOpenerPolicy: false,
+        crossOriginEmbedderPolicy: false,
+    }));
 
-    if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-    } else {
-        next();
+    // Force HTTPS in production
+    if (process.env.NODE_ENV === 'production') {
+        app.use((req, res, next) => {
+            if (req.header('x-forwarded-proto') !== 'https') {
+                res.redirect(`https://${req.header('host')}${req.url}`);
+            } else {
+                next();
+            }
+        });
     }
-});
 
-// Global Validation Pipe
-app.useGlobalPipes(new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transformOptions: {
-        enableImplicitConversion: true,
-    },
-}));
+    // Rate Limiting
+    app.use(
+        rateLimit({
+            windowMs: 1 * 60 * 1000,
+            max: 500,
+            standardHeaders: true,
+            legacyHeaders: false,
+        }),
+    );
 
-// DISABLED TEMPORARILY FOR DEBUGGING
-// app.useGlobalGuards(new RateLimitGuard(app.get(Reflector)));
-// app.useGlobalInterceptors(new AuditInterceptor(app.get(PrismaService)));
+    // Definitive CORS Configuration
+    app.enableCors({
+        origin: (requestOrigin, callback) => {
+            // Allow all origins (standard approach for public/semi-public APIs)
+            // requestOrigin is null for server-to-server or tools like Postman
+            callback(null, true);
+        },
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin'],
+        exposedHeaders: ['Content-Range', 'X-Content-Range'],
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+        credentials: true,
+        maxAge: 3600,
+        optionsSuccessStatus: 200,
+    });
 
+    // Global Validation Pipe
+    app.useGlobalPipes(new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transformOptions: {
+            enableImplicitConversion: true,
+        },
+    }));
 
-// Global Rate Limiting Guard
-app.useGlobalGuards(new RateLimitGuard(app.get(Reflector)));
+    // Global Guards and Interceptors
+    app.useGlobalGuards(new RateLimitGuard(app.get(Reflector)));
+    app.useGlobalInterceptors(new AuditInterceptor(app.get(PrismaService)));
 
-// Global Audit Interceptor (registra todas as ações de modificação)
-app.useGlobalInterceptors(new AuditInterceptor(app.get(PrismaService)));
+    // Swagger Documentation
+    const config = new DocumentBuilder()
+        .setTitle('CantinhoMDA API')
+        .setDescription('API documentation for CantinhoMDA system')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
 
-// Swagger Documentation
-const config = new DocumentBuilder()
-    .setTitle('CantinhoMDA API')
-    .setDescription('API documentation for CantinhoMDA system')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-const document = SwaggerModule.createDocument(app, config);
-SwaggerModule.setup('api/docs', app, document);
-
-await app.listen(process.env.PORT || 3000);
-console.log(`Application is running on: ${await app.getUrl()}`);
+    await app.listen(process.env.PORT || 3000);
+    console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();
