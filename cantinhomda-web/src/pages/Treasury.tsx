@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/axios';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, TrendingUp, TrendingDown, DollarSign, Printer, Check, X, FileText, Pencil, Trash2, CheckCircle, Eye, QrCode } from 'lucide-react';

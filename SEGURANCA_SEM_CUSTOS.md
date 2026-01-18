@@ -1,4 +1,4 @@
-# 🆓 SEGURANÇA SEM CUSTOS - CantinhoMDA
+s# 🆓 SEGURANÇA SEM CUSTOS - CantinhoMDA
 
 ## 💰 Implementações 100% Gratuitas
 

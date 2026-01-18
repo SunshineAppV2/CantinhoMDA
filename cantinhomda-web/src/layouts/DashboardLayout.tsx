@@ -6,7 +6,6 @@ import {
     AlertTriangle,
     RefreshCw,
     DollarSign,
-    LogOut,
 } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,7 +21,7 @@ import { api } from '../lib/axios';
 export function DashboardLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const mainRef = useRef<HTMLDivElement>(null);
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 

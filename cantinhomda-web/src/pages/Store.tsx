@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 import { useAuth } from '../contexts/AuthContext';
 // Firestore removed - using API instead
 import { api } from '../lib/axios';
-import { ShoppingBag, Plus, Tag, Coins, PackageCheck, AlertCircle, Edit, Trash2, Search, Filter, History, Trash, Check, X, CheckSquare, Clock, ArrowRight } from 'lucide-react';
+import { ShoppingBag, Plus, Tag, Coins, PackageCheck, AlertCircle, Edit, Trash2, History, Trash, Check } from 'lucide-react';
 import { Modal } from '../components/Modal';
 import { toast } from 'sonner';
 import { ROLE_TRANSLATIONS } from './members/types';
@@ -551,8 +551,8 @@ export function Store() {
                                         </td>
                                         <td className="px-8 py-5 text-center">
                                             <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-dashed ${purchase.status === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                    purchase.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
-                                                        'bg-rose-50 text-rose-700 border-rose-200'
+                                                purchase.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
+                                                    'bg-rose-50 text-rose-700 border-rose-200'
                                                 }`}>
                                                 {purchase.status === 'DELIVERED' ? 'Entregue' :
                                                     purchase.status === 'PENDING' ? 'Pendente' : 'Cancelado'}

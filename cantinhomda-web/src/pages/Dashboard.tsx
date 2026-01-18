@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Users, Trophy, Calendar, DollarSign, ArrowRight, Stars, GIFT, Share2 } from 'lucide-react';
+import { Users, Trophy, Calendar, DollarSign, ArrowRight, Stars, Share2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Skeleton } from '../components/Skeleton';
 import { Modal } from '../components/Modal';
@@ -50,7 +50,7 @@ function DirectorDashboard() {
     const [showProfileUpdate, setShowProfileUpdate] = useState(false);
     const [showReferralPopup, setShowReferralPopup] = useState(false);
 
-    const { data: stats, isLoading: statsLoading } = useQuery({
+    const { data: stats } = useQuery({
         queryKey: ['dashboard-stats', user?.clubId],
         queryFn: async () => {
             if (!user?.clubId) return null;
