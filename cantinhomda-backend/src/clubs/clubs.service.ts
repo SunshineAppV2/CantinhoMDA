@@ -12,7 +12,7 @@ export class ClubsService implements OnModuleInit {
     ) { }
 
     async onModuleInit() {
-        // Backfill Referral Codes for existing clubs
+        // 1. Backfill Referral Codes for existing clubs
         const clubsWithoutCode = await this.prisma.club.findMany({
             where: { referralCode: null }
         });
@@ -26,6 +26,34 @@ export class ClubsService implements OnModuleInit {
                 });
             }
             console.log('[Referral] Backfill complete.');
+        }
+
+        // 2. Fix Duplicates (Safety Check)
+        const allClubs = await this.prisma.club.findMany({
+            select: { id: true, referralCode: true },
+            where: { referralCode: { not: null } }
+        });
+
+        const seen = new Set<string>();
+        let fixedCount = 0;
+
+        for (const club of allClubs) {
+            if (club.referralCode && seen.has(club.referralCode)) {
+                // Duplicate found! Regenerate
+                const newCode = this.generateReferralCode();
+                await this.prisma.club.update({
+                    where: { id: club.id },
+                    data: { referralCode: newCode }
+                });
+                fixedCount++;
+                console.log(`[Referral] Fixed duplicate code for club ${club.id}: ${club.referralCode} -> ${newCode}`);
+            } else {
+                if (club.referralCode) seen.add(club.referralCode);
+            }
+        }
+
+        if (fixedCount > 0) {
+            console.log(`[Referral] Fixed ${fixedCount} duplicate referral codes.`);
         }
     }
 
