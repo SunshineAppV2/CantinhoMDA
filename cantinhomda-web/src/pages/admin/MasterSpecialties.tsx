@@ -351,7 +351,7 @@ export function MasterSpecialties() {
                                 <button
                                     type="button"
                                     onClick={() => setIsTextImportModalOpen(true)}
-                                    className="text-xs text-blue-600 font-bold hover:text-blue-700 flex items-center gap-1"
+                                    className="px-3 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md text-xs font-bold border border-blue-200 flex items-center gap-1 transition-colors"
                                 >
                                     <FileText className="w-3 h-3" /> Colar Texto
                                 </button>
@@ -572,6 +572,7 @@ export function MasterSpecialties() {
                     setImportText('');
                 }}
                 title="Importar Requisitos via Texto"
+                zIndex="z-[1000]"
             >
                 <div className="space-y-4">
                     <div className="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm">
@@ -593,7 +594,7 @@ export function MasterSpecialties() {
                             onChange={(e) => setImportText(e.target.value)}
                             className="w-full px-4 py-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
                             rows={12}
-                            placeholder={`Exemplo:\n\n1. Conhecer pelo menos 5 raças de cães.\n2. Identificar características de cada raça.\n3. Demonstrar cuidados básicos.\n...\n\nOu:\n\n• Primeiro requisito\n• Segundo requisito\n• Terceiro requisito`}
+                            placeholder={`COLE SEU TEXTO AQUI (Ctrl+V)\n\nExemplo:\n\n1. Conhecer pelo menos 5 raças de cães.\n2. Identificar características de cada raça.\n3. Demonstrar cuidados básicos.\n...\n\nO sistema removerá números e formatação automaticamente.`}
                         />
                         <p className="text-xs text-slate-500 mt-2">
                             {importText.split('\n').filter(l => l.trim()).length} linhas detectadas

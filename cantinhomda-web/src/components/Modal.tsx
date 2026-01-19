@@ -8,9 +8,10 @@ interface ModalProps {
     title: string;
     children: React.ReactNode;
     maxWidth?: string;
+    zIndex?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg', zIndex = 'z-[999]' }: ModalProps) {
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -23,14 +24,16 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' 
 
         return () => {
             document.removeEventListener('keydown', handleEsc);
+            // Só reseta overflow se não houver outro modal aberto (simplificação: remove sempre, mas previne scroll lock eterno)
             document.body.style.overflow = 'unset';
+            // Corrigir isso exigiria um context manager de modais, mas por enquanto ok.
         };
     }, [isOpen, onClose]);
 
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+                <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4 sm:p-6 overflow-hidden`}>
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}

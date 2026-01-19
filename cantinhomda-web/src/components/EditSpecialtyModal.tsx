@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
-import { X, Plus, Trash2, GripVertical, Save } from 'lucide-react';
+import { X, Plus, Trash2, GripVertical, Save, FileText } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Modal } from './Modal';
 import { api } from '../lib/axios';
 import { showToast } from '../lib/toast';
 
@@ -26,6 +27,10 @@ interface EditSpecialtyModalProps {
 
 export function EditSpecialtyModal({ isOpen, onClose, specialty }: EditSpecialtyModalProps) {
     const [requirements, setRequirements] = useState<Requirement[]>([]);
+
+    // Text Import State
+    const [isTextImportOpen, setIsTextImportOpen] = useState(false);
+    const [importText, setImportText] = useState('');
 
     const queryClient = useQueryClient();
 
@@ -80,6 +85,41 @@ export function EditSpecialtyModal({ isOpen, onClose, specialty }: EditSpecialty
         });
     };
 
+    const handleTextImport = () => {
+        if (!importText.trim()) {
+            showToast.error('Por favor, cole o texto com os requisitos.');
+            return;
+        }
+
+        const lines = importText.split('\n').filter(line => line.trim());
+        const parsedRequirements: Requirement[] = [];
+
+        lines.forEach(line => {
+            let cleaned = line.trim()
+                .replace(/^\d+[\.\)\-]\s*/, '')
+                .replace(/^[•\-\*]\s*/, '');
+
+            if (cleaned) {
+                parsedRequirements.push({ description: cleaned, type: 'TEXT' });
+            }
+        });
+
+        if (parsedRequirements.length === 0) {
+            showToast.error('Nenhum requisito válido encontrado.');
+            return;
+        }
+
+        if (confirm(`Encontrados ${parsedRequirements.length} requisitos. Adicionar aos existentes?`)) {
+            setRequirements([...requirements, ...parsedRequirements]);
+        } else {
+            setRequirements(parsedRequirements);
+        }
+
+        setIsTextImportOpen(false);
+        setImportText('');
+        showToast.success(`${parsedRequirements.length} requisitos importados!`);
+    };
+
     if (!isOpen || !specialty) return null;
 
     return (
@@ -111,25 +151,43 @@ export function EditSpecialtyModal({ isOpen, onClose, specialty }: EditSpecialty
                     <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-semibold text-slate-700">Requisitos ({requirements.length})</h3>
-                            <button
-                                onClick={handleAddRequirement}
-                                className="text-sm bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-all"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Adicionar Requisito
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setIsTextImportOpen(true)}
+                                    className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-bold border border-blue-200 flex items-center gap-1 transition-colors"
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    Colar Texto
+                                </button>
+                                <button
+                                    onClick={handleAddRequirement}
+                                    className="text-sm bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-all"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Adicionar
+                                </button>
+                            </div>
                         </div>
 
                         <div className="space-y-3">
                             {requirements.length === 0 ? (
                                 <div className="text-center py-12 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50">
                                     <p className="text-slate-500">Nenhum requisito cadastrado.</p>
-                                    <button
-                                        onClick={handleAddRequirement}
-                                        className="mt-2 text-blue-600 font-medium hover:underline"
-                                    >
-                                        Adicionar o primeiro
-                                    </button>
+                                    <div className="flex gap-3 justify-center mt-3">
+                                        <button
+                                            onClick={handleAddRequirement}
+                                            className="text-blue-600 font-medium hover:underline flex items-center gap-1"
+                                        >
+                                            <Plus className="w-4 h-4" /> Adicionar Manualmente
+                                        </button>
+                                        <span className="text-slate-300">|</span>
+                                        <button
+                                            onClick={() => setIsTextImportOpen(true)}
+                                            className="text-purple-600 font-medium hover:underline flex items-center gap-1"
+                                        >
+                                            <FileText className="w-4 h-4" /> Colar Lista de Texto
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
                                 requirements.map((req, index) => (
@@ -207,6 +265,45 @@ export function EditSpecialtyModal({ isOpen, onClose, specialty }: EditSpecialty
                     </div>
                 </Dialog.Panel>
             </div>
+
+            {/* Import Text Modal - Renderizado fora, mas com z-index maior */}
+            <Modal
+                isOpen={isTextImportOpen}
+                onClose={() => setIsTextImportOpen(false)}
+                title="Importar Requisitos (Colar Texto)"
+                zIndex="z-[100]"
+            >
+                <div className="space-y-4">
+                    <div className="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm">
+                        <p className="font-bold mb-1">Como funciona:</p>
+                        <p>Cole a lista de requisitos aqui. O sistema vai remover números (1., 2.) e marcadores automaticamente.</p>
+                    </div>
+
+                    <textarea
+                        value={importText}
+                        onChange={(e) => setImportText(e.target.value)}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm min-h-[300px]"
+                        placeholder={`COLE AQUI (Ctrl+V)\n\nExemplo:\n\n1. Primeiro requisito do manual.\n2. Segundo requisito.\n3. Terceiro requisito.\n...`}
+                        autoFocus
+                    />
+
+                    <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                        <button
+                            onClick={() => setIsTextImportOpen(false)}
+                            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={handleTextImport}
+                            disabled={!importText.trim()}
+                            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md transition-all disabled:opacity-50"
+                        >
+                            Importar Agora
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </Dialog>
     );
 }
