@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/axios';
-import { Plus, BookOpen, Search, Trash2, Pencil, FileJson } from 'lucide-react';
+import { Plus, BookOpen, Search, Trash2, Pencil, FileJson, UserPlus } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { AssignRequirementModal } from '../../components/AssignRequirementModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Types
 interface RequirementAdaptation {
@@ -86,6 +88,13 @@ export function MasterRequirements() {
     const [reqAgeGroup, setReqAgeGroup] = useState<'JUNIOR' | 'TEEN' | 'SENIOR'>('JUNIOR');
     const [adaptations, setAdaptations] = useState<RequirementAdaptation[]>([]);
     const [newAdaptation, setNewAdaptation] = useState({ condition: '', adaptedText: '', instructorTip: '' });
+
+    // Assign Modal State
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [selectedRequirementForAssign, setSelectedRequirementForAssign] = useState<Requirement | null>(null);
+
+    const { user } = useAuth();
+    const canAssign = ['OWNER', 'MASTER', 'DIRECTOR', 'INSTRUCTOR', 'COUNSELOR', 'ADMIN'].includes(user?.role?.toUpperCase() || '');
 
     // Import Modal State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -524,6 +533,18 @@ export function MasterRequirements() {
                                                     )}
                                                 </div>
                                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {canAssign && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedRequirementForAssign(req);
+                                                                setIsAssignModalOpen(true);
+                                                            }}
+                                                            className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                            title="Atribuir a Membros"
+                                                        >
+                                                            <UserPlus className="w-4 h-4" />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => openEditModal(req)}
                                                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -830,6 +851,14 @@ export function MasterRequirements() {
                     )}
                 </div>
             </Modal>
+            {/* Assign Modal */}
+            <AssignRequirementModal
+                isOpen={isAssignModalOpen}
+                onClose={() => setIsAssignModalOpen(false)}
+                requirement={selectedRequirementForAssign}
+                clubId={user?.clubId}
+            />
+
         </div>
     );
 }

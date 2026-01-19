@@ -517,8 +517,8 @@ export class RequirementsService {
                 select: { id: true }
             });
             validUserIds.push(...users.map(u => u.id));
-        } else if (['ADMIN', 'OWNER', 'INSTRUCTOR'].includes(counselor.role)) {
-            // Admins can assign to anyone
+        } else if (['ADMIN', 'OWNER', 'INSTRUCTOR', 'DIRECTOR', 'MASTER'].includes(counselor.role)) {
+            // Admins/Directors can assign to anyone
             validUserIds.push(...userIds);
         } else {
             throw new Error('Permissão negada');
@@ -538,7 +538,8 @@ export class RequirementsService {
                     data: {
                         userId: uid,
                         requirementId,
-                        status: 'PENDING'
+                        status: 'PENDING',
+                        assignedBy: counselorId
                     }
                 });
                 count++;
