@@ -38,6 +38,11 @@ export function MasterSpecialties() {
     const [importUrl, setImportUrl] = useState('');
     const [isImporting, setIsImporting] = useState(false);
 
+    // Bulk Import State
+    const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
+    const [isBulkImporting, setIsBulkImporting] = useState(false);
+    const [bulkImportResults, setBulkImportResults] = useState<any>(null);
+
     // Fetch Specialties
     const { data: specialties = [], isLoading } = useQuery<Specialty[]>({
         queryKey: ['master-specialties'],
@@ -82,6 +87,19 @@ export function MasterSpecialties() {
         onError: (err: any) => alert(err.response?.data?.message || 'Erro ao importar.')
     });
 
+    const bulkImportMutation = useMutation({
+        mutationFn: async () => await api.post('/specialties/import-requirements-bulk'),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: ['master-specialties'] });
+            setBulkImportResults(response.data);
+            setIsBulkImporting(false);
+        },
+        onError: (err: any) => {
+            alert(err.response?.data?.message || 'Erro na importação em massa.');
+            setIsBulkImporting(false);
+        }
+    });
+
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
         const payload = { name, area, imageUrl, requirements };
@@ -105,6 +123,14 @@ export function MasterSpecialties() {
         importUrlMutation.mutate(importUrl, {
             onSettled: () => setIsImporting(false)
         });
+    };
+
+    const handleBulkImport = () => {
+        if (confirm('Deseja importar requisitos da Wiki MDA para TODAS as especialidades sem requisitos? Isso pode levar alguns minutos.')) {
+            setIsBulkImporting(true);
+            setBulkImportResults(null);
+            bulkImportMutation.mutate();
+        }
     };
 
     const closeModal = () => {
@@ -150,6 +176,12 @@ export function MasterSpecialties() {
                     <p className="text-slate-500">Cadastre e edite as especialidades globais do sistema.</p>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={() => setIsBulkImportModalOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-colors"
+                    >
+                        <Link className="w-5 h-5" /> Importar Requisitos em Massa
+                    </button>
                     <button
                         onClick={() => setIsImportModalOpen(true)}
                         className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-colors"
@@ -367,6 +399,118 @@ export function MasterSpecialties() {
                         </button>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Bulk Import Modal */}
+            <Modal
+                isOpen={isBulkImportModalOpen}
+                onClose={() => {
+                    setIsBulkImportModalOpen(false);
+                    setBulkImportResults(null);
+                }}
+                title="Importação em Massa de Requisitos"
+            >
+                <div className="space-y-4">
+                    {!bulkImportResults ? (
+                        <>
+                            <div className="bg-blue-50 text-blue-800 p-4 rounded-lg text-sm">
+                                <p className="font-bold mb-2">⚡ Importação Automática</p>
+                                <p>Esta função irá:</p>
+                                <ul className="list-disc list-inside mt-2 space-y-1">
+                                    <li>Buscar TODAS as especialidades cadastradas</li>
+                                    <li>Pular especialidades que já possuem requisitos</li>
+                                    <li>Importar requisitos da Wiki MDA para as demais</li>
+                                    <li>Gerar relatório detalhado do processo</li>
+                                </ul>
+                                <p className="mt-3 text-amber-700 font-medium">⏱️ Pode levar alguns minutos dependendo da quantidade.</p>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsBulkImportModalOpen(false)}
+                                    className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                                    disabled={isBulkImporting}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleBulkImport}
+                                    disabled={isBulkImporting}
+                                    className={`bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md transition-all ${isBulkImporting ? 'opacity-70 cursor-wait' : ''}`}
+                                >
+                                    {isBulkImporting ? '⏳ Importando...' : '🚀 Iniciar Importação'}
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <h3 className="font-bold text-green-800 mb-3">📊 Relatório de Importação</h3>
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <div className="bg-white rounded p-3">
+                                        <p className="text-xs text-slate-500">Total</p>
+                                        <p className="text-2xl font-bold text-slate-800">{bulkImportResults.total}</p>
+                                    </div>
+                                    <div className="bg-white rounded p-3">
+                                        <p className="text-xs text-green-600">✅ Sucesso</p>
+                                        <p className="text-2xl font-bold text-green-600">{bulkImportResults.success}</p>
+                                    </div>
+                                    <div className="bg-white rounded p-3">
+                                        <p className="text-xs text-blue-600">⏭️ Puladas</p>
+                                        <p className="text-2xl font-bold text-blue-600">{bulkImportResults.skipped}</p>
+                                    </div>
+                                    <div className="bg-white rounded p-3">
+                                        <p className="text-xs text-red-600">❌ Falhas</p>
+                                        <p className="text-2xl font-bold text-red-600">{bulkImportResults.failed}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Detalhes */}
+                            <div className="max-h-60 overflow-y-auto">
+                                <h4 className="font-bold text-slate-700 mb-2 text-sm">Detalhes:</h4>
+                                <div className="space-y-2">
+                                    {bulkImportResults.details.map((detail: any, idx: number) => (
+                                        <div key={idx} className={`p-2 rounded text-sm ${detail.status === 'success' ? 'bg-green-50 text-green-800' :
+                                                detail.status === 'skipped' ? 'bg-blue-50 text-blue-800' :
+                                                    'bg-red-50 text-red-800'
+                                            }`}>
+                                            <p className="font-medium">
+                                                {detail.status === 'success' && '✅'}
+                                                {detail.status === 'skipped' && '⏭️'}
+                                                {detail.status === 'failed' && '⚠️'}
+                                                {detail.status === 'error' && '❌'}
+                                                {' '}{detail.name}
+                                            </p>
+                                            {detail.requirementsCount && (
+                                                <p className="text-xs">{detail.requirementsCount} requisitos importados</p>
+                                            )}
+                                            {detail.reason && (
+                                                <p className="text-xs">{detail.reason}</p>
+                                            )}
+                                            {detail.error && (
+                                                <p className="text-xs">{detail.error}</p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end pt-4 border-t border-slate-100">
+                                <button
+                                    onClick={() => {
+                                        setIsBulkImportModalOpen(false);
+                                        setBulkImportResults(null);
+                                    }}
+                                    className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-colors"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </Modal>
         </div>
     );

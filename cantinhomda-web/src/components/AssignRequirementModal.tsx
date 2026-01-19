@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
-import { X, Search, UserPlus, Users, Check, Filter } from 'lucide-react';
+import { X, Search, UserPlus, Users, Check } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../services/api';
-import { toast } from 'react-hot-toast';
+import { api } from '../lib/axios';
+import { showToast } from '../lib/toast';
 
 interface User {
     id: string;
@@ -15,13 +15,14 @@ interface User {
         name: string;
     };
     role: string;
+    hasRequirement?: boolean; // Indica se já tem o requisito atribuído
 }
 
 interface Requirement {
     id: string;
-    code: string;
+    code?: string;
     description: string;
-    area: string;
+    area?: string;
     dbvClass?: string;
 }
 
@@ -54,17 +55,34 @@ export function AssignRequirementModal({ isOpen, onClose, requirement, clubId }:
         }
     }, [isOpen, requirement]);
 
-    // Fetch Members
+    // Fetch Members with requirement status
     const { data: members = [], isLoading } = useQuery<User[]>({
-        queryKey: ['club-members-assign', clubId],
+        queryKey: ['club-members-assign', clubId, requirement?.id],
         queryFn: async () => {
             const params: any = { clubId };
             const res = await api.get('/users', { params });
-            // Filter to show only active members who are Pathfinders (members)
-            // Or maybe everyone? Let's show active ones.
-            return res.data.filter((u: any) => u.isActive);
+            const activeMembers = res.data.filter((u: any) => u.isActive);
+
+            // Fetch which members already have this requirement
+            if (requirement?.id) {
+                try {
+                    const reqRes = await api.get(`/requirements/${requirement.id}/assigned-users`);
+                    const assignedUserIds = new Set(reqRes.data.map((u: any) => u.userId));
+
+                    // Mark members who already have the requirement
+                    return activeMembers.map((m: any) => ({
+                        ...m,
+                        hasRequirement: assignedUserIds.has(m.id)
+                    }));
+                } catch (error) {
+                    console.error('Error fetching assigned users:', error);
+                    return activeMembers;
+                }
+            }
+
+            return activeMembers;
         },
-        enabled: isOpen
+        enabled: isOpen && !!requirement
     });
 
     // Fetch Units for filter
@@ -85,12 +103,12 @@ export function AssignRequirementModal({ isOpen, onClose, requirement, clubId }:
         },
         onSuccess: (data: any) => {
             const count = data.data?.count || selectedMemberIds.length;
-            toast.success(`${count} membro(s) atribuído(s) com sucesso!`);
+            showToast.success(`${count} membro(s) atribuído(s) com sucesso!`);
             queryClient.invalidateQueries({ queryKey: ['requirements'] }); // Refresh if needed
             onClose();
         },
         onError: (error: any) => {
-            toast.error('Erro ao atribuir: ' + (error.response?.data?.message || 'Erro desconhecido'));
+            showToast.error('Erro ao atribuir: ' + (error.response?.data?.message || 'Erro desconhecido'));
         }
     });
 
@@ -214,17 +232,31 @@ export function AssignRequirementModal({ isOpen, onClose, requirement, clubId }:
                                             onClick={() => toggleSelection(member.id)}
                                             className={`
                                                 relative p-4 rounded-xl border cursor-pointer transition-all select-none group
-                                                ${isSelected
-                                                    ? 'bg-green-50 border-green-500 shadow-sm'
-                                                    : 'bg-white border-slate-200 hover:border-green-300 hover:shadow-md'}
+                                                ${member.hasRequirement
+                                                    ? 'bg-blue-50 border-blue-300'
+                                                    : isSelected
+                                                        ? 'bg-green-50 border-green-500 shadow-sm'
+                                                        : 'bg-white border-slate-200 hover:border-green-300 hover:shadow-md'}
                                             `}
                                         >
+                                            {/* Badge "JÁ ATRIBUÍDO" */}
+                                            {member.hasRequirement && (
+                                                <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                                    JÁ ATRIBUÍDO
+                                                </div>
+                                            )}
+
                                             <div className="flex items-center gap-3">
                                                 <div className="relative">
                                                     {member.photoUrl ? (
                                                         <img src={member.photoUrl} alt={member.name} className="w-10 h-10 rounded-full object-cover" />
                                                     ) : (
-                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isSelected ? 'bg-green-200 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${member.hasRequirement
+                                                                ? 'bg-blue-200 text-blue-700'
+                                                                : isSelected
+                                                                    ? 'bg-green-200 text-green-700'
+                                                                    : 'bg-slate-100 text-slate-500'
+                                                            }`}>
                                                             {member.name.charAt(0)}
                                                         </div>
                                                     )}
@@ -235,7 +267,12 @@ export function AssignRequirementModal({ isOpen, onClose, requirement, clubId }:
                                                     )}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <h4 className={`font-medium truncate ${isSelected ? 'text-green-900' : 'text-slate-800'}`}>
+                                                    <h4 className={`font-medium truncate ${member.hasRequirement
+                                                            ? 'text-blue-900'
+                                                            : isSelected
+                                                                ? 'text-green-900'
+                                                                : 'text-slate-800'
+                                                        }`}>
                                                         {member.name}
                                                     </h4>
                                                     <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">

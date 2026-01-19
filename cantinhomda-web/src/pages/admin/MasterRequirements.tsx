@@ -4,6 +4,8 @@ import { api } from '../../lib/axios';
 import { Plus, BookOpen, Search, Trash2, Pencil, FileJson, UserPlus } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { AssignRequirementModal } from '../../components/AssignRequirementModal';
+import { AssignSpecialtyModal } from '../../components/AssignSpecialtyModal';
+import { EditSpecialtyModal } from '../../components/EditSpecialtyModal';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Types
@@ -92,6 +94,11 @@ export function MasterRequirements() {
     // Assign Modal State
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [selectedRequirementForAssign, setSelectedRequirementForAssign] = useState<Requirement | null>(null);
+
+    // Specialty Modals State
+    const [isAssignSpecialtyModalOpen, setIsAssignSpecialtyModalOpen] = useState(false);
+    const [isEditSpecialtyModalOpen, setIsEditSpecialtyModalOpen] = useState(false);
+    const [selectedSpecialty, setSelectedSpecialty] = useState<any>(null);
 
     const { user } = useAuth();
     const canAssign = ['OWNER', 'MASTER', 'DIRECTOR', 'INSTRUCTOR', 'COUNSELOR', 'ADMIN'].includes(user?.role?.toUpperCase() || '');
@@ -467,7 +474,14 @@ export function MasterRequirements() {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {specialties.map((spec: any) => (
-                                <div key={spec.id} className="group bg-white p-4 rounded-lg border border-slate-200 hover:border-green-300 hover:shadow-md transition-all">
+                                <div
+                                    key={spec.id}
+                                    className="group bg-white p-4 rounded-lg border border-slate-200 hover:border-green-300 hover:shadow-md transition-all cursor-pointer"
+                                    onClick={() => {
+                                        setSelectedSpecialty(spec);
+                                        setIsEditSpecialtyModalOpen(true);
+                                    }}
+                                >
                                     <div className="flex items-start gap-3">
                                         <div className="flex-1">
                                             <h4 className="font-bold text-slate-800 mb-1">{spec.name}</h4>
@@ -475,15 +489,30 @@ export function MasterRequirements() {
                                         </div>
                                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
-                                                onClick={() => {
-                                                    // TODO: Open specialty details/edit modal
-                                                    console.log('Edit specialty:', spec.id);
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedSpecialty(spec);
+                                                    setIsEditSpecialtyModalOpen(true);
                                                 }}
                                                 className="p-1.5 hover:bg-blue-50 rounded text-blue-600"
                                                 title="Editar"
                                             >
                                                 <Pencil className="w-4 h-4" />
                                             </button>
+                                            {canAssign && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedSpecialty(spec);
+                                                        setIsAssignSpecialtyModalOpen(true);
+                                                    }}
+                                                    className="p-1.5 hover:bg-green-50 rounded text-green-600"
+                                                    title="Atribuir Especialidade"
+                                                >
+                                                    <UserPlus className="w-4 h-4" />
+                                                </button>
+                                            )}
+
                                         </div>
                                     </div>
                                 </div>
@@ -857,6 +886,19 @@ export function MasterRequirements() {
                 onClose={() => setIsAssignModalOpen(false)}
                 requirement={selectedRequirementForAssign}
                 clubId={user?.clubId}
+            />
+
+            <AssignSpecialtyModal
+                isOpen={isAssignSpecialtyModalOpen}
+                onClose={() => setIsAssignSpecialtyModalOpen(false)}
+                specialty={selectedSpecialty}
+                clubId={user?.clubId}
+            />
+
+            <EditSpecialtyModal
+                isOpen={isEditSpecialtyModalOpen}
+                onClose={() => setIsEditSpecialtyModalOpen(false)}
+                specialty={selectedSpecialty}
             />
 
         </div>

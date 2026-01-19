@@ -21,6 +21,7 @@ import {
     BookOpen,
     CreditCard,
     ChevronRight,
+    UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/axios';
@@ -46,7 +47,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
     const getActiveIdFromPath = (path: string) => {
         if (path === '/dashboard') return 'dashboard';
         if (path.includes('/profile') || path.includes('/family') || path.includes('/requirements') || path.includes('/activities')) return 'access';
-        if (path.includes('/members') || path.includes('/classes') || path.includes('/events') || path.includes('/meetings') || path.includes('/secretary') || path.includes('/approvals')) return 'management';
+        if (path.includes('/members') || path.includes('/classes') || path.includes('/events') || path.includes('/meetings') || path.includes('/secretary') || path.includes('/approvals') || path.includes('/assignments')) return 'management';
         if (path.includes('/financial') || path.includes('/treasury') || path.includes('/master-treasury')) return 'financial';
         if (path.includes('/reports') || path.includes('/ranking') || path.includes('/signatures')) return 'reports';
         if (path.includes('/regional-ranking') || path.includes('/coordinator-approvals') || path.includes('/hierarchy') || path.includes('/clubs-directory')) return 'coordinator';
@@ -151,6 +152,9 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             if (hasAccess('ATTENDANCE')) managementSubItems.push({ id: 'meetings', label: 'Chamada', icon: ListChecks, path: '/dashboard/meetings' });
             if (hasAccess('SECRETARY')) managementSubItems.push({ id: 'secretary', label: 'Secretaria', icon: FileText, path: '/dashboard/secretary' });
             if (hasAccess('APPROVALS')) managementSubItems.push({ id: 'approvals', label: 'Aprovações', icon: ListChecks, path: '/dashboard/approvals' });
+            if (['OWNER', 'ADMIN', 'MASTER', 'DIRECTOR', 'INSTRUCTOR', 'COUNSELOR'].includes(user?.role || '')) {
+                managementSubItems.push({ id: 'assignments', label: 'Atribuições', icon: UserPlus, path: '/dashboard/assignments' });
+            }
             if (['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '')) {
                 managementSubItems.push({ id: 'units', label: 'Unidades', icon: Shield, path: '/dashboard/units' });
                 managementSubItems.push({ id: 'club-regional-events', label: 'Meus Eventos (Regionais)', icon: Calendar, path: '/dashboard/club/regional-events' });
@@ -231,6 +235,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
 
             if (isMaster) {
                 configSubItems.push({ id: 'user-approvals', label: 'Aprovação Cadastros', icon: Users, path: '/dashboard/user-approvals' });
+                configSubItems.push({ id: 'club-approvals', label: 'Aprovações de Clubes', icon: Building2, path: '/dashboard/admin/club-approvals' });
                 configSubItems.push({ id: 'payment-management', label: 'Gestão Pagamentos', icon: CreditCard, path: '/dashboard/payment-management' });
                 configSubItems.push({ id: 'master-clubs', label: 'Gerenciar Clubes', icon: Globe, path: '/dashboard/clubs' });
                 configSubItems.push({ id: 'master-hierarchy', label: 'Hierarquia', icon: Globe, path: '/dashboard/hierarchy' });

@@ -51,6 +51,8 @@ import { PaymentManagement } from './pages/admin/PaymentManagement';
 import { RegionalRequirements } from './pages/coordinator/RegionalRequirements';
 import { RegionalEventsManager } from './pages/coordinator/RegionalEventsManager';
 import { ClubRegionalEvents } from './pages/club/ClubRegionalEvents';
+import { Assignments } from './pages/Assignments';
+import { ClubApprovals } from './pages/admin/ClubApprovals';
 
 import { CompleteProfile } from './pages/CompleteProfile';
 // import { SocketProvider } from './contexts/SocketContext';
@@ -94,6 +96,11 @@ function App() {
                 <Route path="classes" element={<Classes />} />
                 <Route path="meetings" element={<Meetings />} />
                 <Route path="events" element={<Events />} />
+              </Route>
+
+              {/* Assignments Route (Master, Directors, Instructors, Counselors) */}
+              <Route element={<ProtectedRoute allowedRoles={['MASTER', 'OWNER', 'ADMIN', 'DIRECTOR', 'INSTRUCTOR', 'COUNSELOR']} />}>
+                <Route path="assignments" element={<Assignments />} />
               </Route>
 
               {/* Director / Admin Routes */}
@@ -150,6 +157,7 @@ function App() {
 
               {/* Master Only Routes */}
               <Route element={<ProtectedRoute allowedRoles={['MASTER', 'OWNER']} />}>
+                <Route path="admin/club-approvals" element={<ClubApprovals />} />
                 <Route path="clubs" element={<Clubs />} />
                 <Route path="master-treasury" element={<MasterTreasury />} />
                 <Route path="club-assignment" element={<ClubAssignment />} />

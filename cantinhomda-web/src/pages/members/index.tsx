@@ -221,7 +221,7 @@ function MembersContent() {
         // cleanup system fields and relations
         [
             'id', 'classProgress', 'requirements', 'createdAt', 'updatedAt', 'UserRequirements',
-            'club', 'unit', 'status', 'children',
+            'club', 'unit', 'status', 'children', 'parentId',
             'UserSpecialties', 'UserActivities', 'UserPoints', 'UserMeetings', 'approvals', 'referrals',
             'points', 'roleAttributes', 'clubRole'
         ].forEach(k => delete payload[k]);
