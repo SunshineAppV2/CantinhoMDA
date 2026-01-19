@@ -103,6 +103,12 @@ export class UsersController {
   async remove(@Param('id') id: string, @Request() req) {
     return this.usersService.remove(id, req.user);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/points-history')
+  async getPointsHistory(@Param('id') id: string, @Req() req) {
+    return this.usersService.getPointsHistory(id, req.user);
+  }
   @Get('force/reset-master-password')
   resetMaster() {
     return this.usersService.resetMasterPasswordForce();

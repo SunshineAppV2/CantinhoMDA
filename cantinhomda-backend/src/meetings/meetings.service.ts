@@ -65,10 +65,18 @@ export class MeetingsService {
         const meeting = await this.prisma.meeting.findUnique({ where: { id: meetingId } });
         if (!meeting) throw new Error('Meeting not found');
 
-        return this.prisma.$transaction(async (tx) => {
-            const results: string[] = [];
+        // Use extended timeout for transactions with many users
+        const results = await this.prisma.$transaction(async (tx) => {
+            const processedUsers: string[] = [];
 
-            for (const userId of attendanceDto.userIds) {
+            // Compatibility check: handle legacy userIds array if sent by older frontend
+            const records = (attendanceDto as any).userIds
+                ? (attendanceDto as any).userIds.map(id => ({ userId: id, points: meeting.points, requirements: [] }))
+                : attendanceDto.records;
+
+            for (const record of records) {
+                const { userId, points, requirements } = record;
+
                 const exists = await tx.attendance.findUnique({
                     where: { userId_meetingId: { userId, meetingId } }
                 });
@@ -95,26 +103,44 @@ export class MeetingsService {
                         }
                     }
 
-                    // 3. Award Points
+                    // 3. Award Points (using calculated points from frontend)
                     for (const targetId of beneficiaries) {
+                        const pointsToAward = points > 0 ? points : meeting.points; // Fallback to meeting base points if 0
+
+                        let reason = meeting.type === 'PARENTS' && targetId !== userId
+                            ? `Presença do Responsável: ${meeting.title}`
+                            : `Reunião: ${meeting.title}`;
+
+                        if (requirements && requirements.length > 0) {
+                            reason += ` (${requirements.join(', ')})`;
+                        }
+
                         if (meeting.activityId) {
-                            // Use Activity Service (Generate Log + Points)
-                            await this.activitiesService.awardPoints({
-                                userId: targetId,
-                                activityId: meeting.activityId
-                            });
-                        } else {
-                            // Legacy/Simple Mode (Just Points, No Activity Log)
+                            // Direct points update within transaction (faster)
+                            // We ignore activity.points and use the calculated total
                             await tx.user.update({
                                 where: { id: targetId },
                                 data: {
-                                    points: { increment: meeting.points },
+                                    points: { increment: pointsToAward },
                                     pointsHistory: {
                                         create: {
-                                            amount: meeting.points,
-                                            reason: meeting.type === 'PARENTS' && targetId !== userId
-                                                ? `Presença do Responsável na Reunião: ${meeting.title}`
-                                                : `Reunião: ${meeting.title}`,
+                                            amount: pointsToAward,
+                                            reason: reason,
+                                            source: 'ACTIVITY'
+                                        }
+                                    }
+                                }
+                            });
+                        } else {
+                            // Legacy/Simple Mode
+                            await tx.user.update({
+                                where: { id: targetId },
+                                data: {
+                                    points: { increment: pointsToAward },
+                                    pointsHistory: {
+                                        create: {
+                                            amount: pointsToAward,
+                                            reason: reason,
                                             source: 'ATTENDANCE'
                                         }
                                     }
@@ -123,11 +149,16 @@ export class MeetingsService {
                         }
                     }
 
-                    results.push(userId);
+                    processedUsers.push(userId);
                 }
             }
-            return { processed: results.length };
+            return processedUsers;
+        }, {
+            maxWait: 30000,
+            timeout: 60000
         });
+
+        return { processed: results.length };
     }
 
     async importMeetings(file: Express.Multer.File, clubId: string) {
@@ -228,7 +259,13 @@ export class MeetingsService {
                 }
 
                 // Register attendance using existing logic (points increment included)
-                const attendance = await this.registerAttendance(meetingId, { userIds: [user.id] });
+                const attendance = await this.registerAttendance(meetingId, {
+                    records: [{
+                        userId: user.id,
+                        points: meeting.points,
+                        requirements: ['Importado via Excel']
+                    }]
+                });
                 if (attendance.processed > 0) {
                     results.success++;
                 } else {

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Inject, forwardRef, NotFoundException, ForbiddenException } from '@nestjs/common';
+Ôªøimport { Injectable, UnauthorizedException, Inject, forwardRef, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Prisma } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -14,14 +14,14 @@ export class UsersService {
     @Inject(forwardRef(() => ClubsService)) private clubsService: ClubsService
   ) { }
 
-  // Busca usu·rio pelo Email (usado no login)
+  // Busca usu√°rio pelo Email (usado no login)
   async findOneByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
     });
   }
 
-  // Busca usu·rios elegÌveis para serem donos de clube (sem clube atribuÌdo)
+  // Busca usu√°rios eleg√≠veis para serem donos de clube (sem clube atribu√≠do)
   async findAvailableDirectors() {
     return this.prisma.user.findMany({
       where: {
@@ -40,7 +40,7 @@ export class UsersService {
     });
   }
 
-  // Busca todos os usu·rios
+  // Busca todos os usu√°rios
   async findAll(currentUser?: any, clubId?: string) {
     console.log('[UsersService.findAll] Called with currentUser:', {
       email: currentUser?.email,
@@ -196,7 +196,7 @@ export class UsersService {
     });
   }
 
-  // Ranking de usu·rios por pontos
+  // Ranking de usu√°rios por pontos
   async findRanking(currentUser?: any) {
     const where: any = {
       isActive: true
@@ -237,8 +237,8 @@ export class UsersService {
     });
   }
 
-  // Busca usu·rio pelo ID (usado para validar token)
-  // Busca usu·rio pelo ID (usado para validar token)
+  // Busca usu√°rio pelo ID (usado para validar token)
+  // Busca usu√°rio pelo ID (usado para validar token)
   async findOne(id: string, currentUser?: any): Promise<User | null> {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -275,7 +275,7 @@ export class UsersService {
       if (currentUser.role === 'INSTRUCTOR') {
         // Allow if same class (assuming Instructor has dbvClass set)
         if (currentUser.dbvClass && user.dbvClass === currentUser.dbvClass && user.clubId === currentUser.clubId) return user;
-        throw new UnauthorizedException('Acesso negado: Aluno n„o atribuÌdo.');
+        throw new UnauthorizedException('Acesso negado: Aluno n√£o atribu√≠do.');
       }
 
       // Regional/District Coordinators
@@ -285,31 +285,31 @@ export class UsersService {
       }
 
       if (currentUser.role === 'COORDINATOR_REGIONAL') {
-        if (user.club?.region !== currentUser.region) throw new UnauthorizedException('Acesso negado: Perfil fora da sua regi„o.');
+        if (user.club?.region !== currentUser.region) throw new UnauthorizedException('Acesso negado: Perfil fora da sua regi√£o.');
         return user;
       }
 
       if (currentUser.role === 'COORDINATOR_AREA') {
-        if (user.club?.association !== currentUser.association) throw new UnauthorizedException('Acesso negado: Perfil fora da sua associaÁ„o.');
+        if (user.club?.association !== currentUser.association) throw new UnauthorizedException('Acesso negado: Perfil fora da sua associa√ß√£o.');
         return user;
       }
 
       // Parent
       if (currentUser.role === 'PARENT') {
-        if (user.parentId !== currentUser.userId) throw new UnauthorizedException('Acesso negado: N„o È seu filho.');
+        if (user.parentId !== currentUser.userId) throw new UnauthorizedException('Acesso negado: N√£o √© seu filho.');
         return user;
       }
 
       // Pathfinder / Others trying to see others
       if (currentUser.role === 'PATHFINDER') {
-        throw new UnauthorizedException('Acesso restrito ao prÛprio perfil.');
+        throw new UnauthorizedException('Acesso restrito ao pr√≥prio perfil.');
       }
     }
 
     return user;
   }
 
-  // Cria um novo usu·rio
+  // Cria um novo usu√°rio
   async create(createUserDto: any): Promise<User> {
     // Strip fields that belong to club or are not part of user schema
     const {
@@ -371,7 +371,7 @@ export class UsersService {
         // Check Limit if creating a NON-PARENT
         if (rest.role !== 'PARENT') {
           if (paidCount >= limit) {
-            throw new ForbiddenException(`Limite do plano atingido (${paidCount}/${limit} membros ativos). FaÁa upgrade para adicionar mais.`);
+            throw new ForbiddenException(`Limite do plano atingido (${paidCount}/${limit} membros ativos). Fa√ßa upgrade para adicionar mais.`);
           }
         }
       }
@@ -486,7 +486,7 @@ export class UsersService {
     });
 
     if (!child) {
-      throw new Error('Filho n„o encontrado');
+      throw new Error('Filho n√£o encontrado');
     }
 
     return this.prisma.user.update({
@@ -495,7 +495,7 @@ export class UsersService {
     });
   }
 
-  // Atualiza um usu·rio
+  // Atualiza um usu√°rio
   async update(id: string, updateUserDto: UpdateUserDto, currentUser?: any): Promise<User> {
     console.log(`[UsersService.update] Target ID: ${id}, Current User: ${currentUser?.email} (${currentUser?.role})`);
     console.log(`[UsersService.update] Raw DTO:`, JSON.stringify(updateUserDto, null, 2));
@@ -556,7 +556,7 @@ export class UsersService {
 
     if (!userToUpdate) {
       console.error(`[Update] ? User NOT FOUND for ID/UID: ${id} (User: ${currentUser?.email})`);
-      throw new NotFoundException('Usu·rio n„o encontrado');
+      throw new NotFoundException('Usu√°rio n√£o encontrado');
     }
 
     // 3. ACL CHECK
@@ -568,7 +568,7 @@ export class UsersService {
       console.log(`[Update] ACL Check: Master=${isMaster}, Self=${isSelf}, ClubAdmin=${isClubAdmin}`);
 
       if (!isMaster && !isSelf && !isClubAdmin) {
-        throw new UnauthorizedException('Permiss„o negada para editar este usu·rio.');
+        throw new UnauthorizedException('Permiss√£o negada para editar este usu√°rio.');
       }
     }
 
@@ -689,7 +689,7 @@ export class UsersService {
       if (rest.union !== undefined) dataToUpdate.union = rest.union;
       if (rest.mission !== undefined) dataToUpdate.mission = rest.mission;
       if (rest.association !== undefined) dataToUpdate.association = rest.association;
-      // Special handling for 'AssociaÁ„o' alias if needed, but 'rest.association' is standard
+      // Special handling for 'Associa√ß√£o' alias if needed, but 'rest.association' is standard
 
       if (rest.region !== undefined) dataToUpdate.region = rest.region;
       if (rest.district !== undefined) dataToUpdate.district = rest.district;
@@ -895,7 +895,7 @@ export class UsersService {
   }
   async remove(id: string, currentUser?: any) {
     const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new Error('Usu·rio n„o encontrado');
+    if (!user) throw new Error('Usu√°rio n√£o encontrado');
 
     if (currentUser) {
       const isMaster = currentUser.email === 'master@cantinhomda.com';
@@ -951,7 +951,7 @@ export class UsersService {
   // ============================================
 
   /**
-   * Buscar todos os usu·rios pendentes de aprovaÁ„o
+   * Buscar todos os usu√°rios pendentes de aprova√ß√£o
    */
   async findPendingUsers() {
     return this.prisma.user.findMany({
@@ -990,7 +990,7 @@ export class UsersService {
   }
 
   /**
-   * Aprovar usu·rio pendente
+   * Aprovar usu√°rio pendente
    * - Atualiza status para ACTIVE
    * - Se for OWNER, cria pagamento pendente para o clube
    */
@@ -1001,14 +1001,14 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('Usu·rio n„o encontrado');
+      throw new NotFoundException('Usu√°rio n√£o encontrado');
     }
 
     if (user.status !== 'PENDING') {
-      throw new UnauthorizedException('Usu·rio n„o est· pendente de aprovaÁ„o');
+      throw new UnauthorizedException('Usu√°rio n√£o est√° pendente de aprova√ß√£o');
     }
 
-    // Atualizar status do usu·rio
+    // Atualizar status do usu√°rio
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -1026,7 +1026,7 @@ export class UsersService {
       // Calcular meses baseado no ciclo
       const months = billingCycle === 'TRIMESTRAL' ? 3 : billingCycle === 'ANUAL' ? 12 : 1;
 
-      // R$ 2,00 por membro/mÍs
+      // R$ 2,00 por membro/m√™s
       const pricePerMember = 2.00;
       const amount = memberLimit * pricePerMember * months;
 
@@ -1060,13 +1060,13 @@ export class UsersService {
 
     return {
       success: true,
-      message: 'Usu·rio aprovado com sucesso',
+      message: 'Usu√°rio aprovado com sucesso',
       user: updatedUser
     };
   }
 
   /**
-   * Rejeitar usu·rio pendente
+   * Rejeitar usu√°rio pendente
    */
   async rejectUser(userId: string, rejectedBy: string) {
     const user = await this.prisma.user.findUnique({
@@ -1074,11 +1074,11 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('Usu·rio n„o encontrado');
+      throw new NotFoundException('Usu√°rio n√£o encontrado');
     }
 
     if (user.status !== 'PENDING') {
-      throw new UnauthorizedException('Usu·rio n„o est· pendente de aprovaÁ„o');
+      throw new UnauthorizedException('Usu√°rio n√£o est√° pendente de aprova√ß√£o');
     }
 
     // Atualizar status para BLOCKED
@@ -1094,8 +1094,48 @@ export class UsersService {
 
     return {
       success: true,
-      message: 'Usu·rio rejeitado',
+      message: 'Usu√°rio rejeitado',
       user: updatedUser
     };
   }
+
+  /**
+   * Buscar hist√≥rico de pontos do usu√°rio
+   */
+  async getPointsHistory(userId: string, currentUser?: any) {
+    // Allow self-access, club admins, or master
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, clubId: true, name: true }
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usu√°rio n√£o encontrado');
+    }
+
+    // ACL Check
+    if (currentUser) {
+      const isMaster = currentUser.email === 'master@cantinhomda.com';
+      const isSelf = currentUser.userId === userId;
+      const isClubAdmin = ['OWNER', 'ADMIN', 'DIRECTOR'].includes(currentUser.role) && user.clubId === currentUser.clubId;
+
+      if (!isMaster && !isSelf && !isClubAdmin) {
+        throw new UnauthorizedException('Permiss√£o negada para ver hist√≥rico.');
+      }
+    }
+
+    const history = await this.prisma.pointHistory.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
+
+    return {
+      userId,
+      userName: user.name,
+      totalRecords: history.length,
+      history
+    };
+  }
 }
+
