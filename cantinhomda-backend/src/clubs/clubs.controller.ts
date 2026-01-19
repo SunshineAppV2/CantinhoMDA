@@ -1,12 +1,18 @@
 import { Controller, Get, Post, Put, Delete, Patch, Body, Param, Query, UseGuards, Request, Req } from '@nestjs/common';
 import { ClubsService } from './clubs.service';
+import { ClubApprovalService } from './club-approval.service';
+import { ClubPaymentService } from './club-payment.service';
 import { CreateClubDto } from './dto/create-club.dto';
 import { BulkUpdateBillingDateDto } from './dto/bulk-update-subscription.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('clubs')
 export class ClubsController {
-    constructor(private readonly clubsService: ClubsService) { }
+    constructor(
+        private readonly clubsService: ClubsService,
+        private readonly clubApprovalService: ClubApprovalService,
+        private readonly clubPaymentService: ClubPaymentService
+    ) { }
 
     @Post()
     create(@Body() createClubDto: CreateClubDto) {
@@ -59,6 +65,123 @@ export class ClubsController {
         const isMaster = req.user.email === 'master@cantinhomda.com' || req.user.role === 'MASTER';
         if (!isMaster) throw new Error('Acesso negado');
         return this.clubsService.getReferralReport();
+    }
+
+    // ============================================
+    // ENDPOINTS DE APROVAÇÃO DE CLUBES
+    // ============================================
+
+    @UseGuards(JwtAuthGuard)
+    @Post(':id/approve')
+    async approveClub(
+        @Param('id') id: string,
+        @Body() body: {
+            grantTrial?: boolean;
+            trialDays?: number;
+            subscriptionPlan?: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
+            notes?: string;
+        },
+        @Request() req
+    ) {
+        const isMaster = req.user.email === 'master@cantinhomda.com' || req.user.role === 'MASTER';
+        if (!isMaster) throw new Error('Acesso negado. Apenas Master pode aprovar clubes.');
+
+        return this.clubApprovalService.approveClub(id, req.user.id, body);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post(':id/reject')
+    async rejectClub(
+        @Param('id') id: string,
+        @Body() body: { reason: string },
+        @Request() req
+    ) {
+        const isMaster = req.user.email === 'master@cantinhomda.com' || req.user.role === 'MASTER';
+        if (!isMaster) throw new Error('Acesso negado. Apenas Master pode rejeitar clubes.');
+
+        return this.clubApprovalService.rejectClub(id, req.user.id, body.reason);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post(':id/grant-trial')
+    async grantTrial(
+        @Param('id') id: string,
+        @Body() body: { trialDays: number },
+        @Request() req
+    ) {
+        const isMaster = req.user.email === 'master@cantinhomda.com' || req.user.role === 'MASTER';
+        if (!isMaster) throw new Error('Acesso negado. Apenas Master pode conceder período de teste.');
+
+        return this.clubApprovalService.grantTrial(id, req.user.id, body.trialDays);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Patch(':id/status')
+    async changeClubStatus(
+        @Param('id') id: string,
+        @Body() body: { status: string; reason?: string },
+        @Request() req
+    ) {
+        const isMaster = req.user.email === 'master@cantinhomda.com' || req.user.role === 'MASTER';
+        if (!isMaster) throw new Error('Acesso negado. Apenas Master pode alterar status de clubes.');
+
+        return this.clubApprovalService.changeStatus(id, body.status as any, req.user.id, body.reason);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('admin/pending')
+    async getPendingClubs(@Request() req) {
+        const isMaster = req.user.email === 'master@cantinhomda.com' || req.user.role === 'MASTER';
+        if (!isMaster) throw new Error('Acesso negado.');
+
+        return this.clubApprovalService.getPendingClubs();
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('admin/approval-metrics')
+    async getApprovalMetrics(@Request() req) {
+        const isMaster = req.user.email === 'master@cantinhomda.com' || req.user.role === 'MASTER';
+        if (!isMaster) throw new Error('Acesso negado.');
+
+        return this.clubApprovalService.getApprovalMetrics();
+    }
+
+    // ============================================
+    // ENDPOINTS DE PAGAMENTO
+    // ============================================
+
+    @UseGuards(JwtAuthGuard)
+    @Post('admin/check-payments')
+    async checkPayments(@Request() req) {
+        const isMaster = req.user.email === 'master@cantinhomda.com' || req.user.role === 'MASTER';
+        if (!isMaster) throw new Error('Acesso negado.');
+
+        return this.clubPaymentService.checkPaymentStatus();
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('admin/payment-status')
+    async getPaymentStatus(@Request() req) {
+        const isMaster = req.user.email === 'master@cantinhomda.com' || req.user.role === 'MASTER';
+        if (!isMaster) throw new Error('Acesso negado.');
+
+        return this.clubPaymentService.getPaymentStatus();
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post(':id/reactivate')
+    async reactivateClub(
+        @Param('id') id: string,
+        @Body() body: { subscriptionPlan: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' },
+        @Request() req
+    ) {
+        const isMaster = req.user.email === 'master@cantinhomda.com' || req.user.role === 'MASTER';
+        if (!isMaster) throw new Error('Acesso negado.');
+
+        return this.clubPaymentService.reactivateClub(id, {
+            subscriptionPlan: body.subscriptionPlan,
+            paidBy: req.user.id
+        });
     }
 
     @UseGuards(JwtAuthGuard)

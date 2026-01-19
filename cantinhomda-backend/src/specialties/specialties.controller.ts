@@ -96,6 +96,11 @@ export class SpecialtiesController {
         return this.specialtiesService.assignSpecialty(userId, specialtyId);
     }
 
+    @Post(':id/assign')
+    assignBulk(@Param('id') id: string, @Body() body: { userIds: string[] }, @Request() req: any) {
+        return this.specialtiesService.assignToUsers(id, body.userIds, req.user);
+    }
+
     @Patch(':id')
     update(@Param('id') id: string, @Body() body: any) {
         return this.specialtiesService.update(id, body);
@@ -115,5 +120,13 @@ export class SpecialtiesController {
     @Post('import-url')
     importFromUrl(@Body('url') url: string) {
         return this.specialtiesService.importFromUrl(url);
+    }
+
+    @Post('import-requirements-bulk')
+    async importRequirementsBulk(@Request() req: any) {
+        if (req.user.email !== 'master@cantinhomda.com' && req.user.role !== 'MASTER') {
+            throw new Error('Apenas o Master pode importar requisitos em massa.');
+        }
+        return this.specialtiesService.importRequirementsBulk();
     }
 }

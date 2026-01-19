@@ -299,6 +299,51 @@ export class RequirementsService {
         });
     }
 
+    // Get Requirement Statistics
+    async getRequirementStats(requirementId: string) {
+        const userRequirements = await this.prisma.userRequirement.findMany({
+            where: { requirementId },
+            select: { status: true }
+        });
+
+        const totalAssigned = userRequirements.length;
+        const completed = userRequirements.filter(ur => ur.status === 'APPROVED').length;
+        const pending = userRequirements.filter(ur => ur.status === 'PENDING').length;
+        const rejected = userRequirements.filter(ur => ur.status === 'REJECTED').length;
+        const approved = completed; // Same as completed for clarity
+
+        const completionRate = totalAssigned > 0
+            ? Math.round((completed / totalAssigned) * 100)
+            : 0;
+
+        return {
+            totalAssigned,
+            completed,
+            pending,
+            approved,
+            rejected,
+            completionRate
+        };
+    }
+
+    // Get users who have this requirement assigned
+    async getAssignedUsers(requirementId: string) {
+        return this.prisma.userRequirement.findMany({
+            where: { requirementId },
+            select: {
+                userId: true,
+                status: true,
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        photoUrl: true
+                    }
+                }
+            }
+        });
+    }
+
     async remove(id: string) {
         return this.prisma.requirement.delete({
             where: { id }

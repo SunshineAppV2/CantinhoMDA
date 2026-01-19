@@ -9,47 +9,70 @@ datasource db {
 }
 
 model Club {
-  id                    String              @id @default(uuid())
+  id                    String             @id @default(uuid())
   name                  String
-  slug                  String?             @unique
+  slug                  String?            @unique
   logoUrl               String?
   settings              Json?
   region                String?
   mission               String?
   union                 String?
-  planTier              PlanTier            @default(TRIAL)
-  memberLimit           Int                 @default(30)
-  subscriptionStatus    SubscriptionStatus  @default(TRIAL)
+  planTier              PlanTier           @default(TRIAL)
+  memberLimit           Int                @default(30)
+  subscriptionStatus    SubscriptionStatus @default(TRIAL)
   nextBillingDate       DateTime?
-  gracePeriodDays       Int                 @default(5)
-  status                ClubStatus          @default(ACTIVE)
-  participatesInRanking Boolean             @default(true)
+  gracePeriodDays       Int                @default(5)
+  status                ClubStatus         @default(ACTIVE)
+  participatesInRanking Boolean            @default(true)
   subscriptionId        String?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  referralCode          String?             @unique
-  referralRewardClaimed Boolean             @default(false)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  referralCode          String?            @unique
+  referralRewardClaimed Boolean            @default(false)
   referrerClubId        String?
   association           String?
   district              String?
   phoneNumber           String?
-  activities            Activity[]
-  auditLogs             AuditLog[]
-  referrerClub          Club?               @relation("ClubReferrals", fields: [referrerClubId], references: [id])
-  referrals             Club[]              @relation("ClubReferrals")
-  events                Event[]
-  masterTransactions    MasterTransaction[]
-  meetings              Meeting[]
-  minutes               Minute[]
-  products              Product[]
-  referralCredits       ReferralCredit[]
-  requirements          Requirement[]
-  transactions          Transaction[]
-  units                 Unit[]
-  users                 User[]
-  payments              Payment[]
-  participatingEvents   RegionalEvent[] @relation("EventParticipants")
-  eventResponses        EventResponse[]
+
+  // Campos de Aprovação
+  approvedAt      DateTime?
+  approvedBy      String? // ID do Master que aprovou
+  approvalMessage String? // Mensagem enviada no cadastro
+  approvalNotes   String? // Notas do Master na aprovação
+
+  // Controle de Teste
+  trialEndsAt DateTime? // Fim do período de teste
+
+  // Controle de Pagamento
+  subscriptionPlan String? // 'MONTHLY' | 'QUARTERLY' | 'ANNUAL'
+  nextPaymentDue   DateTime? // Próximo vencimento
+  lastPaymentDate  DateTime? // Último pagamento confirmado
+
+  // Avisos de Pagamento (72h, 48h, 24h)
+  warning72hSent      Boolean             @default(false)
+  warning48hSent      Boolean             @default(false)
+  warning24hSent      Boolean             @default(false)
+  warning72hSentAt    DateTime?
+  warning48hSentAt    DateTime?
+  warning24hSentAt    DateTime?
+  activities          Activity[]
+  auditLogs           AuditLog[]
+  referrerClub        Club?               @relation("ClubReferrals", fields: [referrerClubId], references: [id])
+  referrals           Club[]              @relation("ClubReferrals")
+  events              Event[]
+  masterTransactions  MasterTransaction[]
+  meetings            Meeting[]
+  minutes             Minute[]
+  products            Product[]
+  referralCredits     ReferralCredit[]
+  requirements        Requirement[]
+  transactions        Transaction[]
+  units               Unit[]
+  users               User[]
+  payments            Payment[]
+  participatingEvents RegionalEvent[]     @relation("EventParticipants")
+  eventResponses      EventResponse[]
+  statusHistory       ClubStatusHistory[]
 
   @@map("clubs")
 }
@@ -77,98 +100,98 @@ model Unit {
 }
 
 model User {
-  id                     String              @id @default(uuid())
-  uid                    String?             @unique
-  email                  String              @unique
-  password               String
-  name                   String
-  photoUrl               String?
-  role                   Role                @default(PATHFINDER)
-  isActive               Boolean             @default(true)
-  status                 UserStatus          @default(ACTIVE)
-  points                 Int                 @default(0)
-  lastClassMilestone     Int                 @default(0)
-  dbvClass               DBVClass?
-  clubId                 String?
-  unitId                 String?
-  parentId               String?
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
-  sex                    String?
-  birthDate              DateTime?
-  maritalStatus          String?
-  phone                  String?
-  mobile                 String?
-  isBaptized             Boolean             @default(false)
-  rg                     String?
-  issuingOrg             String?
-  cpf                    String?
-  shirtSize              String?
-  address                String?
-  addressNumber          String?
-  neighborhood           String?
-  cep                    String?
-  city                   String?
-  state                  String?
-  complement             String?
-  educationLevel         String?
-  educationStatus        String?
-  knowledgeArea          String?
-  courseName             String?
-  institution            String?
-  schoolShift            String?
-  isHealthProfessional   Boolean             @default(false)
-  healthProfessionalType String?
-  fatherName             String?
-  fatherEmail            String?
-  fatherPhone            String?
-  motherName             String?
-  motherEmail            String?
-  motherPhone            String?
-  emergencyName          String?
-  emergencyPhone         String?
-  emergencyRelation      String?
-  susNumber              String?
-  healthPlan             String?
-  bloodType              String?
-  rhFactor               String?
-  diseasesHistory        String[]            @default([])
-  hasHeartProblem        Boolean?            @default(false)
-  heartProblemDesc       String?
-  hasDiabetes            Boolean?            @default(false)
-  hasRenalProblem        Boolean?            @default(false)
-  hasPsychProblem        Boolean?            @default(false)
-  regularMedications     String?
-  specificAllergies      String?
-  recentTrauma           String?
-  recentFracture         String?
-  recentSurgery          String?
-  disabilities           String[]            @default([])
-  healthNotes            String?
-  mustChangePassword     Boolean             @default(false)
-  association            String?
-  district               String?
-  region                 String?
-  mission                String?
-  union                  String?
-  logs                   ActivityLog[]
-  attendances            Attendance[]
-  auditLogs              AuditLog[]
-  registrations          EventRegistration[]
-  authoredMinutes        Minute[]            @relation("AuthoredMinutes")
-  notifications          Notification[]
-  pointsHistory          PointHistory[]
-  purchases              Purchase[]
-  memberTransactions     Transaction[]       @relation("TransactionMember")
-  transactions           Transaction[]
-  requirements           UserRequirement[]
-  specialties            UserSpecialty[]
-  club                   Club?               @relation(fields: [clubId], references: [id])
-  parent                 User?               @relation("ParentChildren", fields: [parentId], references: [id])
-  children               User[]              @relation("ParentChildren")
-  unit                   Unit?               @relation(fields: [unitId], references: [id])
-  confirmedPayments      Payment[]           @relation("PaymentConfirmer")
-  createdEvents          RegionalEvent[]     @relation("EventCreator")
+  id                      String              @id @default(uuid())
+  uid                     String?             @unique
+  email                   String              @unique
+  password                String
+  name                    String
+  photoUrl                String?
+  role                    Role                @default(PATHFINDER)
+  isActive                Boolean             @default(true)
+  status                  UserStatus          @default(ACTIVE)
+  points                  Int                 @default(0)
+  lastClassMilestone      Int                 @default(0)
+  dbvClass                DBVClass?
+  clubId                  String?
+  unitId                  String?
+  parentId                String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  sex                     String?
+  birthDate               DateTime?
+  maritalStatus           String?
+  phone                   String?
+  mobile                  String?
+  isBaptized              Boolean             @default(false)
+  rg                      String?
+  issuingOrg              String?
+  cpf                     String?
+  shirtSize               String?
+  address                 String?
+  addressNumber           String?
+  neighborhood            String?
+  cep                     String?
+  city                    String?
+  state                   String?
+  complement              String?
+  educationLevel          String?
+  educationStatus         String?
+  knowledgeArea           String?
+  courseName              String?
+  institution             String?
+  schoolShift             String?
+  isHealthProfessional    Boolean             @default(false)
+  healthProfessionalType  String?
+  fatherName              String?
+  fatherEmail             String?
+  fatherPhone             String?
+  motherName              String?
+  motherEmail             String?
+  motherPhone             String?
+  emergencyName           String?
+  emergencyPhone          String?
+  emergencyRelation       String?
+  susNumber               String?
+  healthPlan              String?
+  bloodType               String?
+  rhFactor                String?
+  diseasesHistory         String[]            @default([])
+  hasHeartProblem         Boolean?            @default(false)
+  heartProblemDesc        String?
+  hasDiabetes             Boolean?            @default(false)
+  hasRenalProblem         Boolean?            @default(false)
+  hasPsychProblem         Boolean?            @default(false)
+  regularMedications      String?
+  specificAllergies       String?
+  recentTrauma            String?
+  recentFracture          String?
+  recentSurgery           String?
+  disabilities            String[]            @default([])
+  healthNotes             String?
+  mustChangePassword      Boolean             @default(false)
+  association             String?
+  district                String?
+  region                  String?
+  mission                 String?
+  union                   String?
+  logs                    ActivityLog[]
+  attendances             Attendance[]
+  auditLogs               AuditLog[]
+  registrations           EventRegistration[]
+  authoredMinutes         Minute[]            @relation("AuthoredMinutes")
+  notifications           Notification[]
+  pointsHistory           PointHistory[]
+  purchases               Purchase[]
+  memberTransactions      Transaction[]       @relation("TransactionMember")
+  transactions            Transaction[]
+  requirements            UserRequirement[]
+  specialties             UserSpecialty[]
+  club                    Club?               @relation(fields: [clubId], references: [id])
+  parent                  User?               @relation("ParentChildren", fields: [parentId], references: [id])
+  children                User[]              @relation("ParentChildren")
+  unit                    Unit?               @relation(fields: [unitId], references: [id])
+  confirmedPayments       Payment[]           @relation("PaymentConfirmer")
+  createdEvents           RegionalEvent[]     @relation("EventCreator")
   submittedEventResponses EventResponse[]
 
   @@map("users")
@@ -268,31 +291,31 @@ model UserSpecialty {
 }
 
 model Requirement {
-  id           String            @id @default(uuid())
-  code         String?
-  title        String?
-  description  String
-  area         String?
-  points       Int               @default(0)
-  startDate    DateTime?
-  endDate      DateTime?
-  type         RequirementType   @default(TEXT)
-  dbvClass     DBVClass?
-  specialtyId  String?
-  clubId       String?
-  createdAt    DateTime          @default(now())
-  district     String?
-  region       String?
-  questions    Question[]
-  club         Club?             @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  specialty    Specialty?        @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  id              String                  @id @default(uuid())
+  code            String?
+  title           String?
+  description     String
+  area            String?
+  points          Int                     @default(0)
+  startDate       DateTime?
+  endDate         DateTime?
+  type            RequirementType         @default(TEXT)
+  dbvClass        DBVClass?
+  specialtyId     String?
+  clubId          String?
+  createdAt       DateTime                @default(now())
+  district        String?
+  region          String?
+  questions       Question[]
+  club            Club?                   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  specialty       Specialty?              @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
   regionalEventId String?
-  regionalEvent RegionalEvent? @relation(fields: [regionalEventId], references: [id], onDelete: SetNull)
-  methodology RequirementMethodology @default(DISCOVERY)
-  ageGroup    AgeEmphasis?
-  adaptations RequirementAdaptation[]
-  userProgress UserRequirement[]
-  eventResponses EventResponse[]
+  regionalEvent   RegionalEvent?          @relation(fields: [regionalEventId], references: [id], onDelete: SetNull)
+  methodology     RequirementMethodology  @default(DISCOVERY)
+  ageGroup        AgeEmphasis?
+  adaptations     RequirementAdaptation[]
+  userProgress    UserRequirement[]
+  eventResponses  EventResponse[]
 
   @@map("requirements")
 }
@@ -318,7 +341,7 @@ model UserRequirement {
   requirementId String
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
-  assignedBy    String?           // ID of the user who assigned this requirement
+  assignedBy    String? // ID of the user who assigned this requirement
   requirement   Requirement       @relation(fields: [requirementId], references: [id], onDelete: Cascade)
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -369,22 +392,22 @@ model Event {
 }
 
 model RegionalEvent {
-  id            String        @id @default(uuid())
-  title         String
-  description   String?
-  startDate     DateTime
-  endDate       DateTime?
-  region        String?       // If set, applies to this region
-  district      String?       // If set, applies to this district
-  association   String?       // If set, applies to this association
-  union         String?       // If set, applies to this union
-  creatorId     String
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  
-  requirements  Requirement[]
-  creator       User          @relation("EventCreator", fields: [creatorId], references: [id])
-  participatingClubs Club[]   @relation("EventParticipants")
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  region      String? // If set, applies to this region
+  district    String? // If set, applies to this district
+  association String? // If set, applies to this association
+  union       String? // If set, applies to this union
+  creatorId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  requirements       Requirement[]
+  creator            User          @relation("EventCreator", fields: [creatorId], references: [id])
+  participatingClubs Club[]        @relation("EventParticipants")
 
   @@map("regional_events")
 }
@@ -551,9 +574,13 @@ enum SubscriptionStatus {
 }
 
 enum ClubStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
+  PENDING_APPROVAL // Aguardando aprovação do Master
+  TRIAL // Período de teste (apenas Master concede)
+  ACTIVE // Ativo e em dia com pagamento
+  PAYMENT_WARNING // Avisos de pagamento enviados (72h/48h/24h)
+  SUSPENDED // Suspenso por falta de pagamento
+  BLOCKED // Bloqueado manualmente pelo Master
+  INACTIVE // Inativo (legado)
 }
 
 enum DBVClass {
@@ -612,14 +639,12 @@ enum TransactionStatus {
   CANCELED
 }
 
-
-
 model EventResponse {
   id                String            @id @default(uuid())
   status            RequirementStatus @default(PENDING)
   answerText        String?
   answerFileUrl     String?
-  comments          String?           // For rejection reasons
+  comments          String? // For rejection reasons
   completedAt       DateTime?
   clubId            String
   requirementId     String
@@ -654,7 +679,7 @@ model Payment {
   status        PaymentStatus @default(PENDING)
   paymentMethod String        @default("pix")
   description   String
-  metadata      Json?         // { memberCount, months, startDate, newMemberLimit, planName }
+  metadata      Json? // { memberCount, months, startDate, newMemberLimit, planName }
   confirmedAt   DateTime?
   confirmedBy   String?
   expiresAt     DateTime?
@@ -707,4 +732,18 @@ model RequirementAdaptation {
   instructorTip String?
 
   @@map("requirement_adaptations")
+}
+
+model ClubStatusHistory {
+  id     String @id @default(uuid())
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  fromStatus ClubStatus
+  toStatus   ClubStatus
+  changedBy  String // ID do usuário que fez a mudança
+  reason     String? // Motivo da mudança
+  createdAt  DateTime   @default(now())
+
+  @@map("club_status_history")
 }

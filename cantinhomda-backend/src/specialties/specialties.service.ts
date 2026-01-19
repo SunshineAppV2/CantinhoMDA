@@ -550,7 +550,6 @@ export class SpecialtiesService {
         return result;
     }
 
-    // Assign a specialty (Start it for a user)
     async assignSpecialty(userId: string, specialtyId: string) {
         // Check if already assigned
         const exists = await this.prisma.userSpecialty.findUnique({
@@ -566,6 +565,63 @@ export class SpecialtiesService {
                 status: UserSpecialtyStatus.IN_PROGRESS
             }
         });
+    }
+
+    // Bulk assign specialty to multiple users
+    async assignToUsers(specialtyId: string, userIds: string[], currentUser: any) {
+        // 1. Get Specialty Requirements
+        const requirements = await this.prisma.requirement.findMany({
+            where: { specialtyId }
+        });
+
+        const results = {
+            success: 0,
+            failed: 0,
+            errors: []
+        };
+
+        // 2. Process each user
+        for (const userId of userIds) {
+            try {
+                // Create/Upsert UserSpecialty
+                await this.prisma.userSpecialty.upsert({
+                    where: { userId_specialtyId: { userId, specialtyId } },
+                    create: {
+                        userId,
+                        specialtyId,
+                        status: UserSpecialtyStatus.IN_PROGRESS
+                    },
+                    update: {
+                        // If COMPLETED, keep it. If WAITING, keep it. If IN_PROGRESS, keep it.
+                        // Basically, ensure it exists. Detailed logic could vary.
+                        // For now, don't revert status if valid.
+                        // Only if 'PENDING' equivalent? UserSpecialty defaults to IN_PROGRESS.
+                    }
+                });
+
+                // Create UserRequirements for all requirements of this specialty
+                if (requirements.length > 0) {
+                    const userRequirementsData = requirements.map(req => ({
+                        userId,
+                        requirementId: req.id,
+                        status: RequirementStatus.PENDING,
+                        assignedBy: currentUser.id
+                    }));
+
+                    await this.prisma.userRequirement.createMany({
+                        data: userRequirementsData,
+                        skipDuplicates: true
+                    });
+                }
+                results.success++;
+            } catch (error) {
+                console.error(`Error assigning specialty ${specialtyId} to user ${userId}:`, error);
+                results.failed++;
+                // results.errors.push({ userId, error: error.message });
+            }
+        }
+
+        return results;
     }
 
     async update(id: string, data: any) {
@@ -727,6 +783,143 @@ export class SpecialtiesService {
         } catch (error) {
             console.error('Scraping Error:', error);
             throw new Error('Erro ao importar do link: ' + (error as any).message);
+        }
+    }
+
+    /**
+     * Importação em massa de requisitos para todas as especialidades
+     * Busca requisitos da Wiki MDA para cada especialidade existente
+     */
+    async importRequirementsBulk() {
+        const axios = require('axios');
+        const cheerio = require('cheerio');
+
+        try {
+            // Buscar todas as especialidades
+            const specialties = await this.prisma.specialty.findMany({
+                include: {
+                    requirements: true
+                }
+            });
+
+            const results = {
+                total: specialties.length,
+                success: 0,
+                failed: 0,
+                skipped: 0,
+                details: [] as any[]
+            };
+
+            console.log(`🚀 Iniciando importação em massa para ${specialties.length} especialidades...`);
+
+            for (const specialty of specialties) {
+                try {
+                    // Pular se já tem requisitos
+                    if (specialty.requirements && specialty.requirements.length > 0) {
+                        console.log(`⏭️  ${specialty.name}: Já possui ${specialty.requirements.length} requisitos. Pulando...`);
+                        results.skipped++;
+                        results.details.push({
+                            name: specialty.name,
+                            status: 'skipped',
+                            reason: `Já possui ${specialty.requirements.length} requisitos`
+                        });
+                        continue;
+                    }
+
+                    // Construir URL da Wiki
+                    const wikiName = specialty.name
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+                        .replace(/\s+/g, '_');
+
+                    const url = `https://mda.wiki.br/Especialidade_de_${wikiName}`;
+
+                    console.log(`📥 Importando: ${specialty.name} (${url})`);
+
+                    // Fazer scraping
+                    const response = await axios.get(url, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        },
+                        timeout: 10000
+                    });
+
+                    const $ = cheerio.load(response.data);
+
+                    // Extrair requisitos
+                    const requirements: any[] = [];
+                    const reqSection = $('h2:contains("Requisitos")').first();
+
+                    if (reqSection.length > 0) {
+                        const ol = reqSection.nextAll('ol').first();
+                        if (ol.length > 0) {
+                            ol.find('li').each((i: number, elem: any) => {
+                                const text = $(elem).text().trim();
+                                if (text) {
+                                    requirements.push({
+                                        description: text,
+                                        type: 'TEXT'
+                                    });
+                                }
+                            });
+                        }
+                    }
+
+                    if (requirements.length === 0) {
+                        console.log(`⚠️  ${specialty.name}: Nenhum requisito encontrado na Wiki`);
+                        results.failed++;
+                        results.details.push({
+                            name: specialty.name,
+                            status: 'failed',
+                            reason: 'Nenhum requisito encontrado na Wiki',
+                            url
+                        });
+                        continue;
+                    }
+
+                    // Atualizar especialidade com requisitos
+                    await this.prisma.specialty.update({
+                        where: { id: specialty.id },
+                        data: {
+                            requirements: {
+                                create: requirements
+                            }
+                        }
+                    });
+
+                    console.log(`✅ ${specialty.name}: ${requirements.length} requisitos importados`);
+                    results.success++;
+                    results.details.push({
+                        name: specialty.name,
+                        status: 'success',
+                        requirementsCount: requirements.length,
+                        url
+                    });
+
+                    // Delay para não sobrecarregar o servidor
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                } catch (error: any) {
+                    console.error(`❌ Erro ao importar ${specialty.name}:`, error.message);
+                    results.failed++;
+                    results.details.push({
+                        name: specialty.name,
+                        status: 'error',
+                        error: error.message
+                    });
+                }
+            }
+
+            console.log(`\n📊 Importação concluída:`);
+            console.log(`   ✅ Sucesso: ${results.success}`);
+            console.log(`   ⏭️  Puladas: ${results.skipped}`);
+            console.log(`   ❌ Falhas: ${results.failed}`);
+
+            return results;
+
+        } catch (error) {
+            console.error('Erro na importação em massa:', error);
+            throw new Error('Erro ao importar requisitos em massa: ' + (error as any).message);
         }
     }
 }

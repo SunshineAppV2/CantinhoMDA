@@ -108,6 +108,18 @@ export class RequirementsController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Get(':id/stats')
+    async getStats(@Param('id') id: string) {
+        return this.requirementsService.getRequirementStats(id);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get(':id/assigned-users')
+    async getAssignedUsers(@Param('id') id: string) {
+        return this.requirementsService.getAssignedUsers(id);
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Post('answer')
     async answer(@Body() body: { requirementId: string, text?: string, fileUrl?: string }, @Request() req) {
         try {
