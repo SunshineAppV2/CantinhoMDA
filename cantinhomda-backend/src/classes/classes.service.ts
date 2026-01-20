@@ -32,7 +32,7 @@ export class ClassesService {
                 include: {
                     unit: true,
                     requirements: {
-                        where: { status: 'PENDING' }, // Get pending reqs for quick view
+                        // where: { status: 'PENDING' }, // Removed: We need ALL history (Approved/Pending/Rejected) for the new UI
                         include: { requirement: true } // Crucial for displaying Requirement Code/Desc
                     }
                 },
