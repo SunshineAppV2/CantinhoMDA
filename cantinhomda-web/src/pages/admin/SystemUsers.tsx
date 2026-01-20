@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/axios';
 import { useAuth } from '../../contexts/AuthContext';
-import { Loader2, Search, Pencil, KeyRound, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, Search, Pencil, KeyRound, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function SystemUsers() {
@@ -13,6 +13,8 @@ export function SystemUsers() {
     const [searchTerm, setSearchTerm] = useState('');
     const [editingUser, setEditingUser] = useState<any | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+    const [passwordModal, setPasswordModal] = useState({ show: false, userId: '', userName: '', newPassword: '' });
+    const [deleteModal, setDeleteModal] = useState({ show: false, userId: '', userName: '' });
 
     // Fetch Data
     const fetchData = async () => {
@@ -103,6 +105,34 @@ export function SystemUsers() {
             fetchData();
         } catch (error) {
             toast.error('Erro ao atualizar usuário.');
+        }
+    };
+
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await api.patch(`/users/${passwordModal.userId}`, {
+                password: passwordModal.newPassword
+            });
+            toast.success('Senha alterada com sucesso!');
+            setPasswordModal({ show: false, userId: '', userName: '', newPassword: '' });
+        } catch (err) {
+            toast.error('Erro ao alterar senha.');
+        }
+    };
+
+    const handleDeleteClick = (user: any) => {
+        setDeleteModal({ show: true, userId: user.id, userName: user.name });
+    };
+
+    const handleDeleteConfirm = async () => {
+        try {
+            await api.delete(`/users/${deleteModal.userId}`);
+            toast.success('Usuário excluído!');
+            setDeleteModal({ show: false, userId: '', userName: '' });
+            fetchData();
+        } catch (err) {
+            toast.error('Erro ao excluir usuário.');
         }
     };
 
@@ -199,11 +229,18 @@ export function SystemUsers() {
                                             <Pencil className="w-4 h-4" />
                                         </button>
                                         <button
-                                            // onClick={() => handleResetPassword(u.id, u.name)}
-                                            className="p-1.5 text-slate-400 hover:bg-slate-100 rounded cursor-not-allowed opacity-50"
-                                            title="Resetar Senha (Em Breve)"
+                                            onClick={() => setPasswordModal({ show: true, userId: u.id, userName: u.name, newPassword: '' })}
+                                            className="p-1.5 text-slate-400 hover:bg-yellow-50 hover:text-yellow-600 rounded"
+                                            title="Alterar Senha"
                                         >
                                             <KeyRound className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteClick(u)}
+                                            className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded"
+                                            title="Excluir Usuário"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
                                         </button>
                                     </td>
                                 </tr>
@@ -322,6 +359,83 @@ export function SystemUsers() {
                                 <button type="submit" className="px-4 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700">Salvar Alterações</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Password Modal */}
+            {passwordModal.show && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 animate-in zoom-in-95">
+                        <div className="text-center mb-4">
+                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <KeyRound className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <h3 className="text-lg font-bold">Alterar Senha</h3>
+                            <p className="text-sm text-slate-500">Defina uma nova senha para <br /><strong>{passwordModal.userName}</strong></p>
+                        </div>
+                        <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                            <div>
+                                <input
+                                    type="password"
+                                    placeholder="Nova Senha"
+                                    value={passwordModal.newPassword}
+                                    onChange={e => setPasswordModal({ ...passwordModal, newPassword: e.target.value })}
+                                    className="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
+                                    autoFocus
+                                />
+                                <p className="text-xs text-slate-400 mt-1 pl-1">Mínimo 6 caracteres</p>
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setPasswordModal({ show: false, userId: '', userName: '', newPassword: '' })}
+                                    className="flex-1 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-lg"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!passwordModal.newPassword || passwordModal.newPassword.length < 6}
+                                    className="flex-1 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                                >
+                                    Salvar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Modal */}
+            {deleteModal.show && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 animate-in zoom-in-95">
+                        <div className="text-center mb-4">
+                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Trash2 className="w-6 h-6 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800">Excluir Usuário?</h3>
+                            <p className="text-sm text-slate-600 mt-2">
+                                Tem certeza que deseja excluir <strong>{deleteModal.userName}</strong>?
+                            </p>
+                            <p className="text-xs text-red-500 mt-3 font-semibold bg-red-50 p-2 rounded">
+                                Esta ação removerá o usuário do Banco de Dados e do Firebase. É irreversível.
+                            </p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setDeleteModal({ show: false, userId: '', userName: '' })}
+                                className="flex-1 py-2.5 text-slate-600 font-bold hover:bg-slate-100 rounded-lg border border-slate-200"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleDeleteConfirm}
+                                className="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-sm"
+                            >
+                                Sim, Excluir
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
