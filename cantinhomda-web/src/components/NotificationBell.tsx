@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
-import { Modal } from './Modal';
+// import { Modal } from './Modal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/axios';
 // import { useSocket } from '../contexts/SocketContext';
@@ -120,73 +120,83 @@ export function NotificationBell() {
                 )}
             </button>
 
-            {/* Modal for Notifications */}
-            <Modal
-                isOpen={isOpen}
-                onClose={() => setIsOpen(false)}
-                title="Notificações"
-                maxWidth="max-w-md"
-            >
-                <div>
-                    {unreadCount > 0 && (
-                        <div className="flex justify-end mb-2">
+            {/* Popup/Dropdown for Notifications */}
+            {isOpen && (
+                <div className="absolute right-0 top-12 w-80 md:w-96 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                    <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10">
+                        <h3 className="font-bold text-slate-800">Notificações</h3>
+                        {unreadCount > 0 && (
                             <button
                                 onClick={() => {
                                     markAllReadMutation.mutate();
-                                    setIsOpen(false);
+                                    // Keep open? Or close? User request "popup" usually stays open until clicked outside or action taken.
                                 }}
-                                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                className="text-xs text-blue-600 hover:text-blue-700 font-bold hover:underline transition-all"
                             >
                                 Marcar todas como lidas
                             </button>
-                        </div>
-                    )}
-
-                    <div className="space-y-2">
-                        {notifications.length === 0 ? (
-                            <div className="p-8 text-center text-slate-500 text-sm">
-                                Nenhuma notificação.
-                            </div>
-                        ) : (
-                            notifications.map(notification => (
-                                <div
-                                    key={notification.id}
-                                    className={`p-4 border rounded-lg transition-colors cursor-pointer ${!notification.read ? 'bg-blue-50/50 border-blue-100' : 'bg-white border-slate-100'}`}
-                                    onClick={() => {
-                                        if (!notification.read) readMutation.mutate(notification.id);
-
-                                        // Deep Linking Logic
-                                        if (notification.title === 'Nova Aprovação Pendente') {
-                                            navigate('/dashboard/members?action=approvals');
-                                        }
-
-                                        // Always close on click as requested
-                                        setIsOpen(false);
-                                    }}
-                                >
-                                    <div className="flex gap-3">
-                                        <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${notification.type === 'SUCCESS' ? 'bg-green-500' :
-                                            notification.type === 'WARNING' ? 'bg-yellow-500' :
-                                                notification.type === 'ERROR' ? 'bg-red-500' : 'bg-blue-500'
-                                            }`} />
-                                        <div>
-                                            <p className={`text-sm ${!notification.read ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
-                                                {notification.title}
-                                            </p>
-                                            <p className="text-xs text-slate-500 mt-1">
-                                                {notification.message}
-                                            </p>
-                                            <span className="text-[10px] text-slate-400 mt-2 block">
-                                                {new Date(notification.createdAt).toLocaleString()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
                         )}
                     </div>
+
+                    <div className="max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                        {notifications.length === 0 ? (
+                            <div className="py-12 px-8 text-center space-y-3">
+                                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300">
+                                    <Bell className="w-6 h-6" />
+                                </div>
+                                <p className="text-slate-500 text-sm font-medium">Você não tem novas notificações.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-slate-50">
+                                {notifications.map(notification => (
+                                    <div
+                                        key={notification.id}
+                                        className={`p-4 transition-all cursor-pointer hover:bg-slate-50 group ${!notification.read ? 'bg-blue-50/30' : 'bg-white'}`}
+                                        onClick={() => {
+                                            if (!notification.read) readMutation.mutate(notification.id);
+
+                                            if (notification.title === 'Nova Aprovação Pendente') {
+                                                navigate('/dashboard/members?action=approvals');
+                                                setIsOpen(false);
+                                            }
+                                            // Don't auto close for generic reads, allows reading multiple?
+                                            // User usually wants to scan. 
+                                            // But if it's a link, close.
+                                        }}
+                                    >
+                                        <div className="flex gap-3 items-start">
+                                            <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ring-2 ring-white ${notification.type === 'SUCCESS' ? 'bg-green-500' :
+                                                notification.type === 'WARNING' ? 'bg-yellow-500' :
+                                                    notification.type === 'ERROR' ? 'bg-red-500' : 'bg-blue-500'
+                                                }`} />
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-sm leading-tight mb-1 ${!notification.read ? 'font-bold text-slate-800' : 'text-slate-600 font-medium'}`}>
+                                                    {notification.title}
+                                                </p>
+                                                <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all">
+                                                    {notification.message}
+                                                </p>
+                                                <span className="text-[10px] text-slate-400 mt-2 block font-medium">
+                                                    {new Date(notification.createdAt).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    {/* Footer */}
+                    <div className="p-2 border-t border-slate-50 bg-slate-50/50 text-center">
+                        <button
+                            onClick={() => setIsOpen(false)}
+                            className="text-xs text-slate-400 hover:text-slate-600 font-bold uppercase tracking-wider py-1"
+                        >
+                            Fechar
+                        </button>
+                    </div>
                 </div>
-            </Modal>
+            )}
         </div>
     );
 }
