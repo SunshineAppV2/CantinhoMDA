@@ -20,10 +20,11 @@ async function bootstrap() {
         crossOriginEmbedderPolicy: false,
     }));
 
-    // Force HTTPS in production
+    // Force HTTPS in production (Skip for Health Checks to prevent Render Timeouts)
     if (process.env.NODE_ENV === 'production') {
         app.use((req, res, next) => {
-            if (req.header('x-forwarded-proto') !== 'https') {
+            const isHealthCheck = req.path === '/' || req.path === '/health' || req.path.startsWith('/api');
+            if (req.header('x-forwarded-proto') !== 'https' && !isHealthCheck) {
                 res.redirect(`https://${req.header('host')}${req.url}`);
             } else {
                 next();
@@ -80,7 +81,7 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/docs', app, document);
 
-    await app.listen(process.env.PORT || 3000);
+    await app.listen(process.env.PORT || 3000, '0.0.0.0');
     console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();

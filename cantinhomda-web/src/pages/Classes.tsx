@@ -107,7 +107,12 @@ export function Classes() {
                                 <div className="flex justify-between text-xs font-medium">
                                     <span className="text-slate-600">Concluídos</span>
                                     <span className="text-blue-600 font-bold">
-                                        {student.requirements?.filter((r: any) => r.status === 'APPROVED').length || 0} / {requirements.length}
+                                        {(() => {
+                                            const completedCount = student.requirements?.filter((r: any) => r.status === 'APPROVED').length || 0;
+                                            const totalCount = requirements.length;
+                                            const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+                                            return `${completedCount} / ${totalCount} (${percent}%)`;
+                                        })()}
                                     </span>
                                 </div>
                                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
