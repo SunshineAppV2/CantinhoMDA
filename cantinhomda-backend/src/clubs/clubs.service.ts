@@ -900,7 +900,6 @@ export class ClubsService implements OnModuleInit {
                     await tx.user.updateMany({
                         where: { id: { in: userIds } },
                         data: {
-                            xp: 0,
                             points: 0
                         }
                     });
