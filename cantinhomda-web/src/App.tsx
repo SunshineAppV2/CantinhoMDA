@@ -55,6 +55,7 @@ import { Assignments } from './pages/Assignments';
 import { ClubApprovals } from './pages/admin/ClubApprovals';
 
 import { CompleteProfile } from './pages/CompleteProfile';
+import SystemUsers from './pages/admin/SystemUsers';
 // import { SocketProvider } from './contexts/SocketContext';
 
 import { ToastProvider } from './lib/toast';
@@ -169,6 +170,7 @@ function App() {
                 <Route path="referrals" element={<ReferralControl />} />
                 <Route path="user-approvals" element={<UserApprovals />} />
                 <Route path="payment-management" element={<PaymentManagement />} />
+                <Route path="admin/users" element={<SystemUsers />} />
               </Route>
             </Route>
           </Route>

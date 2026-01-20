@@ -64,7 +64,7 @@ export class UsersService {
     // Build Where Clause
     const where: Prisma.UserWhereInput = {};
 
-    if (currentUser?.email === 'master@cantinhomda.com') {
+    if (currentUser?.email === 'master@cantinhomda.com' || currentUser?.role === 'MASTER') {
       // Master can filter by clubId if provided, otherwise see all
       if (clubId) where.clubId = clubId;
     } else if (currentUser && currentUser.role === 'COUNSELOR') {

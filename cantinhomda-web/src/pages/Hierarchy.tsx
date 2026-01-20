@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { api } from '../lib/axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,6 +24,7 @@ interface TreeData {
 
 export function Hierarchy() {
     console.log("Hierarchy Component Loaded - v2 (Grace Period)");
+    const navigate = useNavigate();
     const { user } = useAuth();
     const [viewMode, setViewMode] = useState<'table' | 'tree'>('table');
     const [searchTerm, setSearchTerm] = useState('');
@@ -271,12 +273,20 @@ export function Hierarchy() {
                     </h1>
                     <p className="text-slate-500">Administre hierarquias, clubes e assinaturas.</p>
                 </div>
-                <button
-                    onClick={() => setIsCreateOpen(true)}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-sm self-start md:self-auto"
-                >
-                    <Plus className="w-5 h-5" /> Novo Clube
-                </button>
+                <div className="flex gap-2 self-start md:self-auto">
+                    <button
+                        onClick={() => navigate('/dashboard/admin/users')}
+                        className="flex items-center gap-2 bg-white text-slate-700 border border-slate-300 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors font-bold shadow-sm"
+                    >
+                        <UserCog className="w-5 h-5" /> Usuários
+                    </button>
+                    <button
+                        onClick={() => setIsCreateOpen(true)}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-sm"
+                    >
+                        <Plus className="w-5 h-5" /> Novo Clube
+                    </button>
+                </div>
             </div>
 
             {/* --- DASHBOARD CARDS --- */}
