@@ -1,15 +1,17 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ActivitiesService } from '../activities/activities.service';
+import { MeetingsService } from '../meetings/meetings.service';
 
 @Injectable()
 export class EventsService {
     constructor(
         private prisma: PrismaService,
         private notificationsService: NotificationsService,
-        private activitiesService: ActivitiesService
+        private activitiesService: ActivitiesService,
+        @Inject(forwardRef(() => MeetingsService)) private meetingsService: MeetingsService
     ) { }
 
     async create(data: CreateEventDto) {
@@ -25,14 +27,29 @@ export class EventsService {
             activityId = activity.id;
         }
 
-        return this.prisma.event.create({
+        const event = await this.prisma.event.create({
             data: {
                 ...data,
                 activityId,
                 isScoring: undefined, // Cleanup
-                points: undefined     // Cleanup
+                points: undefined,     // Cleanup
+                showInAttendance: undefined // Cleanup DTO field
             } as any
         });
+
+        // Auto-create Meeting for Attendance if requested
+        if (data.showInAttendance) {
+            await this.meetingsService.create({
+                title: `Evento: ${data.title}`,
+                date: new Date(data.startDate).toISOString(),
+                points: 10,
+                type: 'EVENTO',
+                clubId: data.clubId,
+                isScoring: true // Enable attendance points (uniform, bible, etc)
+            });
+        }
+
+        return event;
     }
 
     async update(id: string, data: Partial<CreateEventDto>) {

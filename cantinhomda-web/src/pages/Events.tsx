@@ -55,6 +55,7 @@ export function Events() {
     const [cost, setCost] = useState('');
     const [description, setDescription] = useState('');
     const [isScoring, setIsScoring] = useState(false);
+    const [showInAttendance, setShowInAttendance] = useState(false);
     const [points, setPoints] = useState(50);
 
     // Registration State
@@ -239,6 +240,7 @@ export function Events() {
         setLocation('');
         setDescription('');
         setIsScoring(false);
+        setShowInAttendance(false);
         setPoints(50);
     };
 
@@ -264,7 +266,7 @@ export function Events() {
         if (editingEvent) {
             updateMutation.mutate({ title, startDate, endDate, location, cost, description, isScoring, points: Number(points) });
         } else {
-            createMutation.mutate({ title, startDate, endDate, location, cost, description, isScoring, points: Number(points) });
+            createMutation.mutate({ title, startDate, endDate, location, cost, description, isScoring, points: Number(points), showInAttendance });
         }
     };
 
@@ -469,6 +471,12 @@ export function Events() {
                         <input type="checkbox" id="eventIsScoring" checked={isScoring} onChange={e => setIsScoring(e.target.checked)} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
                         <label htmlFor="eventIsScoring" className="text-sm font-medium text-slate-700">Evento vale Pontos (Atividade)</label>
                     </div>
+                    {!editingEvent && (
+                        <div className="flex items-center gap-2">
+                            <input type="checkbox" id="showInAttendance" checked={showInAttendance} onChange={e => setShowInAttendance(e.target.checked)} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                            <label htmlFor="showInAttendance" className="text-sm font-medium text-slate-700">Exibir em Chamadas (Criar Reunião)</label>
+                        </div>
+                    )}
                     {isScoring && (
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Pontos por Participação</label>

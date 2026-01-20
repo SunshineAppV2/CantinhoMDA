@@ -33,6 +33,10 @@ export class CreateEventDto {
     @IsOptional()
     points?: number;
 
+    @IsBoolean()
+    @IsOptional()
+    showInAttendance?: boolean;
+
     @IsString()
     @IsOptional()
     clubId: string;
