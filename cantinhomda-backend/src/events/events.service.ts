@@ -41,7 +41,7 @@ export class EventsService {
         if (data.showInAttendance) {
             await this.meetingsService.create({
                 title: `Evento: ${data.title}`,
-                date: new Date(data.startDate).toISOString(),
+                date: new Date(data.startDate),
                 points: 10,
                 type: 'EVENTO',
                 clubId: data.clubId,
