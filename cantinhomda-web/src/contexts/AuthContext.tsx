@@ -1,7 +1,8 @@
-
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import {
     signInWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider,
     signOut,
     onAuthStateChanged
 } from 'firebase/auth';
@@ -35,6 +36,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
+    loginWithGoogle: () => Promise<void>;
     logout: () => Promise<void>;
     signOut: () => Promise<void>; // Alias for logout
     refreshUser: () => Promise<void>; // Re-fetch user data
@@ -238,6 +240,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const loginWithGoogle = async () => {
+        console.log('[LoginGoogle] Starting...');
+        try {
+            const provider = new GoogleAuthProvider();
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            console.log('[LoginGoogle] Firebase Success:', user.email);
+
+            // Sync with Backend
+            const idToken = await user.getIdToken();
+            const res = await api.post('/auth/sync', { idToken });
+
+            if (res.data?.access_token) {
+                const { access_token, user: backendUser } = res.data;
+                safeLocalStorage.setItem('token', access_token);
+
+                // SYNC FIRESTORE (Background)
+                const userRef = doc(db, 'users', user.uid || backendUser.id);
+                setDoc(userRef, {
+                    role: backendUser.role,
+                    clubId: backendUser.clubId || null,
+                    unitId: backendUser.unitId || null,
+                    email: backendUser.email
+                }, { merge: true }).catch(console.warn);
+
+                setUser({
+                    id: backendUser.id,
+                    uid: user.uid,
+                    name: backendUser.name,
+                    email: backendUser.email,
+                    role: backendUser.role,
+                    clubId: backendUser.clubId,
+                    unitId: backendUser.unitId,
+                    mustChangePassword: backendUser.mustChangePassword
+                });
+            }
+        } catch (error: any) {
+            console.error('[LoginGoogle] Error:', error);
+            // If backend doesn't have the user, it might throw 404 or 401
+            // We should catch that and rethrow specific error for frontend to handle (redirect to register)
+            if (error.response?.status === 404 || error.response?.status === 401) {
+                throw new Error('CONTA_INCOMPLETA');
+            }
+            throw error;
+        }
+    };
+
     const logout = async () => {
         await signOut(auth);
         safeLocalStorage.removeItem('token');
@@ -267,6 +317,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             user,
             loading,
             login,
+            loginWithGoogle,
             logout,
             signOut: logout,
             refreshUser,

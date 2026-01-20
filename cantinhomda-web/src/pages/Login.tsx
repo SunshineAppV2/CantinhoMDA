@@ -8,10 +8,9 @@ import { auth } from '../lib/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { toast } from 'sonner';
 
-
 export function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,8 +22,6 @@ export function Login() {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
-
-
 
   // Force cleanup of any stuck modals
   useEffect(() => {
@@ -111,6 +108,32 @@ export function Login() {
     }
   }
 
+  async function handleGoogleLogin() {
+    setError('');
+
+    try {
+      await loginWithGoogle();
+      toast.success('Login com Google realizado!');
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error(err);
+      if (err.message === 'CONTA_INCOMPLETA') {
+        const msg = 'Sua conta existe no Google, mas o cadastro do Clube não foi concluído.';
+        toast.info(msg);
+        setTimeout(() => {
+          navigate(`/register?resume=true`);
+        }, 1000);
+        return;
+      }
+
+      if (err.code === 'auth/popup-closed-by-user') {
+        return; // Ignore
+      }
+
+      setError(err.message || 'Erro ao entrar com Google');
+    }
+  }
+
   return (
     <>
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden relative z-[100]" translate="no">
@@ -123,8 +146,6 @@ export function Login() {
             <p className="text-blue-100 text-sm font-medium">Desbravadores</p>
             <p className="text-blue-100 text-sm font-medium">Aventureiros</p>
           </div>
-
-
         </div>
 
         <div className="p-8">
@@ -171,7 +192,7 @@ export function Login() {
               <button
                 type="button"
                 onClick={() => {
-                  setForgotEmail(email); // Pre-fill with current email if any
+                  setForgotEmail(email);
                   setShowForgotModal(true);
                 }}
                 className="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline mt-2 block ml-auto"
@@ -187,10 +208,24 @@ export function Login() {
             >
               {loading ? <span>Entrando...</span> : (<><span>Entrar no Sistema</span> <ArrowRight className="w-5 h-5" /></>)}
             </button>
+
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-slate-200"></div>
+              <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-medium uppercase">Ou entre com</span>
+              <div className="flex-grow border-t border-slate-200"></div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 hover:shadow-sm"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+              Entrar com Google
+            </button>
           </form>
 
           {/* New Register Link */}
-          {/* New Register Link - Highlighted */}
           <div className="mt-8 pt-6 border-t border-slate-100">
             <p className="text-center text-sm text-slate-600 mb-3 font-medium">Ainda não tem cadastro?</p>
             <button
@@ -204,8 +239,6 @@ export function Login() {
           </div>
         </div>
       </div>
-
-
 
       {/* Suspended Access Modal */}
       <Modal isOpen={isSuspended} onClose={() => setIsSuspended(false)} title="Acesso Suspenso">
