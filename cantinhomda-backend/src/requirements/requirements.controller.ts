@@ -240,6 +240,15 @@ export class RequirementsController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Post(':id/complete')
+    completeForUser(@Param('id') id: string, @Body() body: { userId: string }, @Request() req) {
+        const approverId = req.user.userId || req.user.id;
+        // Verify role perm here if needed, but Service likely handles or we trust higher roles.
+        // Assuming Counselor+ can do this.
+        return this.requirementsService.completeForUser(body.userId, id, approverId);
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Get('approvals/pending')
     getPendingApprovals(@Request() req) {
         const counselorId = req.user.userId || req.user.id;

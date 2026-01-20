@@ -932,5 +932,24 @@ export class RequirementsService {
 
         return updated;
     }
+    async completeForUser(userId: string, requirementId: string, approverId: string) {
+        let userReq = await this.prisma.userRequirement.findUnique({
+            where: { userId_requirementId: { userId, requirementId } }
+        });
+
+        if (!userReq) {
+            userReq = await this.prisma.userRequirement.create({
+                data: {
+                    userId,
+                    requirementId,
+                    status: 'PENDING',
+                    assignedBy: approverId
+                }
+            });
+        }
+
+        // Reuse approve assignment logic to handle points/badges
+        return this.approveAssignment(userReq.id, approverId);
+    }
 }
 
