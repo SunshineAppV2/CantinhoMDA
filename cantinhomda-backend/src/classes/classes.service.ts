@@ -17,7 +17,7 @@ export class ClassesService {
 
             // Filter: Counselor/Instructor only sees members of their Unit (if assigned to one)
             // Director/Admin sees ALL.
-            if ((currentUser.role === 'COUNSELOR' || currentUser.role === 'INSTRUCTOR') && currentUser.unitId) {
+            if (currentUser.role === 'COUNSELOR' && currentUser.unitId) {
                 whereClause.unitId = currentUser.unitId;
             }
 
