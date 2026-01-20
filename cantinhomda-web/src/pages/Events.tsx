@@ -55,7 +55,7 @@ export function Events() {
     const [cost, setCost] = useState('');
     const [description, setDescription] = useState('');
     const [isScoring, setIsScoring] = useState(false);
-    const [showInAttendance, setShowInAttendance] = useState(false);
+    const [showInAttendance, setShowInAttendance] = useState(true);
     const [points, setPoints] = useState(50);
 
     // Registration State
@@ -240,7 +240,7 @@ export function Events() {
         setLocation('');
         setDescription('');
         setIsScoring(false);
-        setShowInAttendance(false);
+        setShowInAttendance(true);
         setPoints(50);
     };
 
