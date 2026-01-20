@@ -41,7 +41,7 @@ export class UsersService {
   }
 
   // Busca todos os usuários
-  async findAll(currentUser?: any, clubId?: string) {
+  async findAll(currentUser?: any, clubId?: string, email?: string) {
     console.log('[UsersService.findAll] Called with currentUser:', {
       email: currentUser?.email,
       role: currentUser?.role,
@@ -97,6 +97,10 @@ export class UsersService {
       where.club = clubFilter;
     } else if (currentUser?.clubId) {
       where.clubId = currentUser.clubId;
+    }
+
+    if (email) {
+      where.email = { contains: email, mode: 'insensitive' };
     }
 
     const users = await this.prisma.user.findMany({

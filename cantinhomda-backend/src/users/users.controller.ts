@@ -73,9 +73,9 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(@Req() req: any, @Query('clubId') clubId?: string) {
-    console.log('[UsersController] findAll called by:', req.user?.email, 'with clubId:', clubId);
-    return this.usersService.findAll(req.user, clubId);
+  findAll(@Req() req: any, @Query('clubId') clubId?: string, @Query('email') email?: string) {
+    console.log('[UsersController] findAll called by:', req.user?.email, 'with clubId:', clubId, 'email:', email);
+    return this.usersService.findAll(req.user, clubId, email);
   }
 
   @UseGuards(JwtAuthGuard)
