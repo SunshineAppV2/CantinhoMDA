@@ -15,7 +15,7 @@ export function Classes() {
     const { data: students = [], isError: isStudentsError } = useQuery({
         queryKey: ['classes-students', selectedClass],
         queryFn: async () => {
-            const response = await api.get(`/ classes / ${selectedClass}/students`);
+            const response = await api.get(`/classes/${selectedClass}/students`);
             return response.data || [];
         }
     });
