@@ -21,7 +21,7 @@ export const PendingApprovalsList = forwardRef<HTMLDivElement>((_props, ref) => 
 
     const approveMutation = useMutation({
         mutationFn: async (id: string) => {
-            await api.patch(`/activities/submissions/${id}/approve`);
+            await api.post(`/activities/submissions/${id}/approve`);
         },
         onSuccess: () => {
             refetch();
@@ -32,7 +32,7 @@ export const PendingApprovalsList = forwardRef<HTMLDivElement>((_props, ref) => 
 
     const rejectMutation = useMutation({
         mutationFn: async (id: string) => {
-            await api.patch(`/activities/submissions/${id}/reject`);
+            await api.post(`/activities/submissions/${id}/reject`);
         },
         onSuccess: () => {
             refetch();
