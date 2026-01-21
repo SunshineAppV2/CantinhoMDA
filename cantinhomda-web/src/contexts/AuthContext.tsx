@@ -80,12 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     clubId: decoded.clubId,
                     unitId: decoded.unitId,
                     mustChangePassword: decoded.mustChangePassword,
-                    // Hierarchy Data
-                    union: backendData.union,
-                    association: backendData.association,
-                    mission: backendData.mission, // Alias
-                    region: backendData.region,
-                    district: backendData.district
+                    // Hierarchy Data - Use backend data first, then JWT as fallback
+                    union: backendData.union || decoded.union,
+                    association: backendData.association || decoded.association,
+                    mission: backendData.mission || decoded.mission,
+                    region: backendData.region || decoded.region,
+                    district: backendData.district || decoded.district
                 });
             } catch (e) {
                 console.error("Invalid token:", e);
