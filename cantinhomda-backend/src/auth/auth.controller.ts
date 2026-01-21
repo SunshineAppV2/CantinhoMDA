@@ -114,4 +114,28 @@ export class AuthController {
   async fixMaster() {
     return (this.authService as any).fixMasterUser();
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/generate')
+  async generateMfa(@Req() req) {
+    return this.authService.generateMfaSecret(req.user.email);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/enable')
+  async enableMfa(@Body() body: { code: string, secret: string }, @Req() req) {
+    const isValid = this.authService.verifyMfaCode(body.code, body.secret);
+    if (!isValid) throw new UnauthorizedException('Código inválido');
+
+    await this.authService.enableMfa(req.user.userId || req.user.id, body.secret);
+    return { success: true };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/validate-login')
+  async validateMfaLogin(@Body() body: { code: string }, @Headers('authorization') auth: string) {
+    // We assume JwtAuthGuard validated the signature, but we double check logic in service
+    const token = auth.split(' ')[1];
+    return this.authService.validateMfaLogin(token, body.code);
+  }
 }

@@ -35,6 +35,14 @@ export class UpdateUserDto {
     @IsOptional()
     mustChangePassword?: boolean;
 
+    @IsBoolean()
+    @IsOptional()
+    isMfaEnabled?: boolean;
+
+    @IsString()
+    @IsOptional()
+    mfaSecret?: string;
+
     @IsString()
     @IsOptional()
     dbvClass?: string;

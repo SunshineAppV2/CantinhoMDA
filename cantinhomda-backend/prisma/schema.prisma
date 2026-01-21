@@ -104,6 +104,8 @@ model User {
   uid                     String?             @unique
   email                   String              @unique
   password                String
+  isMfaEnabled            Boolean             @default(false)
+  mfaSecret               String? // Armazena o segredo TOTP criptografado
   name                    String
   photoUrl                String?
   role                    Role                @default(PATHFINDER)
