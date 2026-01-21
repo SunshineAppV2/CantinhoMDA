@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, ForbiddenException, Query } from '@nestjs/common';
 import { RegionalEventsService } from './regional-events.service';
 import { CreateRegionalEventDto } from './dto/create-regional-event.dto';
 import { UpdateRegionalEventDto } from './dto/update-regional-event.dto';
@@ -55,8 +55,7 @@ export class RegionalEventsController {
     @UseGuards(JwtAuthGuard)
     @Get(':id')
     findOne(@Param('id') id: string, @Request() req) {
-        const userId = req.user?.userId || req.user?.id;
-        return this.regionalEventsService.findOne(id, userId);
+        return this.regionalEventsService.findOne(id, req.user);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -95,9 +94,16 @@ export class RegionalEventsController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Get(':id/responses')
+    getResponses(@Param('id') id: string, @Query('status') status: 'PENDING' | 'APPROVED' | 'REJECTED' = 'PENDING') {
+        return this.regionalEventsService.getEventResponses(id, status);
+    }
+
+    // Manter compatibilidade com frontend antigo se necessário, mas idealmente migrar
+    @UseGuards(JwtAuthGuard)
     @Get(':id/pending-responses')
-    getPendingResponses(@Param('id') id: string, @Request() req) {
-        return this.regionalEventsService.getPendingResponses(id, req.user);
+    getPendingResponses(@Param('id') id: string) {
+        return this.regionalEventsService.getEventResponses(id, 'PENDING');
     }
 
     @UseGuards(JwtAuthGuard)
@@ -130,5 +136,11 @@ export class RegionalEventsController {
     @Post(':id/responses/:respId/reject')
     rejectResponse(@Param('respId') respId: string, @Body() body: any, @Request() req) {
         return this.regionalEventsService.rejectResponse(respId, req.user.userId || req.user.id, body.reason);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post(':id/responses/:respId/revoke')
+    revokeResponse(@Param('respId') respId: string, @Request() req) {
+        return this.regionalEventsService.revokeResponse(respId, req.user.userId || req.user.id);
     }
 }

@@ -68,33 +68,95 @@ export class RegionalEventsService {
         });
     }
 
-    async findOne(id: string, userId?: string) {
-        let clubId: string | undefined;
-        if (userId) {
-            const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { clubId: true } });
-            clubId = user?.clubId || undefined;
-        }
+    async findOne(id: string, user: any) {
+        const userId = user.userId || user.id;
+        const userRole = user.role;
 
-        const event = await this.prisma.regionalEvent.findUnique({
+        let clubId: string | undefined = user.clubId;
+        const isCoordinator = ['COORDINATOR_REGIONAL', 'COORDINATOR_DISTRICT', 'COORDINATOR_AREA', 'MASTER'].includes(userRole);
+
+        // Fetch basic event info first to determine scope
+        const eventBase = await this.prisma.regionalEvent.findUnique({
             where: { id },
-            include: {
-                requirements: {
-                    include: {
-                        eventResponses: clubId ? {
-                            where: { clubId },
-                            select: { status: true, completedAt: true, answerText: true, answerFileUrl: true }
-                        } : false
-                    }
-                }
-            }
+            include: { participatingClubs: { select: { id: true } } }
         });
-        if (!event) throw new NotFoundException('Evento não encontrado');
 
-        console.log(`[RegionalEvents] findOne View. ID: ${id}, User: ${userId}`);
-        if (event.requirements?.length > 0) {
-            console.log(`[RegionalEvents] Req 1 Sample:`, JSON.stringify(event.requirements[0]));
+        if (!eventBase) throw new NotFoundException('Evento não encontrado');
+
+        // Logic for Total Clubs (Denominator)
+        let totalClubsCount = eventBase.participatingClubs.length;
+
+        // If open event (0 participating clubs defined), we estimate based on scope (Region/District)
+        if (totalClubsCount === 0 && isCoordinator) {
+            // Count all clubs in the event's scope (or coordinator's scope fallback)
+            // Simplified: User's scope
+            const whereClub: any = {};
+            if (user.region) whereClub.region = user.region;
+            if (user.district) whereClub.district = user.district;
+
+            totalClubsCount = await this.prisma.club.count({ where: whereClub });
         }
 
+        const includeConfig: any = {
+            requirements: {
+                include: {}
+            }
+        };
+
+        if (isCoordinator) {
+            // Coordinator View: Fetch Stats
+            // We need counts of APPROVED responses per requirement
+            // Prisma doesn't support complex nested aggregation easily in one include without raw query or separate query.
+            // But we can include ALL responses (heavy?) or just use _count if structured right.
+            // Using _count for relation filters is possible.
+            includeConfig.requirements.include = {
+                eventResponses: {
+                    select: { status: true } // We fetch status to count in JS (easier than raw SQL for now)
+                }
+            };
+        } else {
+            // Club View: Fetch Only My Response
+            includeConfig.requirements.include = {
+                eventResponses: clubId ? {
+                    where: { clubId },
+                    select: { status: true, completedAt: true, answerText: true, answerFileUrl: true }
+                } : false
+            };
+        }
+
+        const event: any = await this.prisma.regionalEvent.findUnique({
+            where: { id },
+            include: includeConfig
+        });
+
+        if (isCoordinator) {
+            // Process Stats
+            event.requirements = event.requirements.map((req: any) => {
+                const totalResponses = req.eventResponses?.length || 0;
+                const completed = req.eventResponses?.filter((r: any) => r.status === 'APPROVED').length || 0;
+                const pending = req.eventResponses?.filter((r: any) => r.status === 'PENDING').length || 0;
+
+                // percentage based on Total Clubs Expected
+                // Prevent division by zero
+                const safeTotal = totalClubsCount || 1;
+                const percentage = Math.round((completed / safeTotal) * 100);
+
+                // Clean up responses array from output to save bandwidth if not needed (optional)
+                delete req.eventResponses;
+
+                return {
+                    ...req,
+                    stats: {
+                        completed,
+                        pending,
+                        totalExpected: totalClubsCount,
+                        percentage
+                    }
+                };
+            });
+        }
+
+        console.log(`[RegionalEvents] findOne View. ID: ${id}, Role: ${userRole}`);
         return event;
     }
 
@@ -179,29 +241,28 @@ export class RegionalEventsService {
         });
     }
 
-    async getPendingResponses(eventId: string, user: any) {
-        // Fetch from EventResponse
+    async getEventResponses(eventId: string, status: 'PENDING' | 'APPROVED' | 'REJECTED' = 'PENDING') {
         return this.prisma.eventResponse.findMany({
             where: {
                 requirement: { regionalEventId: eventId },
-                status: 'PENDING'
+                status: status
             },
             include: {
                 club: { select: { id: true, name: true, region: true, district: true } },
                 requirement: { select: { id: true, title: true, code: true, points: true, type: true } },
                 submittedBy: { select: { id: true, name: true, photoUrl: true } }
             },
-            orderBy: { updatedAt: 'asc' }
+            orderBy: { updatedAt: 'desc' }
         });
     }
 
     async approveResponse(responseId: string, coordinatorId: string) {
-        // TODO: Validate Permissions
         return this.prisma.eventResponse.update({
             where: { id: responseId },
             data: {
                 status: 'APPROVED',
-                completedAt: new Date()
+                completedAt: new Date(),
+                comments: null // Clear previous rejection reasons if any
             }
         });
     }
@@ -211,7 +272,19 @@ export class RegionalEventsService {
             where: { id: responseId },
             data: {
                 status: 'REJECTED',
-                comments: reason
+                comments: reason,
+                completedAt: new Date()
+            }
+        });
+    }
+
+    async revokeResponse(responseId: string, coordinatorId: string) {
+        // Reset to PENDING so it can be re-evaluated
+        return this.prisma.eventResponse.update({
+            where: { id: responseId },
+            data: {
+                status: 'PENDING',
+                completedAt: null
             }
         });
     }

@@ -416,20 +416,21 @@ function EventRequirementsManager({ eventId }: { eventId: string }) {
         enabled: isModalOpen // Fetch when modal opens
     });
 
-    // Fetch Requirements for this Event
-    const { data: requirements = [] } = useQuery({
-        queryKey: ['event-requirements', eventId],
+    // Fetch Requirements for this Event (via Event Details to get Stats)
+    const { data: eventDetails, isLoading: reqLoading } = useQuery({
+        queryKey: ['regional-event-details', eventId],
         queryFn: async () => {
-            const res = await api.get('/requirements');
-            // Filter locally for now
-            return (res.data as any[]).filter((r: any) => r.regionalEventId === eventId);
+            const res = await api.get(`/regional-events/${eventId}`);
+            return res.data;
         }
     });
+
+    const requirements = eventDetails?.requirements || [];
 
     const createMutation = useMutation({
         mutationFn: async (data: any) => await api.post('/requirements', { ...data, regionalEventId: eventId }),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['event-requirements', eventId] });
+            queryClient.invalidateQueries({ queryKey: ['regional-event-details', eventId] });
             queryClient.invalidateQueries({ queryKey: ['regional-events'] });
             closeModal();
             import('sonner').then(({ toast }) => toast.success('Requisito adicionado ao evento!'));
@@ -439,7 +440,7 @@ function EventRequirementsManager({ eventId }: { eventId: string }) {
     const updateMutation = useMutation({
         mutationFn: async (data: { id: string, payload: any }) => await api.patch(`/requirements/${data.id}`, data.payload),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['event-requirements', eventId] });
+            queryClient.invalidateQueries({ queryKey: ['regional-event-details', eventId] });
             closeModal();
             import('sonner').then(({ toast }) => toast.success('Requisito atualizado!'));
         }
@@ -448,10 +449,12 @@ function EventRequirementsManager({ eventId }: { eventId: string }) {
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => await api.delete(`/requirements/${id}`),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['event-requirements', eventId] });
+            queryClient.invalidateQueries({ queryKey: ['regional-event-details', eventId] });
             import('sonner').then(({ toast }) => toast.success('Requisito removido!'));
         }
     });
+
+    // ... (modal functions stay same until return) ...
 
     const closeModal = () => {
         setIsModalOpen(false);
@@ -523,24 +526,49 @@ function EventRequirementsManager({ eventId }: { eventId: string }) {
             </div>
 
             <div className="space-y-3">
+                {reqLoading && <p className="text-center py-4 text-slate-500">Carregando requisitos...</p>}
+
                 {requirements.map((req: any) => (
-                    <div key={req.id} className="bg-white p-3 rounded border border-slate-200 flex justify-between items-center">
-                        <div>
+                    <div key={req.id} className="bg-white p-4 rounded border border-slate-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                        <div className="flex-1">
                             <div className="font-bold text-slate-800 flex items-center gap-2">
-                                {req.code} {req.title}
-                                {req.clubId && <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 rounded border border-purple-200">Exclusivo</span>}
+                                <span className={`font-mono text-xs px-1.5 py-0.5 rounded ${req.code ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-500'}`}>{req.code || '#'}</span>
+                                {req.title || 'Sem título'}
+                                {req.clubId && <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 rounded border border-purple-200 font-bold uppercase">Exclusivo</span>}
                             </div>
-                            <div className="text-sm text-slate-500">{req.description}</div>
-                            <div className="flex gap-2 text-xs mt-1">
-                                <span className="font-bold text-blue-600">{req.points} Pontos</span>
+                            <div className="text-sm text-slate-600 mt-1">{req.description}</div>
+                            <div className="flex gap-3 text-xs mt-2">
+                                <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{req.points} Pontos</span>
                                 {(req.startDate || req.endDate) && (
-                                    <span className="text-slate-400">
+                                    <span className="text-slate-400 flex items-center gap-1">
+                                        <Calendar className="w-3 h-3" />
                                         {req.startDate && format(new Date(req.startDate), 'dd/MM')}
                                         {req.endDate && ` - ${format(new Date(req.endDate), 'dd/MM')}`}
                                     </span>
                                 )}
                             </div>
                         </div>
+
+                        {/* Stats / Progress Bar */}
+                        {req.stats && (
+                            <div className="md:w-64 shrink-0 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <div className="flex justify-between items-end mb-1">
+                                    <div className="text-xs font-bold text-slate-700">Progresso</div>
+                                    <div className="text-xs font-bold text-blue-600">{req.stats.completed}/{req.stats.totalExpected} Clubes</div>
+                                </div>
+                                <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-blue-500 rounded-full transition-all duration-1000"
+                                        style={{ width: `${Math.min(100, req.stats.percentage)}%` }}
+                                    ></div>
+                                </div>
+                                <div className="flex justify-between mt-1">
+                                    <span className="text-[10px] text-slate-400">{req.stats.percentage}% Concluído</span>
+                                    {req.stats.pending > 0 && <span className="text-[10px] text-orange-600 font-bold">{req.stats.pending} Pendentes</span>}
+                                </div>
+                            </div>
+                        )}
+
                         {canManageEvents && (
                             <div className="flex items-center gap-1">
                                 <button onClick={() => openEdit(req)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-colors" title="Editar">
@@ -643,11 +671,13 @@ function EventRequirementsManager({ eventId }: { eventId: string }) {
 function EventEvaluationModal({ event, isOpen, onClose }: { event: RegionalEvent, isOpen: boolean, onClose: () => void }) {
     const queryClient = useQueryClient();
 
-    // Fetch Pending Responses
-    const { data: pending = [], isLoading } = useQuery({
-        queryKey: ['event-pending', event.id],
+    const [activeTab, setActiveTab] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
+
+    // Fetch Responses based on Tab
+    const { data: responses = [], isLoading } = useQuery({
+        queryKey: ['event-responses', event.id, activeTab],
         queryFn: async () => {
-            const res = await api.get(`/regional-events/${event.id}/pending-responses`);
+            const res = await api.get(`/regional-events/${event.id}/responses?status=${activeTab}`);
             return res.data;
         },
         enabled: isOpen
@@ -656,7 +686,7 @@ function EventEvaluationModal({ event, isOpen, onClose }: { event: RegionalEvent
     const approveMutation = useMutation({
         mutationFn: async (id: string) => await api.post(`/regional-events/${event.id}/responses/${id}/approve`),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['event-pending', event.id] });
+            queryClient.invalidateQueries({ queryKey: ['event-responses', event.id] });
             import('sonner').then(({ toast }) => toast.success('Aprovado!'));
         }
     });
@@ -664,13 +694,21 @@ function EventEvaluationModal({ event, isOpen, onClose }: { event: RegionalEvent
     const rejectMutation = useMutation({
         mutationFn: async (id: string) => await api.post(`/regional-events/${event.id}/responses/${id}/reject`, { reason: 'Rejeitado pelo coordenador' }),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['event-pending', event.id] });
+            queryClient.invalidateQueries({ queryKey: ['event-responses', event.id] });
             import('sonner').then(({ toast }) => toast.success('Rejeitado!'));
         }
     });
 
+    const revokeMutation = useMutation({
+        mutationFn: async (id: string) => await api.post(`/regional-events/${event.id}/responses/${id}/revoke`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['event-responses', event.id] });
+            import('sonner').then(({ toast }) => toast.success('Aprovação revogada!'));
+        }
+    });
+
     // Group by Club
-    const groupedByClub = (pending as any[]).reduce((acc: any, curr: any) => {
+    const groupedByClub = (responses as any[]).reduce((acc: any, curr: any) => {
         const clubName = curr.club?.name || 'Clube Desconhecido';
         if (!acc[clubName]) acc[clubName] = [];
         acc[clubName].push(curr);
@@ -679,18 +717,45 @@ function EventEvaluationModal({ event, isOpen, onClose }: { event: RegionalEvent
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Avaliar: ${event.title}`}>
+            <div className="flex gap-2 border-b border-slate-200 mb-4 pb-1">
+                {(['PENDING', 'APPROVED', 'REJECTED'] as const).map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors border-b-2 ${activeTab === tab
+                            ? (tab === 'PENDING' ? 'text-orange-600 border-orange-600 bg-orange-50' :
+                                tab === 'APPROVED' ? 'text-green-600 border-green-600 bg-green-50' :
+                                    'text-red-600 border-red-600 bg-red-50')
+                            : 'text-slate-500 border-transparent hover:text-slate-700 hover:bg-slate-50'
+                            }`}
+                    >
+                        {tab === 'PENDING' && 'Pendentes'}
+                        {tab === 'APPROVED' && 'Aprovados'}
+                        {tab === 'REJECTED' && 'Rejeitados'}
+                    </button>
+                ))}
+            </div>
+
             <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
                 {isLoading && <p className="text-center text-slate-500">Carregando...</p>}
-                {!isLoading && pending.length === 0 && <p className="text-center text-slate-500 py-10">Nenhuma resposta pendente.</p>}
+                {!isLoading && responses.length === 0 && (
+                    <p className="text-center text-slate-500 py-10">
+                        Nenhuma resposta {activeTab === 'PENDING' ? 'pendente' : activeTab === 'APPROVED' ? 'aprovada' : 'rejeitada'}.
+                    </p>
+                )}
 
-                {Object.entries(groupedByClub).map(([clubName, responses]: [string, any]) => (
+                {Object.entries(groupedByClub).map(([clubName, groupResponses]: [string, any]) => (
                     <div key={clubName} className="bg-white border rounded-lg shadow-sm overflow-hidden">
                         <div className="bg-slate-50 px-4 py-2 border-b font-bold text-slate-700 flex justify-between">
                             <span>{clubName}</span>
-                            <span className="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full">{responses.length} pendentes</span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${activeTab === 'PENDING' ? 'bg-orange-100 text-orange-700' :
+                                    activeTab === 'APPROVED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                {groupResponses.length} {activeTab === 'PENDING' ? 'pendentes' : 'itens'}
+                            </span>
                         </div>
                         <div className="divide-y relative">
-                            {responses.map((resp: any) => (
+                            {groupResponses.map((resp: any) => (
                                 <div key={resp.id} className="p-4 flex flex-col gap-3">
                                     <div className="flex items-start gap-3">
                                         <div className="relative">
@@ -705,28 +770,63 @@ function EventEvaluationModal({ event, isOpen, onClose }: { event: RegionalEvent
                                                     {resp.answerText}
                                                 </div>
                                             )}
+                                            {/* Fix localhost URL display */}
                                             {resp.answerFileUrl && (
-                                                <a href={resp.answerFileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm block mb-2">
+                                                <a
+                                                    href={(() => {
+                                                        const url = resp.answerFileUrl;
+                                                        if (url.startsWith('http://localhost') && api.defaults.baseURL && !api.defaults.baseURL.includes('localhost')) {
+                                                            return url.replace(/http:\/\/localhost:\d+/, api.defaults.baseURL);
+                                                        }
+                                                        return url;
+                                                    })()}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-600 underline text-sm block mb-2"
+                                                >
                                                     Ver Arquivo Anexado
                                                 </a>
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Action Buttons based on Tab */}
                                     <div className="flex justify-end gap-2">
-                                        <button
-                                            onClick={() => rejectMutation.mutate(resp.id)}
-                                            disabled={rejectMutation.isPending || approveMutation.isPending}
-                                            className="px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50 rounded border border-red-200"
-                                        >
-                                            Rejeitar
-                                        </button>
-                                        <button
-                                            onClick={() => approveMutation.mutate(resp.id)}
-                                            disabled={rejectMutation.isPending || approveMutation.isPending}
-                                            className="px-3 py-1 text-xs font-bold text-green-600 hover:bg-green-50 rounded border border-green-200"
-                                        >
-                                            Aprovar
-                                        </button>
+                                        {activeTab === 'PENDING' && (
+                                            <>
+                                                <button
+                                                    onClick={() => rejectMutation.mutate(resp.id)}
+                                                    disabled={rejectMutation.isPending || approveMutation.isPending}
+                                                    className="px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50 rounded border border-red-200"
+                                                >
+                                                    Rejeitar
+                                                </button>
+                                                <button
+                                                    onClick={() => approveMutation.mutate(resp.id)}
+                                                    disabled={rejectMutation.isPending || approveMutation.isPending}
+                                                    className="px-3 py-1 text-xs font-bold text-green-600 hover:bg-green-50 rounded border border-green-200"
+                                                >
+                                                    Aprovar
+                                                </button>
+                                            </>
+                                        )}
+
+                                        {activeTab === 'APPROVED' && (
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm('Tem certeza? Isso fará a resposta voltar para PENDENTE.')) {
+                                                        revokeMutation.mutate(resp.id);
+                                                    }
+                                                }}
+                                                className="px-3 py-1 text-xs font-bold text-orange-600 hover:bg-orange-50 rounded border border-orange-200"
+                                            >
+                                                Revogar Aprovação
+                                            </button>
+                                        )}
+
+                                        {activeTab === 'REJECTED' && (
+                                            <span className="text-xs text-red-500 italic">Rejeitado</span>
+                                        )}
                                     </div>
                                 </div>
                             ))}
