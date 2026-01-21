@@ -152,7 +152,10 @@ export class AuthService {
 
   async validateMfaLogin(tempToken: string, code: string) {
     try {
+      console.log(`[MFA] Validating login. Code length: ${code?.length}`);
       const decoded = this.jwtService.verify(tempToken);
+      console.log(`[MFA] Token verified. Sub: ${decoded.sub}, Pending: ${decoded.isMfaPending}`);
+
       if (!decoded.isMfaPending) throw new UnauthorizedException('Token inválido');
 
       const user = await this.usersService.findOne(decoded.sub);

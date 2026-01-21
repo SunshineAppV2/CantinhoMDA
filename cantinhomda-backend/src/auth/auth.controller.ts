@@ -131,10 +131,12 @@ export class AuthController {
     return { success: true };
   }
 
-  @UseGuards(JwtAuthGuard)
+  // JwtAuthGuard removed to allow tempToken with partial payload
   @Post('mfa/validate-login')
   async validateMfaLogin(@Body() body: { code: string }, @Headers('authorization') auth: string) {
-    // We assume JwtAuthGuard validated the signature, but we double check logic in service
+    if (!auth || !auth.startsWith('Bearer ')) {
+      throw new UnauthorizedException('Token inválido ou ausente');
+    }
     const token = auth.split(' ')[1];
     return this.authService.validateMfaLogin(token, body.code);
   }
