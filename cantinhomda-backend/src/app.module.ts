@@ -33,8 +33,15 @@ import { RankingModule } from './ranking/ranking.module';
 import { SystemModule } from './system/system.module';
 import { EncryptionModule } from './common/encryption/encryption.module';
 
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
     EncryptionModule, // Criptografia global para dados sensíveis (LGPD)
     PrismaModule,
     UsersModule,

@@ -8,6 +8,7 @@ import * as admin from 'firebase-admin';
 import { toDataURL } from 'qrcode';
 
 import { authenticator } from 'otplib';
+import { jwtConstants } from './constants';
 
 // Initialize Firebase Admin (Lazy)
 if (!admin.apps.length) {
@@ -150,10 +151,20 @@ export class AuthService {
     } as any);
   }
 
+
+
   async validateMfaLogin(tempToken: string, code: string) {
     try {
       console.log(`[MFA] Validating login. Code length: ${code?.length}`);
-      const decoded = this.jwtService.verify(tempToken);
+
+      let decoded: any;
+      try {
+        decoded = this.jwtService.verify(tempToken, { secret: jwtConstants.secret });
+      } catch (jwtError: any) {
+        console.error(`[MFA] JWT Verify Error: ${jwtError.message}`);
+        throw new UnauthorizedException(`Token Error: ${jwtError.message}`);
+      }
+
       console.log(`[MFA] Token verified. Sub: ${decoded.sub}, Pending: ${decoded.isMfaPending}`);
 
       if (!decoded.isMfaPending) throw new UnauthorizedException('Token inválido');
