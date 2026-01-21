@@ -28,7 +28,21 @@ export function ProtectedRoute({ allowedRoles }: { allowedRoles?: string[] }) {
         const hasRegion = (user?.role === 'COORDINATOR_REGIONAL' || user?.role === 'COORDINATOR_DISTRICT') ? !!user?.region : true;
         const hasDistrict = user?.role === 'COORDINATOR_DISTRICT' ? !!user?.district : true;
 
+        console.log('[ProtectedRoute] Coordinator Profile Check:', {
+            role: user?.role,
+            hasUnion,
+            hasAssociation,
+            hasRegion,
+            hasDistrict,
+            union: user?.union,
+            association: user?.association,
+            mission: user?.mission,
+            region: user?.region,
+            district: user?.district
+        });
+
         if (!hasUnion || !hasAssociation || !hasRegion || !hasDistrict) {
+            console.warn('[ProtectedRoute] ⚠️ Redirecting to /complete-profile - Missing data');
             return <Navigate to="/complete-profile" replace />;
         }
     }
