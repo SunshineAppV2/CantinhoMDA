@@ -9,9 +9,16 @@ import { PrismaService } from './prisma/prisma.service';
 import { Reflector } from '@nestjs/core';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { join } from 'path';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+    // Serve Static Assets (Uploads)
+    // Using process.cwd() is safer usually if running from root
+    app.useStaticAssets(join(process.cwd(), 'uploads'), {
+        prefix: '/uploads/',
+    });
 
     // Security Headers (Helmet.js) WITH宽松 CORS policy
     app.use(helmet({
