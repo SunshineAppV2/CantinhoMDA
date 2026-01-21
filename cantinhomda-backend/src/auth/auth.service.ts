@@ -7,8 +7,7 @@ import { CreateUserDto } from '../users/dto/create-user.dto';
 import * as admin from 'firebase-admin';
 import { toDataURL } from 'qrcode';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { authenticator } = require('otplib');
+import { authenticator } from 'otplib';
 
 // Initialize Firebase Admin (Lazy)
 if (!admin.apps.length) {
