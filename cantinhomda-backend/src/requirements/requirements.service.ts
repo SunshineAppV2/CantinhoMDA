@@ -562,7 +562,7 @@ export class RequirementsService {
                 select: { id: true }
             });
             validUserIds.push(...users.map(u => u.id));
-        } else if (['ADMIN', 'OWNER', 'INSTRUCTOR', 'DIRECTOR', 'MASTER'].includes(counselor.role)) {
+        } else if (['ADMIN', 'OWNER', 'INSTRUCTOR', 'DIRECTOR', 'MASTER', 'SECRETARY'].includes(counselor.role)) {
             // Admins/Directors can assign to anyone
             validUserIds.push(...userIds);
         } else {
@@ -621,7 +621,7 @@ export class RequirementsService {
 
         if (counselor.role === 'COUNSELOR') {
             whereClause.user = { unitId: counselor.unitId };
-        } else if (['OWNER', 'ADMIN', 'INSTRUCTOR'].includes(counselor.role)) {
+        } else if (['OWNER', 'ADMIN', 'INSTRUCTOR', 'DIRECTOR', 'SECRETARY'].includes(counselor.role)) {
             // Admins see all pending in their club
             whereClause.user = { clubId: counselor.clubId };
         } else if (counselor.role === 'COORDINATOR_DISTRICT') {
@@ -671,7 +671,7 @@ export class RequirementsService {
 
         if (counselor.role === 'COUNSELOR') {
             whereClause.user = { unitId: counselor.unitId };
-        } else if (['OWNER', 'ADMIN', 'INSTRUCTOR'].includes(counselor.role)) {
+        } else if (['OWNER', 'ADMIN', 'INSTRUCTOR', 'DIRECTOR', 'SECRETARY'].includes(counselor.role)) {
             // Admins see all pending deliveries?
         } else {
             return [];
@@ -794,7 +794,7 @@ export class RequirementsService {
                 // All requirements done. Check Approver Role.
                 const approver = await this.prisma.user.findUnique({ where: { id: approverId } });
 
-                if (approver && ['INSTRUCTOR', 'ADMIN', 'OWNER'].includes(approver.role)) {
+                if (approver && ['INSTRUCTOR', 'ADMIN', 'OWNER', 'DIRECTOR', 'SECRETARY'].includes(approver.role)) {
 
                     // Check if already awarded
                     const existingSpecialty = await this.prisma.userSpecialty.findUnique({

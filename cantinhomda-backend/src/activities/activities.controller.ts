@@ -85,7 +85,7 @@ export class ActivitiesController {
 
         const isSelf = req.user.id === userId;
         const isMaster = req.user.email === 'master@cantinhomda.com';
-        const isManager = ['OWNER', 'ADMIN', 'DIRECTOR', 'COUNSELOR', 'INSTRUCTOR'].includes(req.user.role);
+        const isManager = ['OWNER', 'ADMIN', 'DIRECTOR', 'COUNSELOR', 'INSTRUCTOR', 'SECRETARY'].includes(req.user.role);
 
         if (!isSelf && !isMaster && !isManager) {
             throw new UnauthorizedException('Você não tem permissão para ver o detalhamento deste usuário.');

@@ -71,7 +71,7 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
 
     const hasAccess = (moduleKey: string) => {
         if (!user) return false;
-        if (['OWNER', 'ADMIN', 'MASTER', 'DIRECTOR'].includes(user.role)) return true;
+        if (['OWNER', 'ADMIN', 'MASTER', 'DIRECTOR', 'SECRETARY'].includes(user.role)) return true;
 
         const defaultPermissions = {
             SECRETARY: ['SECRETARY', 'MEMBERS', 'ATTENDANCE', 'EVENTS'],
@@ -153,10 +153,10 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
             if (hasAccess('ATTENDANCE')) managementSubItems.push({ id: 'meetings', label: 'Chamada', icon: ListChecks, path: '/dashboard/meetings' });
             if (hasAccess('SECRETARY')) managementSubItems.push({ id: 'secretary', label: 'Secretaria', icon: FileText, path: '/dashboard/secretary' });
             if (hasAccess('APPROVALS')) managementSubItems.push({ id: 'approvals', label: 'Aprovações', icon: ListChecks, path: '/dashboard/approvals' });
-            if (['OWNER', 'ADMIN', 'MASTER', 'DIRECTOR', 'INSTRUCTOR', 'COUNSELOR'].includes(user?.role || '')) {
+            if (['OWNER', 'ADMIN', 'MASTER', 'DIRECTOR', 'INSTRUCTOR', 'COUNSELOR', 'SECRETARY'].includes(user?.role || '')) {
                 managementSubItems.push({ id: 'assignments', label: 'Atribuições', icon: UserPlus, path: '/dashboard/assignments' });
             }
-            if (['OWNER', 'ADMIN', 'DIRECTOR'].includes(user?.role || '')) {
+            if (['OWNER', 'ADMIN', 'DIRECTOR', 'SECRETARY'].includes(user?.role || '')) {
                 managementSubItems.push({ id: 'units', label: 'Unidades', icon: Shield, path: '/dashboard/units' });
                 managementSubItems.push({ id: 'club-regional-events', label: 'Meus Eventos (Regionais)', icon: Calendar, path: '/dashboard/club/regional-events' });
             }

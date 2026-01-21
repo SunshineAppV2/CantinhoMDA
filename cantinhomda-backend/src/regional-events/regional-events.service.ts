@@ -99,6 +99,7 @@ export class RegionalEventsService {
 
         const includeConfig: any = {
             requirements: {
+                orderBy: { code: 'asc' },
                 include: {}
             }
         };
