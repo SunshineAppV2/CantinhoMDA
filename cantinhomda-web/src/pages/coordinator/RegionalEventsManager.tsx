@@ -749,7 +749,7 @@ function EventEvaluationModal({ event, isOpen, onClose }: { event: RegionalEvent
                         <div className="bg-slate-50 px-4 py-2 border-b font-bold text-slate-700 flex justify-between">
                             <span>{clubName}</span>
                             <span className={`text-xs px-2 py-1 rounded-full ${activeTab === 'PENDING' ? 'bg-orange-100 text-orange-700' :
-                                    activeTab === 'APPROVED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                activeTab === 'APPROVED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                 }`}>
                                 {groupResponses.length} {activeTab === 'PENDING' ? 'pendentes' : 'itens'}
                             </span>

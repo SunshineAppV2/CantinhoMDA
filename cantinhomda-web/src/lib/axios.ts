@@ -12,6 +12,11 @@ console.log('[Axios] API BaseURL:', api.defaults.baseURL);
 import { auth } from './firebase';
 
 api.interceptors.request.use(async (config) => {
+    // 0. If Authorization is already set, don't overwrite it (e.g., MFA temp tokens or manual overrides)
+    if (config.headers.Authorization) {
+        return config;
+    }
+
     // 1. Try Backend Token (JWT)
     const token = safeLocalStorage.getItem('token');
     if (token) {
@@ -23,8 +28,6 @@ api.interceptors.request.use(async (config) => {
             const fbToken = await user.getIdToken();
             // Note: Backend might reject this if not configured for Firebase Admin, 
             // but we keep it for now as a fallback or for firebase-services.
-            // Actually, if we send this to OUR backend and it expects JWT, it fails as 401.
-            // But let's keep logic: if we have local token, use it.
             config.headers.Authorization = `Bearer ${fbToken}`;
         }
     }
