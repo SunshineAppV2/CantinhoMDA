@@ -54,7 +54,7 @@ import { ClubRegionalEvents } from './pages/club/ClubRegionalEvents';
 import { Assignments } from './pages/Assignments';
 import { ClubApprovals } from './pages/admin/ClubApprovals';
 
-import { CompleteProfile } from './pages/CompleteProfile';
+
 import SystemUsers from './pages/admin/SystemUsers';
 import { AdminFeatures } from './pages/admin/AdminFeatures';
 // import { SocketProvider } from './contexts/SocketContext';
@@ -76,7 +76,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/change-password" element={<ChangePassword />} />
-            <Route path="/complete-profile" element={<CompleteProfile />} />
+
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="ranking" element={<Ranking />} />
